@@ -122,6 +122,69 @@ public abstract class RollerIT {
     }
 
     /**
+     * Roller's admin UI is Bootstrap: below the responsive breakpoint the navigation bar
+     * collapses behind a toggle and tests would be clicking links that are not on screen.
+     */
+    private static final int BROWSER_WIDTH = 1366;
+
+    private static final int BROWSER_HEIGHT = 768;
+
+    /** The viewport every browser in this suite starts at, in Selenide's spelling. */
+    protected static final String BROWSER_SIZE = BROWSER_WIDTH + "x" + BROWSER_HEIGHT;
+
+    /**
+     * The Chrome arguments every browser in this suite starts with, plus whatever the
+     * caller needs on top.
+     *
+     * <p>Single-sourced deliberately. {@code VirtualHostIT} has to build its own
+     * {@link ChromeOptions} so it can add {@code --host-resolver-rules}, and used to
+     * repeat this list by hand -- which meant a flag added here silently did not reach
+     * that class. Anything needing extra arguments passes them in rather than starting
+     * a second list.
+     *
+     * <p>The first three are what make Chrome usable inside the containers this suite
+     * runs in on CI. The rest are resource hygiene: a browser that exists for one test
+     * class has no business updating components, syncing a profile, fetching
+     * safe-browsing lists or reporting metrics, and none of that traffic is under test.
+     *
+     * @param extraArguments additional Chrome switches, e.g. {@code --host-resolver-rules=...}
+     */
+    protected static ChromeOptions chromeOptions(String... extraArguments) {
+        ChromeOptions options = new ChromeOptions().addArguments(
+                "--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage",
+                "--disable-background-networking",
+                "--disable-component-update",
+                "--disable-client-side-phishing-detection",
+                "--disable-domain-reliability",
+                "--disable-sync",
+                "--metrics-recording-only",
+                "--no-first-run",
+                "--no-default-browser-check",
+                "--disable-default-apps",
+                "--disable-extensions",
+                "--mute-audio",
+                // Site isolation buys a renderer PROCESS per origin. This suite talks to
+                // one origin -- VirtualHostIT's second hostname is --host-resolver-rules'd
+                // onto the same 127.0.0.1 -- so it is pure per-process overhead here.
+                "--disable-features=Translate,OptimizationHints,MediaRouter,"
+                        + "IsolateOrigins,site-per-process",
+                // Matches Configuration.browserSize, so the window opens at the right size
+                // instead of being resized over the wire after launch.
+                "--window-size=" + BROWSER_WIDTH + "," + BROWSER_HEIGHT);
+        return extraArguments.length == 0 ? options : options.addArguments(extraArguments);
+    }
+
+    /**
+     * Scheme, host and port of the Roller under test, without the context path -- the
+     * form CDP's storage commands want, and not something {@link #baseUrl()} can give
+     * them because a prefixed deployment puts a path on the end of it.
+     */
+    static String origin() {
+        URI uri = URI.create(baseUrl());
+        return uri.getScheme() + "://" + uri.getAuthority();
+    }
+
+    /**
      * Applies the browser settings shared by the whole suite. Called by
      * {@link BrowserHealthExtension} before it starts a browser; idempotent, because
      * Selenide's configuration is global and only read at browser startup.
@@ -133,13 +196,8 @@ public abstract class RollerIT {
         Configuration.baseUrl = baseUrl();
         Configuration.browser = "chrome";
         Configuration.headless = true;
-        // Roller's admin UI is Bootstrap: below the responsive breakpoint the navigation bar
-        // collapses behind a toggle and tests would be clicking links that are not on screen.
-        Configuration.browserSize = "1366x768";
-        // --no-sandbox and --disable-dev-shm-usage are what make Chrome usable inside the
-        // containers this suite runs in on CI.
-        Configuration.browserCapabilities = new ChromeOptions()
-                .addArguments("--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage");
+        Configuration.browserSize = BROWSER_SIZE;
+        Configuration.browserCapabilities = chromeOptions();
         selenideConfigured = true;
     }
 

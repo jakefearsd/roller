@@ -35,7 +35,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.TestInstance;
-import org.openqa.selenium.chrome.ChromeOptions;
 
 import static com.codeborne.selenide.Condition.exist;
 import static com.codeborne.selenide.Condition.text;
@@ -152,10 +151,12 @@ class VirtualHostIT extends RollerIT {
         Configuration.baseUrl = baseUrl();
         Configuration.browser = "chrome";
         Configuration.headless = true;
-        Configuration.browserSize = "1366x768";
-        Configuration.browserCapabilities = new ChromeOptions()
-                .addArguments("--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage",
-                        "--host-resolver-rules=MAP " + VHOST + " 127.0.0.1");
+        Configuration.browserSize = BROWSER_SIZE;
+        // Through RollerIT.chromeOptions rather than a hand-rolled list: this class only
+        // needs ONE extra switch, and repeating the shared list here is how a flag added
+        // to the suite silently fails to reach the one class that resolves a second host.
+        Configuration.browserCapabilities =
+                chromeOptions("--host-resolver-rules=MAP " + VHOST + " 127.0.0.1");
         RollerIT.markSelenideConfigured();
     }
 
@@ -163,8 +164,7 @@ class VirtualHostIT extends RollerIT {
     @AfterAll
     void disableVhostDns() {
         Selenide.closeWebDriver();
-        Configuration.browserCapabilities = new ChromeOptions()
-                .addArguments("--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage");
+        Configuration.browserCapabilities = chromeOptions();
     }
 
     /**
