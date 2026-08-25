@@ -534,9 +534,15 @@ limitations under the License.
                              fork does not inherit it. See the it.parallelism
                              property above for why CI needs a smaller value. -->
                         <junit.jupiter.execution.parallel.config.fixed.parallelism>${it.parallelism}</junit.jupiter.execution.parallel.config.fixed.parallelism>
-                        <!-- The only bound that actually holds; see the
-                             it.parallel.enabled property above for the
-                             measurement that says so. -->
+                        <!-- The CEILING, and the reason the parallelism above finally
+                             means something. JUnit's FIXED strategy grows the pool past
+                             its target to compensate for blocked threads, up to
+                             fixed.max-pool-size, which DEFAULTS TO 256. A Selenium test
+                             blocks on nearly every line, so it grew there almost at once:
+                             that is how -Dit.parallelism=2 came to start 24 classes inside
+                             four seconds. Pinned to the same property, so one number
+                             decides both the target and the cap. -->
+                        <junit.jupiter.execution.parallel.config.fixed.max-pool-size>${it.parallelism}</junit.jupiter.execution.parallel.config.fixed.max-pool-size>
                         <junit.jupiter.execution.parallel.enabled>${it.parallel.enabled}</junit.jupiter.execution.parallel.enabled>
                     </systemPropertyVariables>
                     <trimStackTrace>false</trimStackTrace>

@@ -109,6 +109,44 @@ class ItCiWorkflowTest {
                 "failsafe must also forward the parallelism, which still shapes the LOCAL run");
     }
 
+    /**
+     * The browser pool needs a CEILING, and {@code fixed.parallelism} is not one.
+     *
+     * <p>JUnit's FIXED strategy reads three parameters, not one. {@code fixed.parallelism}
+     * is the ForkJoinPool's <em>target</em>; {@code fixed.max-pool-size} is how far the
+     * pool may grow to compensate for threads that are blocked -- and it defaults to
+     * <b>256</b>. A Selenium test blocks on nearly every line, so the pool grows almost
+     * immediately, which is why this repository measured {@code -Dit.parallelism=2}
+     * starting 24 classes inside four seconds and why a GitHub runner ended up launching
+     * ~30 Chromes at once. Setting the parallelism alone has never bounded anything.
+     *
+     * <p>The ceiling matters more now than it did, not less: the browser is held for a
+     * whole test CLASS rather than one test, so an uncapped pool means many
+     * <em>long-lived</em> browsers rather than many short-lived ones.
+     *
+     * <p>Deliberately NOT setting {@code fixed.saturate}. It reads like the knob for this
+     * and is inverted: its default {@code true} means "do not throw when the pool cannot
+     * grow, just run with fewer threads", which is exactly what we want. Setting it
+     * {@code false} makes ForkJoinPool throw {@code RejectedExecutionException} at a
+     * blocked join instead.
+     */
+    @Test
+    void theBrowserPoolIsCappedAndNotMerelyTargeted() throws IOException {
+        String pom = Files.readString(IT_POM);
+        assertTrue(pom.contains("<junit.jupiter.execution.parallel.config.fixed.max-pool-size>"
+                        + "${it.parallelism}"
+                        + "</junit.jupiter.execution.parallel.config.fixed.max-pool-size>"),
+                "failsafe must forward fixed.max-pool-size as ${it.parallelism}: without it the "
+                        + "pool grows to JUnit's default of 256 and -Dit.parallelism caps nothing");
+
+        String properties = Files.readString(REPO_ROOT.resolve(
+                "it-selenium/src/test/resources/junit-platform.properties"));
+        assertTrue(properties.contains(
+                        "junit.jupiter.execution.parallel.config.fixed.max-pool-size"),
+                "junit-platform.properties must carry the cap too, so a run that does not go "
+                        + "through failsafe (an IDE, a bare JUnit launcher) is bounded as well");
+    }
+
     /** The local default stays parallel; only CI opts out. */
     @Test
     void aDeveloperMachineStillRunsTheSuiteInParallel() throws IOException {
