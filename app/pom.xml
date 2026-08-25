@@ -985,6 +985,22 @@ limitations under the License.
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${maven-surefire.version}</version>
                 <configuration>
+                    <!-- Opt-in escape hatch for iterating on the BROWSER suite.
+                         `mvn verify -Pit` runs this whole unit suite, the static
+                         analysis gates and the packaging before the first Chrome
+                         starts, which on this machine is about 3m20s of a 5m45s
+                         run. When the change under test is in it-selenium/ that
+                         is pure waiting, so `-DskipUnitTests=true` skips it.
+
+                         Deliberately its OWN property and not `-DskipTests`:
+                         that one is shared with failsafe and would skip the
+                         browser tests too, which is the opposite of what someone
+                         reaching for this wants. Defaults to false in the parent
+                         pom, CI never sets it, and it must stay that way; this
+                         is a shortcut for a fast local loop, never for deciding
+                         whether a change is good. Run the full build before
+                         pushing. -->
+                    <skipTests>${skipUnitTests}</skipTests>
                     <systemProperties>
                         <property>
                             <name>project.build.directory</name>

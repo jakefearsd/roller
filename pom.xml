@@ -46,6 +46,11 @@ limitations under the License.
         <testcontainers.version>2.0.5</testcontainers.version>
         <maven-surefire.version>3.5.6</maven-surefire.version>
 
+        <!-- False everywhere that matters. See the comment on surefire's
+             skipTests in app/pom.xml for what this is and why it is not
+             spelled skipTests. -->
+        <skipUnitTests>false</skipUnitTests>
+
         <!-- JaCoCo coverage gate (jacoco:check on verify). The ratchet is ACTIVE:
              these floors are measured minus a 0.01 margin, and later stages only
              ever raise them, never lower them. Targets are documented in

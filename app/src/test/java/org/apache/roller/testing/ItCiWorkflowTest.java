@@ -20,8 +20,10 @@ package org.apache.roller.testing;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
@@ -59,6 +61,8 @@ class ItCiWorkflowTest {
     private static final Path REPO_ROOT = Path.of(System.getProperty("user.dir")).getParent();
     private static final Path MAIN_WORKFLOW = REPO_ROOT.resolve(".github/workflows/main.yml");
     private static final Path IT_POM = REPO_ROOT.resolve("it-selenium/pom.xml");
+    private static final Path PARENT_POM = REPO_ROOT.resolve("pom.xml");
+    private static final Path APP_POM = REPO_ROOT.resolve("app/pom.xml");
 
     /**
      * CI must turn class-parallelism OFF, not merely turn it down.
@@ -207,5 +211,53 @@ class ItCiWorkflowTest {
             end = next.start();
         }
         return workflow.substring(start, end);
+    }
+
+    /**
+     * {@code skipUnitTests} exists so someone iterating on the browser suite
+     * can skip the unit suite that runs ahead of it, and it must default to
+     * false and stay unset in CI.
+     *
+     * <p>Pinned because of what it silently costs if it ever escapes. The
+     * property's whole job is to stop a phase of the build from running, and
+     * a build that skips a phase still says BUILD SUCCESS -- so a stray
+     * {@code -DskipUnitTests=true} in a workflow, a profile or a committed
+     * {@code .mvn/maven.config} would take the unit suite out of CI while
+     * every run stayed green. That is the same shape as the gate erosions
+     * this repository already tests for: {@code maxAllowedViolations} left
+     * above zero, an exclusion added without a justification. A convenience
+     * flag that turns a check off is worth exactly as much scrutiny as the
+     * check.
+     *
+     * <p>Also asserts it is NOT spelled {@code skipTests}: that name is
+     * shared with failsafe, so it would skip the browser suite too, which is
+     * the opposite of what anyone reaching for this wants.
+     */
+    @Test
+    void skippingTheUnitSuiteIsOptInAndNeverOnInCi() throws IOException {
+        String parent = Files.readString(PARENT_POM);
+        assertTrue(parent.contains("<skipUnitTests>false</skipUnitTests>"),
+                "The parent pom must default skipUnitTests to false, so a plain "
+                        + "`mvn verify` always runs the unit suite.");
+
+        String app = Files.readString(APP_POM);
+        assertTrue(app.contains("<skipTests>${skipUnitTests}</skipTests>"),
+                "app/pom.xml's surefire must read the opt-in property, or the flag is "
+                        + "inert and someone will believe they skipped something.");
+
+        for (Path file : List.of(MAIN_WORKFLOW, REPO_ROOT.resolve(".github/workflows"))) {
+            if (!Files.exists(file)) {
+                continue;
+            }
+            try (Stream<Path> tree = Files.walk(file)) {
+                for (Path candidate : tree.filter(Files::isRegularFile).toList()) {
+                    String text = Files.readString(candidate);
+                    if (text.contains("skipUnitTests")) {
+                        fail("CI must never skip the unit suite, but " + candidate.getFileName()
+                                + " names skipUnitTests.");
+                    }
+                }
+            }
+        }
     }
 }
