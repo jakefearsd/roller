@@ -477,4 +477,50 @@ class WeblogEntryLogicTest {
         assertEquals(Boolean.TRUE, copy.getPinnedToMain());
         assertEquals("fr", copy.getLocale());
     }
+
+    // ------------------------------------------------------------------ tags
+
+    /**
+     * A tag added before the entry has an update time must still carry one.
+     *
+     * <p>{@code roller_weblogentrytag.time} is NOT NULL, and {@code addTag}
+     * copies whatever {@code getUpdateTime()} happens to return at the moment
+     * it is called. On a brand-new entry that is null, so the insert fails --
+     * which made {@code POST /api/v1/weblogs/{handle}/entries} answer 500 for
+     * any request carrying tags, every time.
+     *
+     * <p>The JSP editor escaped it only by accident of ordering:
+     * {@code EntryEditController} calls {@code setUpdateTime} on the line
+     * before {@code EntryBean.copyTo}, and copyTo is what applies the tags.
+     * Nothing said so, and nothing enforced it -- the API simply applied tags
+     * first and saved second, which is the natural order to write. Fixing it
+     * here rather than by adding the same magic line to the API removes the
+     * ordering trap for every caller, present and future.
+     */
+    @Test
+    void aTagAddedBeforeTheEntryHasAnUpdateTimeStillCarriesOne() throws WebloggerException {
+        assertNull(entry.getUpdateTime(), "precondition: a new entry has no update time");
+
+        entry.addTag("travel");
+
+        WeblogEntryTag tag = entry.getTags().iterator().next();
+        assertNotNull(tag.getTime(),
+                "roller_weblogentrytag.time is NOT NULL, so a null here is an insert "
+                        + "that fails at the database rather than a field left empty");
+    }
+
+    /**
+     * When the entry DOES have an update time, the tag keeps taking it, so a
+     * tag and the entry it belongs to still agree on when they were written.
+     * This is the behaviour that already existed and must not drift.
+     */
+    @Test
+    void aTagTakesTheEntrysUpdateTimeWhenThereIsOne() throws WebloggerException {
+        Timestamp updated = new Timestamp(1_500_000_000_000L);
+        entry.setUpdateTime(updated);
+
+        entry.addTag("travel");
+
+        assertEquals(updated, entry.getTags().iterator().next().getTime());
+    }
 }

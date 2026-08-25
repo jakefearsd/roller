@@ -748,7 +748,18 @@ public class WeblogEntry implements Serializable, ShortcodeContext {
         tag.setCreatorUserName(getCreatorUserName());
         tag.setWeblog(getWebsite());
         tag.setWeblogEntry(this);
-        tag.setTime(getUpdateTime());
+        // Not getUpdateTime() alone: roller_weblogentrytag.time is NOT NULL, and
+        // a brand-new entry has no update time until saveWeblogEntry stamps one,
+        // which happens AFTER the caller has applied its tags. Reading it
+        // unguarded made every tagged POST to the entries API fail with a
+        // constraint violation. The JSP editor only escaped that by ordering --
+        // EntryEditController sets an update time on the line before
+        // EntryBean.copyTo applies the tags -- which is an invariant nothing
+        // stated and nothing enforced. Falling back to now keeps the tag and its
+        // entry agreeing on a timestamp whenever there is one to agree with, and
+        // removes the ordering trap when there is not.
+        Timestamp entryUpdated = getUpdateTime();
+        tag.setTime(entryUpdated != null ? entryUpdated : new Timestamp(System.currentTimeMillis()));
         tagSet.add(tag);
         
         addedTags.add(tag);
