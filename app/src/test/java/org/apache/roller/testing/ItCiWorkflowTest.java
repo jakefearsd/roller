@@ -236,9 +236,14 @@ class ItCiWorkflowTest {
     @Test
     void skippingTheUnitSuiteIsOptInAndNeverOnInCi() throws IOException {
         String parent = Files.readString(PARENT_POM);
-        assertTrue(parent.contains("<skipUnitTests>false</skipUnitTests>"),
-                "The parent pom must default skipUnitTests to false, so a plain "
-                        + "`mvn verify` always runs the unit suite.");
+        assertTrue(parent.contains("<skipUnitTests>${skipTests}</skipUnitTests>"),
+                "skipUnitTests must default to ${skipTests}, not to a bare false. "
+                        + "Naming skipTests in surefire's <configuration> makes the pom "
+                        + "win over the command line, so a hardcoded false there silently "
+                        + "breaks `mvn -DskipTests` for this module.");
+        assertTrue(parent.contains("<skipTests>false</skipTests>"),
+                "and skipTests itself must default to false, so a plain `mvn verify` "
+                        + "always runs the unit suite.");
 
         String app = Files.readString(APP_POM);
         assertTrue(app.contains("<skipTests>${skipUnitTests}</skipTests>"),

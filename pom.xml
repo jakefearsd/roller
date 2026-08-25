@@ -46,10 +46,20 @@ limitations under the License.
         <testcontainers.version>2.0.5</testcontainers.version>
         <maven-surefire.version>3.5.6</maven-surefire.version>
 
-        <!-- False everywhere that matters. See the comment on surefire's
-             skipTests in app/pom.xml for what this is and why it is not
-             spelled skipTests. -->
-        <skipUnitTests>false</skipUnitTests>
+        <!-- See the comment on surefire's skipTests in app/pom.xml for what
+             this is and why it is not spelled skipTests.
+
+             It DEFAULTS TO ${skipTests} rather than to false, and that is a
+             bug fix, not a flourish: naming skipTests in surefire's <configuration>
+             makes the pom's value win over the command line, so wiring a bare
+             `false` there silently broke `mvn ... -DskipTests` for this module
+             (surefire ran the suite anyway, and the only sign was a build that
+             failed on a test the user had asked to skip). Chaining the default
+             keeps -DskipTests working exactly as it always did, while
+             -DskipUnitTests stays the narrower opt-in that leaves failsafe
+             alone. -->
+        <skipTests>false</skipTests>
+        <skipUnitTests>${skipTests}</skipUnitTests>
 
         <!-- JaCoCo coverage gate (jacoco:check on verify). The ratchet is ACTIVE:
              these floors are measured minus a 0.01 margin, and later stages only
