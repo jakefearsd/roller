@@ -22,6 +22,8 @@ import java.util.UUID;
 import org.apache.roller.it.support.BrowserHealth;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceAccessMode;
+import org.junit.jupiter.api.parallel.ResourceLock;
 
 import com.codeborne.selenide.CollectionCondition;
 
@@ -53,6 +55,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * the same discipline {@code WeblogConfigMatrixIT} uses -- this class drives
  * the identical Settings form to move {@code analyticsSiteId}.
  */
+@ResourceLock(value = RollerIT.GLOBAL_CONFIG, mode = ResourceAccessMode.READ)
 class AnalyticsInjectionIT extends RollerIT {
 
     @Test

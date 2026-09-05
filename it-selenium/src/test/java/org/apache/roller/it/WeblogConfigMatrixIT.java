@@ -20,6 +20,8 @@ package org.apache.roller.it;
 import org.apache.roller.it.support.BrowserHealth;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceAccessMode;
+import org.junit.jupiter.api.parallel.ResourceLock;
 
 import static com.codeborne.selenide.Condition.checked;
 import static com.codeborne.selenide.Condition.exist;
@@ -48,6 +50,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * ever does: the global-flag permutations live in a separate class precisely so
  * they can be serialised on their own.
  */
+@ResourceLock(value = RollerIT.GLOBAL_CONFIG, mode = ResourceAccessMode.READ)
 class WeblogConfigMatrixIT extends RollerIT {
 
     /** The editor's editable surface; text goes in through the page's own seam. */

@@ -27,6 +27,8 @@ import org.apache.roller.it.support.BrowserHealth;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceAccessMode;
+import org.junit.jupiter.api.parallel.ResourceLock;
 
 import static com.codeborne.selenide.Condition.checked;
 import static com.codeborne.selenide.Condition.exist;
@@ -57,6 +59,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * suite's automatic {@code BrowserHealth} check at teardown for a 404 the
  * test asked for on purpose.
  */
+@ResourceLock(value = RollerIT.GLOBAL_CONFIG, mode = ResourceAccessMode.READ)
 class PageIT extends RollerIT {
 
     private static final String CREATE_WEBLOG = "/roller-ui/createWeblog.rol";

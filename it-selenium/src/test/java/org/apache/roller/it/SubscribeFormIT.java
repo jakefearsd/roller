@@ -28,6 +28,8 @@ import org.apache.roller.it.support.BrowserHealth;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceAccessMode;
+import org.junit.jupiter.api.parallel.ResourceLock;
 
 import static com.codeborne.selenide.Condition.attribute;
 import static com.codeborne.selenide.Condition.exist;
@@ -67,6 +69,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * the {@code MultiUserJourneyIT} precedent for a refusal the test asked for
  * on purpose.
  */
+@ResourceLock(value = RollerIT.GLOBAL_CONFIG, mode = ResourceAccessMode.READ)
 class SubscribeFormIT extends RollerIT {
 
     private static final String SUBSCRIBE_ENDPOINT = "/newsletter/subscribe";

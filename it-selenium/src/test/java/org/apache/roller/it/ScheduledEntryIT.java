@@ -22,6 +22,8 @@ import java.time.format.DateTimeFormatter;
 
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceAccessMode;
+import org.junit.jupiter.api.parallel.ResourceLock;
 
 import static com.codeborne.selenide.Condition.exist;
 import static com.codeborne.selenide.Condition.text;
@@ -58,6 +60,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * made for a test's convenience. {@code ScheduledEntriesTask} keeps its unit
  * coverage in the meantime.
  */
+@ResourceLock(value = RollerIT.GLOBAL_CONFIG, mode = ResourceAccessMode.READ)
 class ScheduledEntryIT extends RollerIT {
 
     /** The editor's editable surface; text goes in through the page's own seam. */

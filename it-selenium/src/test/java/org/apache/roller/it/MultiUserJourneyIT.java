@@ -20,6 +20,8 @@ package org.apache.roller.it;
 import org.apache.roller.it.support.BrowserHealth;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceAccessMode;
+import org.junit.jupiter.api.parallel.ResourceLock;
 
 import static com.codeborne.selenide.Condition.disappear;
 import static com.codeborne.selenide.Condition.exist;
@@ -49,6 +51,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>The isolation assertions here are deliberately blunt: they ask whether one
  * owner's entry id, handed to the other owner's session, does anything at all.
  */
+@ResourceLock(value = RollerIT.GLOBAL_CONFIG, mode = ResourceAccessMode.READ)
 class MultiUserJourneyIT extends RollerIT {
 
     private static final String CREATE_USER = "/roller-ui/admin/createUser.rol";

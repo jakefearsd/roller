@@ -29,6 +29,8 @@ import java.util.regex.Pattern;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceAccessMode;
+import org.junit.jupiter.api.parallel.ResourceLock;
 
 import static com.codeborne.selenide.Condition.exist;
 import static com.codeborne.selenide.Condition.text;
@@ -53,6 +55,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  * the browser into a 3xx/4xx chain would trip {@code BrowserHealth}'s
  * teardown checks for responses the test asked for on purpose.
  */
+@ResourceLock(value = RollerIT.GLOBAL_CONFIG, mode = ResourceAccessMode.READ)
 class RedirectIT extends RollerIT {
 
     private static final String CREATE_WEBLOG = "/roller-ui/createWeblog.rol";

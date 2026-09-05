@@ -28,6 +28,8 @@ import org.apache.roller.it.support.BrowserHealth;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceAccessMode;
+import org.junit.jupiter.api.parallel.ResourceLock;
 
 import static com.codeborne.selenide.Condition.exist;
 import static com.codeborne.selenide.Condition.text;
@@ -54,6 +56,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * own field-filling), so exercising it is naturally a direct POST, matching
  * the {@code PageIT} precedent for deliberate non-2xx/JSON assertions.
  */
+@ResourceLock(value = RollerIT.GLOBAL_CONFIG, mode = ResourceAccessMode.READ)
 class ContactFormIT extends RollerIT {
 
     private static final String CONTACT_ENDPOINT = "/roller-ui/rendering/contact.rol";
