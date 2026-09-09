@@ -65,6 +65,14 @@ class ItCiWorkflowTest {
     private static final Path APP_POM = REPO_ROOT.resolve("app/pom.xml");
 
     /**
+     * An apt-get install line naming the webp package. Matched loosely on
+     * purpose -- the assertion is "CI installs cwebp", not "CI spells its
+     * install step exactly this way".
+     */
+    private static final Pattern WEBP_INSTALL =
+            Pattern.compile("apt-get\\s+install[^\\n]*\\bwebp\\b");
+
+    /**
      * CI must turn class-parallelism OFF, not merely turn it down.
      *
      * <p>Turning it down does nothing, and that is the whole finding here.
@@ -187,6 +195,38 @@ class ItCiWorkflowTest {
                 "the upload must run on failure, which is the only run whose evidence matters");
     }
 
+    /**
+     * CI must install {@code cwebp}, because the three tests that cover the
+     * WebP rendition path feature-detect it and SKIP when it is absent.
+     *
+     * <p>This is the silent-erosion shape the class already tests for
+     * elsewhere, arriving through an assumption rather than a flag.
+     * {@code CwebpEncoder} shells out to the {@code cwebp} binary and is
+     * deliberately feature-detected, so a developer machine without it still
+     * builds -- that part is by design. What was not by design is that
+     * {@code Dockerfile} installs {@code webp} (Debian's name for the
+     * package carrying {@code cwebp}) while no CI job did, so
+     * {@code CwebpEncoderTest}, {@code MediaFileTest} and
+     * {@code MediaResourceServletRenderingTest} skipped their WebP arms on
+     * every single run and the build reported "Skipped: 3" to nobody. A
+     * shipped production code path had no automated coverage that ever
+     * executed anywhere.
+     *
+     * <p>An assumption that never holds is worse than a missing test: a
+     * missing test is visible in a coverage report, while this one reports
+     * as a passing class.
+     */
+    @Test
+    void ciInstallsTheCwebpBinaryTheWebpTestsFeatureDetect() throws IOException {
+        String buildJob = buildTestJob(Files.readString(MAIN_WORKFLOW));
+
+        assertTrue(WEBP_INSTALL.matcher(buildJob).find(),
+                "the build-test job must apt-get install webp before running the unit suite. "
+                        + "Without it CwebpEncoder.isAvailable() is false on the runner and the "
+                        + "three WebP tests skip silently while the job stays green -- so the "
+                        + "rendition path the Dockerfile ships is covered nowhere that runs.");
+    }
+
     // ------------------------------------------------------------------ parsing
 
     private static int localDefaultParallelism() throws IOException {
@@ -199,11 +239,20 @@ class ItCiWorkflowTest {
         return Integer.parseInt(m.group(1));
     }
 
+    /** The build-test job's block, so an assertion cannot pass on the IT job's text. */
+    private static String buildTestJob(String workflow) {
+        return jobBlock(workflow, "build-test");
+    }
+
     /** The integration-test job's block, so an assertion cannot pass on some other job's text. */
     private static String integrationTestJob(String workflow) {
-        int start = workflow.indexOf("\n  integration-test:");
+        return jobBlock(workflow, "integration-test");
+    }
+
+    private static String jobBlock(String workflow, String job) {
+        int start = workflow.indexOf("\n  " + job + ":");
         if (start < 0) {
-            return fail("no integration-test job in " + MAIN_WORKFLOW);
+            return fail("no " + job + " job in " + MAIN_WORKFLOW);
         }
         Matcher next = Pattern.compile("\n  [a-zA-Z][a-zA-Z0-9_-]*:").matcher(workflow);
         int end = workflow.length();

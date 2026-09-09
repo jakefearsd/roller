@@ -87,6 +87,15 @@ jobs:
           distribution: 'zulu'
           cache: maven
 
+      # CwebpEncoder shells out to this binary and is feature-detected, so
+      # its absence does not fail anything -- it makes three tests SKIP
+      # (CwebpEncoderTest, MediaFileTest, MediaResourceServletRenderingTest),
+      # silently, while the job stays green. The Dockerfile installs the same
+      # package, so without this the WebP rendition path shipped to production
+      # had no automated coverage that ever executed. Pinned by ItCiWorkflowTest.
+      - name: Install cwebp (WebP renditions)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends webp
+
       - name: Build Roller and run JUnit Tests
         run: mvn -V -ntp install
 
