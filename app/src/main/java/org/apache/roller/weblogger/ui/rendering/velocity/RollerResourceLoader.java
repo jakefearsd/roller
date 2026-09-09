@@ -139,9 +139,19 @@ public class RollerResourceLoader extends ResourceLoader {
 	}
 
 	/**
-	 * Files loaded by this resource loader are not reloadable here, as they are
-	 * stored in custom themes and there is no way velocity can trigger a
-	 * reload.
+	 * Always false: this loader has no timestamp to compare against, because
+	 * a custom template is a database row reached by name and nothing here
+	 * records when it last changed.
+	 *
+	 * <p><b>This answer is what forces {@code resource.loader.roller.cache}
+	 * to stay false in velocity.properties, and the two may only ever change
+	 * together.</b> A constant false means "never stale", so with caching on
+	 * Velocity would reuse the first parse tree it built for the life of the
+	 * JVM and editing a custom template would silently do nothing until a
+	 * restart. {@code ThemeResourceLoader} told the same lie and had the same
+	 * cache restriction until it was taught to report the theme's real disk
+	 * timestamp; enabling this cache means doing that work here first.
+	 * {@code LoaderCachingContractTest} fails the build if the pairing breaks.
 	 * 
 	 * @see org.apache.velocity.runtime.resource.loader.ResourceLoader#isSourceModified(org.apache.velocity.runtime.resource.Resource)
 	 */
@@ -151,7 +161,8 @@ public class RollerResourceLoader extends ResourceLoader {
 	}
 
 	/**
-	 * Defaults to return 0.
+	 * Always 0, i.e. "no timestamp available"; see
+	 * {@link #isSourceModified(Resource)} for why that constrains caching.
 	 * 
 	 * @see org.apache.velocity.runtime.resource.loader.ResourceLoader#getLastModified(org.apache.velocity.runtime.resource.Resource)
 	 */
