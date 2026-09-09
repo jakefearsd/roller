@@ -238,13 +238,32 @@ real tier into that same static).
   (`jacoco.line.minimum` / `jacoco.branch.minimum`, plus a PACKAGE rule for
   `ui.rendering.*`). Floors only ever move up. Raise them after each stage —
   **but "raise" means "raise where there is slack", not "raise all three".**
-  Post-W2 the BUNDLE LINE floor is 0.8700 against a measured 0.8705, i.e. it
-  is already binding to within a rounding error, and pushing it higher just
-  means an unrelated change fails the build for the one uncovered line it
-  happened to add. It was therefore left alone while BRANCH went 0.7800 →
-  0.7900 and the `ui.rendering.*` PACKAGE LINE rule went 0.55 → 0.60 (binding
-  package: `velocity`, 0.6190). Coverage of *new* work is the diff gate's job
-  below, not this floor's.
+  Post-W2 the BUNDLE LINE floor sat at 0.8700 against a measured 0.8705 and
+  was deliberately left alone as binding-to-a-rounding-error, while BRANCH
+  went 0.7800 → 0.7900 and the `ui.rendering.*` PACKAGE LINE rule went
+  0.55 → 0.60. **That reasoning expired and the floors were re-measured on
+  2026-09-08: LINE 0.9142, BRANCH 0.8458, and in the PACKAGE rule velocity
+  0.8806 / servlets 0.8571 / rendering 0.9447.** All three had drifted into
+  enforcing nothing — the PACKAGE rule had 23 points of slack — so they now
+  stand at **0.9100 / 0.8400 / 0.80**. Two things to know before touching
+  them again. **Set the floor a few tenths under measured, never at it**:
+  the margin is the whole difference between a ratchet and a tripwire that
+  an unrelated change sets off for the one uncovered line it added. And
+  **the PACKAGE rule's binding package is whatever its `<includes>` names,
+  not the lowest number in the report** — `ui.rendering.filters` measures
+  lower (0.8333) but is not included, and at 18 lines a single uncovered
+  line moves it 5.6 points, far too volatile to hang a gate on; the real
+  constraint is `servlets` at 0.8571 across 693 lines. Coverage of *new*
+  work is the diff gate's job below, not this floor's.
+  One measurement caveat now that CI installs `cwebp` (see below): the same
+  tree measures **differently depending on whether `cwebp` is on `PATH`**,
+  because the three WebP tests skip without it. Measured both ways on
+  2026-09-09 — without: LINE 0.9142 / BRANCH 0.8458; with: 0.9158 / 0.8487.
+  The floors above are set against the **without** numbers on purpose, that
+  being the pessimistic end, so a bare dev box and CI both clear them. The
+  gap is only ~0.2 points, but it runs the wrong way for a ratchet: raise a
+  floor from a CI-measured number and it can pass CI while failing on a
+  laptop that has no `cwebp`.
 - Changed lines need ~90% coverage: `bin/check-diff-coverage.sh [base-ref]`
   (default `HEAD~1`; needs `pip install diff_cover` and a fresh
   `mvn -pl app jacoco:report`). CI enforces this on every push/PR.
@@ -453,7 +472,18 @@ seconds total.
 `.github/workflows/main.yml` is split by cost, not by topic.
 
 - **Every push and PR** runs `build-test` only: the unit suite plus the
-  diff-coverage gate. ~3 minutes.
+  diff-coverage gate. ~3 minutes. It **installs `cwebp`** (the `webp`
+  package) before building, and that step is load-bearing rather than
+  convenience: `CwebpEncoder` shells out to that binary and is
+  feature-detected, so its absence does not fail anything — it makes
+  `CwebpEncoderTest`, `MediaFileTest` and `MediaResourceServletRenderingTest`
+  **skip their WebP arms silently** while the job stays green. The
+  `Dockerfile` installs the same package, so until 2026-09-09 the WebP
+  rendition path shipped to production had no automated coverage that
+  executed anywhere. `ItCiWorkflowTest` pins the step. **An assumption that
+  never holds is worse than a missing test** — a missing test shows up in a
+  coverage report, while this one reported as a passing class; if you add
+  another `assumeTrue` on a binary, make CI provide it in the same commit.
 - **Nightly (04:00 UTC), on a PR, or on demand** runs `integration-test`:
   the browser ITs, ~16 minutes. They are deliberately *not* on the push
   path — paying 16 minutes per commit turned a re-runnable flake (the
@@ -1265,6 +1295,29 @@ excused whatever its type.
   that hierarchy**, for the same reason it is not a sibling in the sentence
   above: its `get` takes no timestamp because it has no per-weblog expiry to
   apply, and inheriting one would be a behavioural change.
+- **A Velocity resource loader that cannot report modification may not be
+  cached, and the two settings may only ever change together.** With
+  `cache=true` Velocity reuses a parse tree whenever `isSourceModified` says
+  "not stale", so a loader answering a constant `false` pins every template it
+  ever loaded for the life of the JVM: editing one does nothing until a
+  restart, with no error anywhere, on the screen whose whole purpose is
+  editing templates. `ThemeResourceLoader` used to answer that constant, which
+  is *why* `resource.loader.theme.cache` had to be false — and why every blog
+  page re-read and re-parsed its theme on every request in production. It was
+  made honest first (it reports the theme's real disk timestamp, and reports
+  `0` → "modified" when it cannot tell, the fail-safe direction), and only
+  then cached. **`RollerResourceLoader` is the half that did not change**: it
+  serves CUSTOM templates from database rows with no timestamp, still answers
+  a constant `false`, and so `resource.loader.roller.cache` must stay
+  `false`. Enabling it means teaching that loader to report a real timestamp
+  first. `LoaderCachingContractTest` pins the pairing behaviourally — it
+  probes every *cached* Roller loader with a maximally stale resource and
+  fails if one answers "unmodified" — so a new loader arriving with the same
+  trap is caught without anyone updating a list. Loaders that genuinely need
+  a collaborator to answer (`webapp`, which asks the `ServletContext` for a
+  real file) are named in that test with their reason, the
+  `QualityGatePomTest` convention; a new unprobeable cached loader fails
+  until someone decides which list it belongs in.
 - **Velocity in this codebase is lenient, and that is a live hazard whenever
   you delete a Java member.** `velocity.properties` sets no
   `runtime.references.strict` and turns off `runtime.log.invalid.reference`.
