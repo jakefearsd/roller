@@ -310,9 +310,17 @@
         <%-- Registered once, with the frame. The shell announces itself when
              its document is ready, so the first push waits for that rather
              than guessing -- and because the ensure/push pair below is
-             idempotent, re-entering preview mode costs nothing. --%>
+             idempotent, re-entering preview mode costs nothing.
+
+             event.source is checked in addition to event.origin: two Roller
+             tabs open on the same origin each have their own iframe, and the
+             origin check alone cannot tell one tab's shell from another's --
+             only the frame this listener itself created may speak to it. --%>
         window.addEventListener('message', function (event) {
             if (event.origin !== window.location.origin) {
+                return;
+            }
+            if (event.source !== rollerPreview.frame.contentWindow) {
                 return;
             }
             if (event.data && event.data.type === 'roller-preview-ready') {

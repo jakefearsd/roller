@@ -545,10 +545,10 @@ table.mm_table_actions td {
    scale (12px, .08em tracking, uppercase, 600 weight, --ink-soft) instead
    of Bootstrap's/the browser's oversized h3/h4 defaults. This targets the
    header text itself regardless of what markup rides inside a
-   .card-header: plain text (the newsletter and entry-revisions cards),
-   h4.card-title (EntryEditor's Summary panel, MediaFileAdd, TemplateEdit,
-   PageEdit -- EntryEdit's own panels are .editor-drawer now, and its
-   Plugins card was deleted with the plugin it held), or
+   .card-header: plain text, or h4.card-title (MediaFileAdd, TemplateEdit --
+   EntryEdit/EntryEditor's own panels are all .editor-box/.editor-drawer now,
+   the newsletter and revisions boxes and the Summary drawer included, and
+   the Plugins card was deleted with the plugin it held), or
    h3.setup-section-title (Setup.jsp) -- so any heading dropped into a
    card header inherits the quiet treatment instead of reintroducing its
    element's own default size. .section-head is the same role applied to
@@ -650,10 +650,13 @@ table.mm_table_actions td {
 /* ---- Entry editor: writing surface + publish rail ----
    The approved card is docs/design/editor/editor-writing-surface.html. The
    main column carries title/permalink/editor; a 252px rail carries Publish,
-   Organize, the SEO drawer, and (below the form, but in the
-   same grid column) the newsletter and revisions cards. The form itself is
-   display:contents so those cards -- which hold their own <form>s and
-   cannot nest inside #entry -- still place into the rail's column. */
+   Organize, the SEO drawer, and (below the form, but in the same grid
+   column) the newsletter and revisions boxes and the quiet delete link --
+   all .editor-box/.rail-group-label, the same shape as the boxes inside the
+   form, so the rail reads as one continuous column rather than boxes then
+   cards then a link. The form itself is display:contents so those boxes --
+   which hold their own <form>s and cannot nest inside #entry -- still place
+   into the rail's column. */
 
 .editor-grid {
     display: grid;
@@ -912,6 +915,13 @@ table.mm_table_actions td {
 
 .editor-drawer-body {
     padding-top: 10px;
+}
+
+/* The Summary drawer sits in the main column, directly under the editor's
+   own status line -- unlike the SEO drawer, which is inside an .editor-box
+   in the rail and inherits that box's own top padding. */
+.editor-main > .editor-drawer {
+    margin: 14px 0 0;
 }
 
 /* Quiet destructive action: a text link, not a red button. Shared -- the

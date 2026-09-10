@@ -1,0 +1,187 @@
+<!-- @dsCard group="Editor" name="Markdown surface" subtitle="Toolbar, Write/Split/Preview, status line, guide" -->
+<style>
+  .ms-card * { margin: 0; padding: 0; box-sizing: border-box; }
+  .ms-card { display: flex; flex-direction: column; gap: 24px; font-family: "IBM Plex Sans", system-ui, sans-serif; }
+  .ms-panel { position: relative; border-radius: 6px; padding: 24px 28px; border: 1px solid var(--line);
+    background: var(--paper); color: var(--ink); overflow: hidden; }
+  .ms-light { --paper:#F7F9F9; --surface:#FFFFFF; --ink:#17262A; --ink-soft:#5A6E72; --line:#DCE4E4;
+    --accent:#0F6E68; --accent-quiet:#E3F0EE; --good:#2F7D4F; --bad:#A33B2E; --focus:#2AA198; }
+  .ms-dark  { --paper:#131C1C; --surface:#1A2626; --ink:#DCE7E5; --ink-soft:#8FA5A2; --line:#2A3838;
+    --accent:#4FB3AA; --accent-quiet:#1E3230; --good:#6FBF8F; --bad:#D0705F; --focus:#2AA198; }
+  .ms-mode-label { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft);
+    font-weight: 600; margin-bottom: 18px; }
+
+  /* weblog identity strip -- so the card reads as "Coastal Guides", not a
+     generic form. */
+  .ms-weblog { display: flex; align-items: baseline; gap: 8px; margin-bottom: 14px; }
+  .ms-weblog .name { font-family: "IBM Plex Serif", Georgia, serif; font-size: 16px; font-weight: 600; }
+  .ms-weblog .entry { font-size: 12px; color: var(--ink-soft); font-family: "IBM Plex Mono", ui-monospace, monospace; }
+
+  .ms-surface { border: 1px solid var(--line); border-radius: 6px; background: var(--surface); overflow: hidden; }
+
+  /* toolbar row */
+  .ms-toolbar { display: flex; align-items: center; gap: 2px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  .ms-tool { width: 26px; height: 24px; border-radius: 4px; display: grid; place-items: center;
+    color: var(--ink-soft); font-size: 12px; font-weight: 600; }
+  .ms-tool.on { background: var(--accent-quiet); color: var(--accent); }
+  .ms-tool-sep { width: 1px; height: 18px; background: var(--line); margin: 0 4px; }
+
+  /* Write / Split / Preview segmented control */
+  .ms-seg { margin-left: auto; display: inline-flex; border: 1px solid var(--line); border-radius: 99px; overflow: hidden; }
+  .ms-seg span { padding: 4px 10px; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--ink-soft); }
+  .ms-seg span.on { background: var(--accent-quiet); color: var(--ink); }
+
+  /* split pane: markdown source | theme-rendered preview */
+  .ms-split { display: grid; grid-template-columns: 1fr 1fr; min-height: 220px; }
+  .ms-write { padding: 14px 16px; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 13px;
+    line-height: 1.7; color: var(--ink); }
+  .ms-write .md { color: var(--accent); }
+  .ms-write .dim { color: var(--ink-soft); }
+  .ms-preview { padding: 16px 18px; border-left: 1px solid var(--line); background: var(--paper);
+    font-family: "IBM Plex Serif", Georgia, serif; }
+  .ms-preview h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; color: var(--ink); }
+  .ms-preview p { font-family: "IBM Plex Sans", system-ui, sans-serif; font-size: 13px; line-height: 1.6;
+    color: var(--ink); margin-bottom: 8px; }
+  .ms-preview .cap { font-family: "IBM Plex Sans", system-ui, sans-serif; font-size: 11px; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--ink-soft); margin-bottom: 4px; }
+  .ms-preview .fig { border: 1px solid var(--line); border-radius: 4px; background: var(--accent-quiet);
+    height: 46px; display: grid; place-items: center; color: var(--accent); font-size: 11px; font-weight: 600;
+    margin-top: 8px; }
+
+  /* status line */
+  .ms-status { display: flex; justify-content: space-between; gap: 16px; padding: 6px 12px;
+    border-top: 1px solid var(--line); font-size: 11px; font-weight: 600; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--ink-soft); }
+  .ms-status .saved { color: var(--good); }
+
+  /* the writing guide, docked as a peek along the panel's right edge --
+     depicts the offcanvas without a full takeover of the card. */
+  .ms-guide { position: absolute; top: 24px; bottom: 24px; right: -132px; width: 176px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 6px 0 0 6px;
+    box-shadow: -6px 0 16px rgba(0,0,0,.12); padding: 14px 16px; transition: right .2s ease; }
+  .ms-panel:hover .ms-guide, .ms-panel.ms-guide-open .ms-guide { right: -8px; }
+  .ms-guide h4 { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--ink); margin-bottom: 10px; }
+  .ms-guide .cap { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--ink-soft); margin: 10px 0 4px; }
+  .ms-guide .cap:first-of-type { margin-top: 0; }
+  .ms-guide .row { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink); padding: 2px 0; }
+  .ms-guide .row code { font-family: "IBM Plex Mono", ui-monospace, monospace; color: var(--accent); }
+  .ms-guide-tab { position: absolute; top: 24px; right: 168px; writing-mode: vertical-rl; text-orientation: mixed;
+    font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft);
+    background: var(--surface); border: 1px solid var(--line); border-right: none; border-radius: 4px 0 0 4px;
+    padding: 8px 4px; }
+
+  .ms-note { margin-top: 4px; padding: 12px 16px; background: var(--accent-quiet); border-radius: 6px;
+    font-size: 13px; color: var(--ink); max-width: 62ch; }
+
+  @media (max-width: 760px) {
+    .ms-split { grid-template-columns: 1fr; }
+    .ms-preview { border-left: none; border-top: 1px solid var(--line); }
+  }
+</style>
+<div class="ms-card">
+  <div class="ms-panel ms-light">
+    <p class="ms-mode-label">Light</p>
+    <div class="ms-weblog">
+      <span class="name">Coastal Guides</span>
+      <span class="entry">harbor-notes/entry/field-notes-from-the-coast</span>
+    </div>
+    <div class="ms-surface">
+      <div class="ms-toolbar">
+        <span class="ms-tool on">B</span><span class="ms-tool"><i>I</i></span><span class="ms-tool">H</span>
+        <span class="ms-tool-sep"></span>
+        <span class="ms-tool">“”</span><span class="ms-tool">•</span><span class="ms-tool">⛓</span>
+        <span class="ms-tool">▣</span><span class="ms-tool-sep"></span><span class="ms-tool">[+]</span>
+        <div class="ms-seg"><span>Write</span><span class="on">Split</span><span>Preview</span></div>
+      </div>
+      <div class="ms-split">
+        <div class="ms-write">
+          <p><span class="md">## </span>What the tide left</p>
+          <p>&nbsp;</p>
+          <p>The fog burned off at seven, which the forecast promised</p>
+          <p>and the harbor ignored.</p>
+          <p>&nbsp;</p>
+          <p><span class="md">[gallery </span><span class="dim">dir="harbor-cottage" row="3"</span><span class="md">]</span></p>
+        </div>
+        <div class="ms-preview">
+          <div class="cap">Harbor Notes</div>
+          <h3>What the tide left</h3>
+          <p>The fog burned off at seven, which the forecast promised and the harbor ignored.</p>
+          <div class="fig">gallery · 3 photos</div>
+        </div>
+      </div>
+      <div class="ms-status">
+        <span>142 words · 1 min read</span>
+        <span class="saved">Saved</span>
+      </div>
+    </div>
+    <div class="ms-guide-tab">Guide</div>
+    <div class="ms-guide">
+      <h4>Writing guide</h4>
+      <div class="cap">Markdown</div>
+      <div class="row"><code>**bold**</code><span>bold</span></div>
+      <div class="row"><code>## </code><span>Heading</span></div>
+      <div class="cap">Shortcodes</div>
+      <div class="row"><code>[gallery]</code><span>grid</span></div>
+      <div class="row"><code>[map]</code><span>Leaflet</span></div>
+      <div class="cap">Keyboard</div>
+      <div class="row"><code>Ctrl+S</code><span>Save</span></div>
+      <div class="row"><code>Ctrl+Enter</code><span>Publish</span></div>
+    </div>
+  </div>
+  <div class="ms-panel ms-dark">
+    <p class="ms-mode-label">Dark</p>
+    <div class="ms-weblog">
+      <span class="name">Coastal Guides</span>
+      <span class="entry">harbor-notes/entry/field-notes-from-the-coast</span>
+    </div>
+    <div class="ms-surface">
+      <div class="ms-toolbar">
+        <span class="ms-tool on">B</span><span class="ms-tool"><i>I</i></span><span class="ms-tool">H</span>
+        <span class="ms-tool-sep"></span>
+        <span class="ms-tool">“”</span><span class="ms-tool">•</span><span class="ms-tool">⛓</span>
+        <span class="ms-tool">▣</span><span class="ms-tool-sep"></span><span class="ms-tool">[+]</span>
+        <div class="ms-seg"><span>Write</span><span class="on">Split</span><span>Preview</span></div>
+      </div>
+      <div class="ms-split">
+        <div class="ms-write">
+          <p><span class="md">## </span>What the tide left</p>
+          <p>&nbsp;</p>
+          <p>The fog burned off at seven, which the forecast promised</p>
+          <p>and the harbor ignored.</p>
+          <p>&nbsp;</p>
+          <p><span class="md">[gallery </span><span class="dim">dir="harbor-cottage" row="3"</span><span class="md">]</span></p>
+        </div>
+        <div class="ms-preview">
+          <div class="cap">Harbor Notes</div>
+          <h3>What the tide left</h3>
+          <p>The fog burned off at seven, which the forecast promised and the harbor ignored.</p>
+          <div class="fig">gallery · 3 photos</div>
+        </div>
+      </div>
+      <div class="ms-status">
+        <span>142 words · 1 min read</span>
+        <span>Unsaved changes</span>
+      </div>
+    </div>
+    <div class="ms-guide-tab">Guide</div>
+    <div class="ms-guide">
+      <h4>Writing guide</h4>
+      <div class="cap">Markdown</div>
+      <div class="row"><code>**bold**</code><span>bold</span></div>
+      <div class="row"><code>## </code><span>Heading</span></div>
+      <div class="cap">Shortcodes</div>
+      <div class="row"><code>[gallery]</code><span>grid</span></div>
+      <div class="row"><code>[map]</code><span>Leaflet</span></div>
+      <div class="cap">Keyboard</div>
+      <div class="row"><code>Ctrl+S</code><span>Save</span></div>
+      <div class="row"><code>Ctrl+Enter</code><span>Publish</span></div>
+    </div>
+    <p class="ms-note">The guide is a Bootstrap offcanvas -- shown here docked along the panel's
+      right edge (hover a panel, or see the "Guide" tab) rather than as a separate screenshot, since
+      it slides over the same surface it documents. Split mode renders the weblog's OWN theme, not a
+      generic preview -- the panel on the right is styled prose, not a markdown-to-HTML dump.</p>
+  </div>
+</div>

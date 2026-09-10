@@ -130,6 +130,23 @@ convention as the twelve preview cards; treat it as the worked example for
 "one writing surface, many settings" admin layouts, and see signature move 4
 (WEIGHT, NOT SIZE) above for the rule its title field demonstrates.
 
+## Shipped reference card: the Markdown surface (Editor wave)
+
+`docs/design/editor/editor-markdown-surface.html` is the approved card for
+the CodeMirror rebuild of the editor's writing surface itself (Package A of
+the Editor wave) — drawn alongside the JSP/JS work rather than ahead of it,
+the same convention as the editor rail card above. It depicts the toolbar row,
+the Write/Split/Preview segmented control, a split pane whose right half is
+the weblog's OWN theme rendering (not a generic markdown-to-HTML dump — the
+whole reason the live preview posts through the server), the status line
+(word count/reading time on the left, save state on the right), and the
+writing guide docked as a peek along the panel's right edge, since a
+Bootstrap offcanvas slides in over the same surface it documents rather than
+living beside it. Same `@dsCard` header convention and light/dark panel pair
+as every other card here; this is the companion piece to the editor rail
+card above — that one is the rail's shape, this one is the surface it sits
+next to.
+
 ## Cards drawn ahead of a rebuild (Consistency Pass, 2026-08-10)
 
 Two screens were too far off-spec to fix by restyling, and the repo's rule is

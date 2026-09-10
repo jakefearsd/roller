@@ -1,4 +1,4 @@
-import { EditorState, Compartment, Prec } from '@codemirror/state';
+import { EditorState, Prec } from '@codemirror/state';
 import { EditorView, keymap, placeholder as placeholderExt, drawSelection,
          dropCursor, highlightActiveLine, ViewPlugin, Decoration } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';

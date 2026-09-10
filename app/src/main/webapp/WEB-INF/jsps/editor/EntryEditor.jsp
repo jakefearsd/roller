@@ -36,25 +36,17 @@
 
 <jsp:include page="/WEB-INF/jsps/editor/EditorSurface.jsp"/>
 
-<%-- summary --%>
+<%-- summary: a quiet drawer under the editor, same convention as the SEO
+     drawer in the rail (.editor-drawer/.editor-drawer-body) but with no
+     enclosing .editor-box -- this one sits in the main column, not the
+     rail. --%>
 
-<div class="card" id="panel-summary">
-    <div class="card-header">
-
-        <h4 class="card-title">
-            <a href="#" class="collapsed"
-               data-bs-toggle="collapse" data-bs-target="#collapseSummaryEditor">
-                <spring:message code="weblogEdit.summary"/>
-            </a>
-        </h4>
-
-    </div>
-    <div id="collapseSummaryEditor" class="collapse">
-        <div class="card-body">
-
-            <textarea name="bean.summary" id="edit_summary" rows="10" class="col-sm-12">${fn:escapeXml(bean.summary)}</textarea>
-
-        </div>
+<a class="editor-drawer collapsed" data-bs-toggle="collapse" data-bs-target="#collapseSummaryEditor" href="#">
+    <spring:message code="weblogEdit.summary"/>
+</a>
+<div id="collapseSummaryEditor" class="collapse">
+    <div class="editor-drawer-body">
+        <textarea name="bean.summary" id="edit_summary" rows="10" class="col-sm-12">${fn:escapeXml(bean.summary)}</textarea>
     </div>
 </div>
 

@@ -175,7 +175,7 @@ body.qj :focus-visible { outline: 2px solid var(--qj-focus); outline-offset: 2px
     padding: 0;
 }
 .qj-nav a { color: var(--qj-ink-soft); text-decoration: none; padding: .1rem 0; }
-/* .selected is what #showWeblogCategoryLinksList emits; the a.active half of
+/* .selected is what the showWeblogCategoryLinksList macro emits; the a.active half of
  * this selector was written for markup no template has ever produced. */
 .qj-nav li.selected a { color: var(--qj-accent); box-shadow: inset 0 -2px var(--qj-accent); }
 
@@ -257,7 +257,7 @@ body.qj :focus-visible { outline: 2px solid var(--qj-focus); outline-offset: 2px
 
 /* Entry-to-entry navigation on the permalink: two halves of a rule, older on
  * the left, newer on the right, each with a caps label over the neighbour's
- * real title. This replaces #showNextPrevEntriesControl's "&laquo; a | Main |
+ * real title. This replaces the showNextPrevEntriesControl macro's "&laquo; a | Main |
  * b &raquo;" strip -- see permalink.vm for why the theme renders its own. */
 .qj-pager {
     max-width: 46rem;
@@ -267,7 +267,7 @@ body.qj :focus-visible { outline: 2px solid var(--qj-focus); outline-offset: 2px
 }
 /* The two-up grid is scoped to qj-steps, not qj-pager, on purpose: both
  * templates share the qj-pager container, and if the grid lived there any
- * template still emitting #showNextPrevEntriesControl's inline "a | Main | b"
+ * template still emitting the showNextPrevEntriesControl macro's inline "a | Main | b"
  * strip would have its pipes dealt into grid cells and stack vertically. */
 .qj-steps {
     display: grid;
@@ -426,7 +426,7 @@ body.qj :focus-visible { outline: 2px solid var(--qj-focus); outline-offset: 2px
 .qj-search-error { margin: 0 0 1.5rem; color: var(--qj-ink-soft); }
 
 /* ---- contact form & newsletter subscribe ----
- * #showAudienceAssets/#showSubscribeForm inject these forms unscoped
+ * the showAudienceAssets/showSubscribeForm macros inject these forms unscoped
  * (form.className = 'contact-form' / 'newsletter-subscribe'); the body.qj
  * prefix here outranks that head-level style block by specificity so the
  * theme's own card treatment wins without touching the shared macro (same
@@ -519,7 +519,7 @@ body.qj .audience-message { margin-top: .75rem; font-size: .90625rem; color: var
 }
 
 /* ---- search results page ----
- * #showWeblogSearchAgainForm emits an unclassed <input type="text"
+ * the showWeblogSearchAgainForm macro emits an unclassed <input type="text"
  * class="text">, a <select> and a submit button straight into the theme, so
  * without these three rules the journal's search page showed raw OS form
  * controls in the middle of a serif reading layout. Ported from
@@ -561,7 +561,7 @@ body.qj .audience-message { margin-top: .75rem; font-size: .90625rem; color: var
 }
 
 /* ---- newsletter prompt ----
- * #showSubscribeForm drops this <p> into every theme's footer with no styling
+ * the showSubscribeForm macro drops this <p> into every theme's footer with no styling
  * of its own; it takes the same caps-label role the audience forms' own
  * labels already carry in this file. */
 body.qj .newsletter-prompt {
@@ -623,6 +623,6 @@ body.qj .jgrid { margin: 1.75rem 0; }
 body.qj .video-figure { margin: 1.75rem 0; }
 body.qj .video-embed { border-radius: var(--qj-radius); overflow: hidden; }
 
-/* #showNextPrevSearchControl's hit count, formerly an <h3> and now a status
+/* the showNextPrevSearchControl macro's hit count, formerly an <h3> and now a status
  * paragraph -- it needs the size the heading used to give it. */
 body.qj .search-summary { margin: 0 0 .75rem; font-size: .75rem; color: var(--qj-ink-soft); }

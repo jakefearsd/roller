@@ -533,13 +533,17 @@ app/pom.xml -- update both together.
 // then. On a public page it still runs exactly once, from the call at the
 // bottom of this module.
 async function rollerInitGalleries(root) {
+  // Tear the old lightbox down BEFORE the .jgrid guard, not after: the live
+  // preview can swap in a fragment whose last gallery was just deleted, and
+  // if the early return below ran first the old lightbox would be left
+  // bound to nodes this swap already removed from the document.
+  if (window.rollerGalleryLightbox) {
+    window.rollerGalleryLightbox.destroy();
+    window.rollerGalleryLightbox = null;
+  }
   if (!(root || document).querySelector('.jgrid')) { return; }
   const { default: PhotoSwipeLightbox } =
       await import('$url.site/webjars/photoswipe/5.4.3/dist/photoswipe-lightbox.esm.min.js');
-  // One lightbox binds every .jgrid on the page through the `gallery`
-  // SELECTOR, so a second init would leave the first one holding detached
-  // nodes and both would answer the same click. Tear the old one down first.
-  if (window.rollerGalleryLightbox) { window.rollerGalleryLightbox.destroy(); }
   const lightbox = new PhotoSwipeLightbox({
     gallery: '.jgrid',
     children: 'a',
@@ -712,6 +716,15 @@ function rollerInitMaps(root) {
     var queued = rollerLeafletQueue;
     rollerLeafletQueue = [];
     rollerBuildMaps(queued);
+  };
+  // A network hiccup or a blocked CDN request must not strand the state at
+  // 'loading' forever -- without this, every later map on the page (or a
+  // retry from the live preview) would queue behind a script that is never
+  // coming and never build anything. Reset to 'idle' and drop the queue so
+  // the next rollerInitMaps call starts a fresh load attempt.
+  script.onerror = function () {
+    rollerLeafletState = 'idle';
+    rollerLeafletQueue = [];
   };
   document.head.appendChild(script);
 }
@@ -1030,6 +1043,10 @@ function rollerPreviewScrollTo(fraction) {
 }
 window.addEventListener('message', function (event) {
   if (event.origin !== window.location.origin) { return; }
+  // The origin check alone cannot tell the editor tab that framed this
+  // document from any other same-origin tab that happens to be open; only
+  // our own parent may drive this shell.
+  if (event.source !== window.parent) { return; }
   var data = event.data || {};
   // A scroll carries no html: the editor sends one of these per animation
   // frame while the author scrolls, and re-rendering on each would be absurd.
