@@ -481,17 +481,16 @@ limitations under the License.
                  $(element).ready()/$().ready() forms -> $(document).ready().
                  All of them were in MediaFileSidebar.jsp except two $().ready()
                  in EntryEdit/PageEdit.
-                 jquery-ui 1.14.x ships jquery-patch.js for exactly this jQuery
-                 line, and jquery-validation 1.21.0 supports it; the browser ITs
-                 are what actually prove it, since BrowserHealth fails a page
-                 that logs a console error or throws. -->
+                 jquery-ui 1.14.x used to ship alongside this for its
+                 datepicker widget (Entries.jsp's sidebar date filters, Task
+                 B4) and its bundled jquery-patch.js, but head.jsp never
+                 loaded that patch file: jquery-validation 1.21.0 already
+                 runs against jQuery 4 without it, proven by the browser ITs
+                 (BrowserHealth fails a page that logs a console error or
+                 throws). jquery-ui is gone now: the datepicker was replaced
+                 by a native <input type="date">, and jquery-patch.js was
+                 never in the loaded set it would have needed to matter. -->
             <version>4.0.0</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.webjars</groupId>
-            <artifactId>jquery-ui</artifactId>
-            <version>1.14.2</version>
         </dependency>
 
         <dependency>

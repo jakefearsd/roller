@@ -174,6 +174,29 @@ class JspConsistencyTest {
                 "MediaFileView.jsp must have exactly one .selection-bar");
     }
 
+    /**
+     * Task B4: the Entries sidebar's date filters became native
+     * {@code <input type="date">} elements, and jQuery UI -- the datepicker
+     * widget that used to back them, and its only consumer anywhere in this
+     * admin UI -- is gone entirely. No JSP may call its API or reference its
+     * webjar, and head.jsp, which every admin page includes, must not load it.
+     */
+    @Test
+    void noJqueryUiAnywhere() throws IOException {
+        List<Path> allJsps = jsps().toList();
+        assertTrue(allJsps.size() > 20,
+                "Found too few JSPs -- the scan is not looking where it thinks it is.");
+
+        for (Path jsp : allJsps) {
+            String src = Files.readString(jsp, StandardCharsets.UTF_8);
+            assertFalse(src.contains("datepicker("), jsp + " still calls jQuery UI's datepicker()");
+            assertFalse(src.contains("jquery-ui"), jsp + " still references the jquery-ui webjar");
+        }
+
+        String head = Files.readString(JSPS.resolve("tiles/head.jsp"), StandardCharsets.UTF_8);
+        assertFalse(head.contains("jquery-ui"), "head.jsp still loads jquery-ui");
+    }
+
     private static int countOccurrences(String haystack, String needle) {
         int count = 0;
         int idx = 0;

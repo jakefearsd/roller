@@ -17,10 +17,7 @@
  */
 package org.apache.roller.weblogger.ui.controllers.editor;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.pojos.MediaFileFilter;
@@ -32,83 +29,18 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Tests for the search/filter beans behind the editor's list pages:
- * {@link EntriesBean} and {@link MediaFileSearchBean}.
+ * Tests for the search/filter bean behind the media list page,
+ * {@link MediaFileSearchBean}. {@link EntriesBean}, the Entries-list twin of
+ * this bean, has its own top-level {@link EntriesBeanTest}.
  *
- * <p>These are pure translation layers from form fields to query criteria, with
- * no business tier behind them — which makes them cheap to test exhaustively
+ * <p>This is a pure translation layer from form fields to query criteria, with
+ * no business tier behind it — which makes it cheap to test exhaustively
  * and easy to get subtly wrong. A mis-mapped filter silently returns the wrong
  * rows rather than failing, so every branch of the mapping is pinned here.
  */
 class QueryBeansTest {
-
-    @Nested
-    class EntriesBeanTest {
-
-        @Test
-        void datesAreParsedFromTheEditorsUsFormat() {
-            EntriesBean bean = new EntriesBean();
-            bean.setStartDateString("03/15/24");
-            bean.setEndDateString("04/20/24");
-
-            assertEquals("2024-03-15", format(bean.getStartDate()));
-            assertEquals("2024-04-20", format(bean.getEndDate()));
-        }
-
-        @Test
-        void anAbsentOrUnparseableDateBecomesNoBoundRatherThanAnError() {
-            // A null bound means "unbounded" to the search criteria; throwing
-            // here would break the list page on a typo.
-            EntriesBean bean = new EntriesBean();
-            assertNull(bean.getStartDate(), "No date typed means no lower bound");
-            assertNull(bean.getEndDate(), "No date typed means no upper bound");
-
-            bean.setStartDateString("");
-            bean.setEndDateString("");
-            assertNull(bean.getStartDate());
-            assertNull(bean.getEndDate());
-
-            bean.setStartDateString("garbage");
-            bean.setEndDateString("garbage");
-            assertNull(bean.getStartDate(), "A typo must not become a bogus bound");
-            assertNull(bean.getEndDate());
-        }
-
-        @Test
-        void tagsAreSplitOnWhitespace() {
-            EntriesBean bean = new EntriesBean();
-            bean.setTagsAsString("travel  food   ");
-
-            assertEquals(List.of("travel", "food"), bean.getTags());
-        }
-
-        @Test
-        void noTagFilterIsAnEmptyListRatherThanNull() {
-            // getTags() used to return null here, forcing its one caller
-            // (EntriesController, which feeds it straight into
-            // WeblogEntrySearchCriteria.setTags) to carry a null check on a
-            // collection. JPAWeblogEntryManagerImpl.getWeblogEntries already
-            // treats "tags == null" and "tags.isEmpty()" identically -- both
-            // skip the tag join entirely -- so an empty list means exactly
-            // what null used to mean: no tag filter at all.
-            assertEquals(List.of(), new EntriesBean().getTags());
-        }
-
-        @Test
-        void theListDefaultsToEverythingSortedByMostRecentlyEdited() {
-            EntriesBean bean = new EntriesBean();
-
-            assertEquals("ALL", bean.getStatus(),
-                    "The management list must show drafts and pending entries by default, "
-                            + "since those are what the author still has to act on");
-            assertEquals(org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria.SortBy.UPDATE_TIME,
-                    bean.getSortBy());
-            assertEquals(0, bean.getPage());
-        }
-    }
 
     @Nested
     class MediaFileSearchBeanTest {
@@ -261,10 +193,5 @@ class QueryBeansTest {
             bean.copyTo(filter);
             return filter.getOrder();
         }
-    }
-
-    private static String format(Date date) {
-        assertTrue(date != null, "Expected a parsed date");
-        return new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(date);
     }
 }

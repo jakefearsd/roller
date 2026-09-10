@@ -55,28 +55,14 @@
         <label for="entries_bean_startDateString" class="form-label">
             <spring:message code="weblogEntryQuery.label.startDate"/>
         </label>
-        <div class="input-group">
-
-            <input type="text" id="entries_bean_startDateString" name="bean.startDateString" value="${bean.startDateString}" placeholder="MM/DD/YY" readonly class="date-picker form-control"/>
-            <label for="entries_bean_startDateString" class="input-group-text">
-                <span class="bi bi-calendar" aria-hidden="true"></span>
-            </label>
-
-        </div>
+        <input type="date" id="entries_bean_startDateString" name="bean.startDateString" value="${bean.startDateString}" class="form-control"/>
     </div>
 
     <div class="mb-3">
         <label for="entries_bean_endDateString" class="form-label">
             <spring:message code="weblogEntryQuery.label.endDate"/>
         </label>
-        <div class="input-group">
-
-            <input type="text" id="entries_bean_endDateString" name="bean.endDateString" value="${bean.endDateString}" placeholder="MM/DD/YY" readonly class="date-picker form-control"/>
-            <label for="entries_bean_endDateString" class="input-group-text">
-                <span class="bi bi-calendar" aria-hidden="true"></span>
-            </label>
-
-        </div>
+        <input type="date" id="entries_bean_endDateString" name="bean.endDateString" value="${bean.endDateString}" class="form-control"/>
     </div>
 
     <br/>
@@ -102,15 +88,4 @@
     <button type="submit" class="btn btn-secondary"><spring:message code="weblogEntryQuery.button.query"/></button>
 
 </form>
-
-<script>
-
-    $(document).ready(function () {
-        // 'mm/dd/y' matches EntriesBean's strict MM/dd/yy parse -- jQuery UI's
-        // two-digit year token is lowercase 'y', not 'yy' (four-digit).
-        $("#entries_bean_startDateString").datepicker({dateFormat: 'mm/dd/y'});
-        $("#entries_bean_endDateString").datepicker({dateFormat: 'mm/dd/y'});
-    });
-
-</script>
 
