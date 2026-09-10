@@ -324,6 +324,14 @@
                 // throwing on every keystroke; the editor matters more than
                 // the safety net.
                 stopped = true;
+                return;
+            }
+            // A save that actually landed, for anything else on the page
+            // that cares -- today, the status line's word-count-and-save-state
+            // indicator (Task A8), which listens on the bar element rather
+            // than reaching into this module's internals.
+            if (bar) {
+                dispatch(bar, 'roller-draft:saved');
             }
         }
 

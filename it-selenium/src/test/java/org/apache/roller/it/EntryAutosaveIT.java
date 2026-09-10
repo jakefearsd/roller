@@ -29,6 +29,7 @@ import org.junit.jupiter.api.Test;
 import com.codeborne.selenide.Selenide;
 
 import static com.codeborne.selenide.Condition.exist;
+import static com.codeborne.selenide.Condition.text;
 import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
 import static com.codeborne.selenide.Selenide.executeJavaScript;
@@ -212,6 +213,32 @@ class EntryAutosaveIT extends RollerIT {
         reloadWithoutLeaveWarning();
         $("#entry").should(exist);
         $(DRAFT_BAR).shouldNotBe(visible);
+    }
+
+    /**
+     * The status line (Task A8), end to end: word count follows typing, the
+     * save-state span reads "Unsaved changes" as soon as something has
+     * changed, and reads "Draft saved locally" once {@code roller-draft.js}
+     * actually writes a snapshot -- the {@code roller-draft:saved} event this
+     * wave added to that module, consumed here rather than in a unit test
+     * because the event only exists once a real debounce has elapsed.
+     */
+    @Test
+    void typingUpdatesTheWordCountAndSaveStatus() {
+        String suffix = nonce();
+
+        openPath(ENTRY_ADD);
+        $("#entry").should(exist);
+        $("#editorStatusSave").shouldHave(text("Saved"));
+
+        $("input[name='bean.title']").setValue("Status Line " + suffix);
+        Editor.setText("one two three four five");
+
+        $("#editorStatusWords").shouldHave(text("5 words"));
+        $("#editorStatusSave").shouldHave(text("Unsaved changes"));
+
+        waitForDraftSnapshot(entryDraftKey("entryAdd", "new"));
+        $("#editorStatusSave").shouldHave(text("Draft saved locally"));
     }
 
     @Test

@@ -82,14 +82,20 @@ public class MessagePlaceholderContractTest {
     private static final Pattern PLACEHOLDER = Pattern.compile("\\{\\s*(\\d+)\\s*[,}]");
 
     /**
-     * The one message deliberately allowed to declare a placeholder that no
+     * Messages deliberately allowed to declare a placeholder that no
      * server-side call site fills: {@code EntryEdit.jsp} / {@code PageEdit.jsp}
      * hand the raw pattern to the browser in a {@code data-template} attribute
      * and {@code roller-draft.js} substitutes {@code &#123;0&#125;} itself with
      * the draft's local timestamp, which only the browser knows.
+     * {@code editor.status.words} (Task A8) is the same shape:
+     * {@code EntryEditor.jsp} hands it to the browser in
+     * {@code #editorStatus}'s {@code data-words-template} attribute and
+     * {@code rollerUpdateWordCount()} substitutes both {@code &#123;0&#125;}
+     * (word count) and {@code &#123;1&#125;} (reading minutes) itself --
+     * neither is known until {@code rollerEditor.stats()} runs in the browser.
      */
     private static final Set<String> CLIENT_SIDE_SUBSTITUTION = Set.of(
-            "weblogEdit.draftRecovery.message");
+            "weblogEdit.draftRecovery.message", "editor.status.words");
 
     /**
      * Empty, and it stays empty.

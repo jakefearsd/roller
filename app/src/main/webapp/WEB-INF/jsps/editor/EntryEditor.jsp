@@ -78,7 +78,21 @@
         <div class="editor-preview-pane" id="editorPreviewPane" hidden aria-live="polite"
              data-shell-url="<c:out value='${previewShellURL}'/>"></div>
     </div>
-    <div class="editor-status" id="editorStatus"></div>
+    <%-- The two status spans replace what used to be an empty div that only
+         ever grew error spans from rollerStatusError. Rendering them here --
+         rather than from rollerUpdateStatus() on first run -- means the
+         status line's CSS ("empty" hides it) never needs to distinguish
+         "not yet initialised" from "genuinely nothing to say", and an existing
+         entry's word count is correct on the very first paint rather than
+         appearing only after the first keystroke. --%>
+    <div class="editor-status" id="editorStatus"
+         data-words-template="<spring:message code='editor.status.words'/>">
+        <span id="editorStatusWords"></span>
+        <span id="editorStatusSave"
+              data-unsaved="<spring:message code='editor.status.unsaved'/>"
+              data-saved-locally="<spring:message code='editor.status.savedLocally'/>"
+              data-saved="<spring:message code='editor.status.saved'/>"><spring:message code="editor.status.saved"/></span>
+    </div>
 </div>
 
 <%-- summary --%>
@@ -138,6 +152,46 @@
 
 </div>
 
+<%-- Writing guide: an offcanvas rather than a modal, so it can sit alongside
+     the editor instead of blocking it. The shortcode table is generated from
+     ${shortcodeCards} -- the same model attribute that drives the Insert
+     menu above -- so a sixth shortcode cannot ship without also showing up
+     here; ShortcodeCardIT compares the two sets in a real browser. --%>
+<div class="offcanvas offcanvas-end editor-guide" tabindex="-1" id="editorGuide" aria-labelledby="editorGuideTitle">
+    <div class="offcanvas-header">
+        <p class="rail-group-label mb-0" id="editorGuideTitle"><spring:message code="editor.guide"/></p>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="<spring:message code='generic.close'/>"></button>
+    </div>
+    <div class="offcanvas-body">
+        <p class="rail-group-label"><spring:message code="editor.guide.markdown"/></p>
+        <table class="editor-guide-table">
+            <tr><td><code># <spring:message code="editor.heading"/></code></td><td><spring:message code="editor.guide.h1"/></td></tr>
+            <tr><td><code>**<spring:message code="editor.boldPlaceholder"/>**</code></td><td><spring:message code="editor.bold"/></td></tr>
+            <tr><td><code>*<spring:message code="editor.italicPlaceholder"/>*</code></td><td><spring:message code="editor.italic"/></td></tr>
+            <tr><td><code>[<spring:message code="editor.linkPlaceholder"/>](https://…)</code></td><td><spring:message code="editor.link"/></td></tr>
+            <tr><td><code>- item</code></td><td><spring:message code="editor.bulletList"/></td></tr>
+            <tr><td><code>1. item</code></td><td><spring:message code="editor.numberedList"/></td></tr>
+            <tr><td><code>&gt; quote</code></td><td><spring:message code="editor.quote"/></td></tr>
+            <tr><td><code>`code`</code></td><td><spring:message code="editor.code"/></td></tr>
+            <tr><td><code>| a | b |</code></td><td><spring:message code="editor.table"/></td></tr>
+        </table>
+        <p class="rail-group-label"><spring:message code="editor.guide.shortcodes"/></p>
+        <table class="editor-guide-table">
+            <c:forEach items="${shortcodeCards}" var="card">
+                <tr data-shortcode="<c:out value='${card.name}'/>"><td><code><c:out value="${card.snippet}"/></code></td><td><spring:message code="${card.labelKey}"/></td></tr>
+            </c:forEach>
+        </table>
+        <p class="rail-group-label"><spring:message code="editor.guide.shortcuts"/></p>
+        <table class="editor-guide-table">
+            <tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td><spring:message code="weblogEdit.save"/></td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>Enter</kbd></td><td><spring:message code="weblogEdit.post"/></td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>B</kbd> / <kbd>I</kbd></td><td><spring:message code="editor.bold"/> / <spring:message code="editor.italic"/></td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>F</kbd></td><td><spring:message code="editor.find"/></td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>/</kbd></td><td><spring:message code="editor.guide"/></td></tr>
+        </table>
+    </div>
+</div>
+
 <script>
 
     <%-- The editor. Entries are stored as Markdown -- always, with no
@@ -176,6 +230,48 @@
         if (button) {
             button.click();
         }
+    }
+
+    <%-- The toolbar's help button and Ctrl+/ both call this through
+         commands.help, which only calls it if it is defined -- so a page
+         that never assigns window.rollerOpenGuide (there is only ever this
+         one) degrades to the button and shortcut doing nothing rather than
+         throwing. --%>
+    window.rollerOpenGuide = function () {
+        bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('editorGuide')).show();
+    };
+
+    <%-- Word count / reading time. Split from rollerUpdateStatus() below so
+         the one-time call right after the editor is created (to seed an
+         existing entry's word count on first paint) does not also mark a
+         freshly-opened, untouched entry as having unsaved changes. --%>
+    function rollerUpdateWordCount() {
+        var stats = rollerEditor.stats();
+        var status = document.getElementById('editorStatus');
+        var template = status.dataset.wordsTemplate || '';
+        document.getElementById('editorStatusWords').textContent =
+            template.replace('{0}', stats.words).replace('{1}', stats.minutes);
+    }
+
+    <%-- The save-state span holds its three possible messages as data
+         attributes (set from the message bundle in the markup above) rather
+         than as JS string literals, so there is exactly one place -- the
+         JSP -- that ever spells out "Unsaved changes" et al. state is one of
+         'unsaved' / 'savedLocally' / 'saved', matching the dataset property
+         names data-unsaved / data-saved-locally / data-saved decode to. --%>
+    function rollerSetSaveState(state) {
+        var el = document.getElementById('editorStatusSave');
+        if (el) {
+            el.textContent = el.dataset[state] || '';
+        }
+    }
+
+    <%-- Registered on every editor change and every form input/change below.
+         Any edit -- to the text or to a rail field like category or tags --
+         means the entry no longer matches what the server last saved. --%>
+    function rollerUpdateStatus() {
+        rollerUpdateWordCount();
+        rollerSetSaveState('unsaved');
     }
 
     $(document).ready(function () {
@@ -263,6 +359,15 @@
              array, not on the editor, so an editor swap carries it along. --%>
         rollerEditorChangeListeners.push(rollerSchedulePreview);
 
+        <%-- Status line: word count follows every change, same as the preview
+             above. Seeded once, right here, so an existing entry shows its
+             real word count on first paint rather than only after the first
+             keystroke -- rollerUpdateWordCount() alone, not
+             rollerUpdateStatus(), so seeding it does not also mark an
+             untouched entry "Unsaved changes". --%>
+        rollerUpdateWordCount();
+        rollerEditorChangeListeners.push(rollerUpdateStatus);
+
         <%-- Scroll sync, editor -> preview only. Proportional rather than
              line-mapped: a rendered gallery or map is metres taller than the
              two lines of Markdown that produced it, so there is no honest
@@ -325,6 +430,11 @@
         $("#entry").on('input change', function () {
             rollerEntryDirty = true;
         });
+        <%-- The status line's own copy of the same "anything changed" signal:
+             a rail field (category, tags) has no editor change event to hang
+             off, so it needs this binding independently of the editor's own
+             fan-out array above. --%>
+        $("#entry").on('input change', rollerUpdateStatus);
         <%-- Namespaced. A bare .off("beforeunload") below would unbind every
              beforeunload handler on the page, including one belonging to
              something else added later -- silently, with no signal. --%>
@@ -367,6 +477,24 @@
                 setText: rollerSetEntryText,
                 onEditorChange: function (callback) {
                     rollerEditorChangeListeners.push(callback);
+                }
+            });
+        }
+
+        <%-- roller-draft.js dispatches this on the bar element right after it
+             writes a snapshot to localStorage. "Only if still dirty" matters
+             at submit time: the entry's own submit handler above sets
+             rollerEntryDirty = false BEFORE roller-draft.js's own submit
+             handler runs save() and dispatches this event (both are bound on
+             #entry; jQuery and native handlers on the same element still run
+             in registration order, and this page's dirty-flag handler is
+             registered first) -- so a real save does not flash "Draft saved
+             locally" a moment before the page reloads to "Saved". --%>
+        var draftBarForStatus = document.getElementById('draftRecoveryBar');
+        if (draftBarForStatus) {
+            draftBarForStatus.addEventListener('roller-draft:saved', function () {
+                if (rollerEntryDirty) {
+                    rollerSetSaveState('savedLocally');
                 }
             });
         }

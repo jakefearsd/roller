@@ -47,3 +47,14 @@
 .editor-status { display: flex; gap: 16px; padding: 6px 12px; border-top: 1px solid var(--line); font-family: var(--font-ui); font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); }
 .editor-status:empty { display: none; }
 .editor-status .is-error { color: var(--bad); }
+
+/* The writing guide (Task A8): a Bootstrap offcanvas, themed through the same
+   --bs-offcanvas-* custom-property seam the buttons above use --bs-btn-*
+   for. Bootstrap's own show/hide rules then resolve to token colors with
+   nothing of our own needed to override them. */
+.editor-guide { --bs-offcanvas-bg: var(--surface); --bs-offcanvas-color: var(--ink); }
+.editor-guide .offcanvas-body .rail-group-label { margin-top: 16px; }
+.editor-guide-table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+.editor-guide-table td { padding: 4px 0; vertical-align: top; }
+.editor-guide-table td:first-child { width: 45%; padding-right: 12px; }
+.editor-guide-table code, .editor-guide-table kbd { font-family: var(--font-data); font-size: 13.5px; background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }

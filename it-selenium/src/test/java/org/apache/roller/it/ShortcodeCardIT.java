@@ -17,16 +17,22 @@
  */
 package org.apache.roller.it;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import org.apache.roller.it.support.Editor;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import com.codeborne.selenide.SelenideElement;
 
 import static com.codeborne.selenide.CollectionCondition.exactTexts;
 import static com.codeborne.selenide.Condition.exist;
 import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
 import static com.codeborne.selenide.Selenide.$$;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -98,6 +104,42 @@ class ShortcodeCardIT extends RollerIT {
         String text = Editor.getText();
         assertTrue(text != null && text.contains("[faq]\n[q]"),
                 "The FAQ snippet lost its line breaks; it holds: " + text);
+    }
+
+    /**
+     * The other half of {@code EntryEditorJspGuideTest}: that class pins the
+     * guide's shortcode table to a source-level fact (it iterates
+     * {@code shortcodeCards} rather than being hand-typed), which cannot see
+     * whether the rendered result actually agrees with what the Insert menu
+     * -- generated from the same model attribute, but rendered separately --
+     * shows in a real browser. Comparing rendered sets closes that gap: a
+     * shortcode present in one but not the other would mean either an
+     * undocumented shortcode or a guide entry describing something no longer
+     * registered.
+     */
+    @Test
+    void theGuideListsEveryRegisteredShortcode() {
+        openEditor();
+        $("#shortcodeInsertButton").shouldBe(visible).click();
+        Set<String> menuShortcodes = dataShortcodesOf("#shortcodeInsertMenu .shortcode-card");
+
+        $("#editorToolbar button[data-cmd='help']").shouldBe(visible).click();
+        $("#editorGuide").shouldBe(visible);
+        Set<String> guideShortcodes = dataShortcodesOf("#editorGuide [data-shortcode]");
+
+        assertEquals(menuShortcodes, guideShortcodes,
+                "the guide must list exactly the shortcodes the Insert menu offers -- "
+                        + "neither more (a stale row describing something no longer "
+                        + "registered) nor fewer (a shortcode that shipped with no "
+                        + "documentation)");
+    }
+
+    private static Set<String> dataShortcodesOf(String cssSelector) {
+        Set<String> names = new HashSet<>();
+        for (SelenideElement el : $$(cssSelector)) {
+            names.add(el.getAttribute("data-shortcode"));
+        }
+        return names;
     }
 
     private void openEditor() {
