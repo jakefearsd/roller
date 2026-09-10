@@ -76,6 +76,23 @@ public class DesignTokenTest {
             Paths.get("src/main/webapp/roller-ui/styles/roller.css"),
             Paths.get("src/main/webapp/roller-ui/styles/roller-editor.css"));
 
+    /**
+     * The CodeMirror bundle's own source, under Maven (frontend-maven-plugin
+     * builds it into {@code roller-editor.js}, see CLAUDE.md's "Frontend
+     * build"). {@code markdown-theme.js} styles the editor entirely through
+     * {@code var(--token)} strings handed to CodeMirror's own theming API
+     * (see its header comment), so it is tokens-only in the same sense the
+     * two stylesheets above are -- this is that same audit for the one place
+     * a color could otherwise be typed as a JS string literal instead of a
+     * CSS one.
+     */
+    private static final Path FRONTEND_SRC = Paths.get("frontend/src");
+
+    /** Strips a JS line comment to end-of-line. None of this source has a
+     * {@code //} inside a string literal (verified by inspection), so this
+     * does not need to be string-aware. */
+    private static final Pattern JS_LINE_COMMENT = Pattern.compile("//[^\\n]*");
+
     private static final Path HEAD_JSP =
             Paths.get("src/main/webapp/WEB-INF/jsps/tiles/head.jsp");
 
@@ -180,6 +197,42 @@ public class DesignTokenTest {
                     stylesheet + " must stay tokens-only -- found hex color literal(s) outside "
                             + "comments (should be var(--token) references instead): "
                             + String.join(", ", found));
+        }
+    }
+
+    /**
+     * The JS twin of {@link #tokensOnlyStylesheetsHaveNoHexColorLiteralsOutsideComments()}:
+     * every {@code .js} file under {@code app/frontend/src/} must stay
+     * tokens-only too. A hex literal there is exactly as much an off-spec
+     * color as one in {@code roller-editor.css} -- CodeMirror's theming API
+     * takes plain strings, so nothing stops a future edit from typing a
+     * literal {@code '#17262A'} where {@code 'var(--ink)'} belongs, and this
+     * directory sat unaudited while the CSS half was already covered.
+     */
+    @Test
+    public void frontendSourceHasNoHexColorLiteralsOutsideComments() throws IOException {
+        assertTrue(Files.isDirectory(FRONTEND_SRC), "Expected to find " + FRONTEND_SRC.toAbsolutePath());
+
+        List<Path> jsFiles;
+        try (Stream<Path> files = Files.list(FRONTEND_SRC)) {
+            jsFiles = files.filter(f -> f.getFileName().toString().endsWith(".js")).sorted().toList();
+        }
+        assertFalse(jsFiles.isEmpty(), "Found no .js files under " + FRONTEND_SRC.toAbsolutePath());
+
+        for (Path js : jsFiles) {
+            String source = Files.readString(js, StandardCharsets.UTF_8);
+            String withoutComments = CSS_COMMENT.matcher(source).replaceAll(" ");
+            withoutComments = JS_LINE_COMMENT.matcher(withoutComments).replaceAll(" ");
+
+            Matcher matcher = HEX_LITERAL.matcher(withoutComments);
+            Set<String> found = new TreeSet<>();
+            while (matcher.find()) {
+                found.add(matcher.group());
+            }
+
+            assertTrue(found.isEmpty(),
+                    js + " must stay tokens-only -- found hex color literal(s) outside comments "
+                            + "(should be var(--token) references instead): " + String.join(", ", found));
         }
     }
 
