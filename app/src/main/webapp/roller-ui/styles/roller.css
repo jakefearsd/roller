@@ -572,13 +572,14 @@ table.mm_table_actions td {
    scale (12px, .08em tracking, uppercase, 600 weight, --ink-soft) instead
    of Bootstrap's/the browser's oversized h3/h4 defaults. This targets the
    header text itself regardless of what markup rides inside a
-   .card-header: plain text, or h4.card-title (MediaFileAdd, TemplateEdit --
-   EntryEdit/EntryEditor's own panels are all .editor-box/.editor-drawer now,
-   the newsletter and revisions boxes and the Summary drawer included, and
-   the Plugins card was deleted with the plugin it held), or
-   h3.setup-section-title (Setup.jsp) -- so any heading dropped into a
-   card header inherits the quiet treatment instead of reintroducing its
-   element's own default size. .section-head is the same role applied to
+   .card-header: plain text, or a heading carrying .section-head
+   (MediaFileAdd, TemplateEdit -- both were h4.card-title until task B11's
+   heading-level sweep; EntryEdit/EntryEditor's own panels are all
+   .editor-box/.editor-drawer now, the newsletter and revisions boxes and
+   the Summary drawer included, and the Plugins card was deleted with the
+   plugin it held), or h3.setup-section-title (Setup.jsp) -- so any heading
+   dropped into a card header inherits the quiet treatment instead of
+   reintroducing its element's own default size. .section-head is the same role applied to
    WeblogConfig.jsp's and GlobalConfig.jsp's un-carded "display group"
    headers, which shouted just as loudly with no card to blame. */
 .card-header,
