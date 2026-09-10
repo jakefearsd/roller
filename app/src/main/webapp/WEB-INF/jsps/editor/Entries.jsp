@@ -51,17 +51,6 @@
      (unchanged id/name) because the bulk-delete confirmation modal further
      down references #entriesBulkForm via form="..."; only its contents are
      conditional. --%>
-<c:if test="${not empty pager.items}">
-<p style="text-align: center">
-    <span class="draftEntryBox">&nbsp;&nbsp;&nbsp;&nbsp;</span>
-    <spring:message code="weblogEntryQuery.draft"/>&nbsp;&nbsp;
-    <span class="pendingEntryBox">&nbsp;&nbsp;&nbsp;&nbsp;</span>
-    <spring:message code="weblogEntryQuery.pending"/>&nbsp;&nbsp;
-    <span class="scheduledEntryBox">&nbsp;&nbsp;&nbsp;&nbsp;</span>
-    <spring:message code="weblogEntryQuery.scheduled"/>&nbsp;&nbsp;
-</p>
-</c:if>
-
 <%-- One form around the whole table. The row checkboxes, the duplicate
      button and the bulk action bar all post through it, which is why the
      duplicate control is a submit button with its own formaction rather than
@@ -156,20 +145,7 @@
 </tr>
 
 <c:forEach items="${pager.items}" var="post">
-    <c:choose>
-    <c:when test="${post.status.name() == 'DRAFT'}">
-        <tr class="draftentry">
-    </c:when>
-    <c:when test="${post.status.name() == 'PENDING'}">
-        <tr class="pendingentry">
-    </c:when>
-    <c:when test="${post.status.name() == 'SCHEDULED'}">
-        <tr class="scheduledentry">
-    </c:when>
-    <c:otherwise>
-        <tr>
-    </c:otherwise>
-    </c:choose>
+    <tr>
     <td>
         <input type="checkbox" class="form-check-input entry-select"
                name="selectedEntries" value="${post.id}"
@@ -213,24 +189,23 @@
         </c:choose>
     </td>
 
-    <%-- A badge, not just the row tint: the tint is the only thing carrying
-         status today, and colour alone is not information a screen reader or
-         a colour-blind reader receives. Same badge pattern as Pages.jsp. --%>
+    <%-- The status pill, not just a row tint: colour alone is not information
+         a screen reader or a colour-blind reader receives. Same component as
+         Pages.jsp. pillWhen must be explicitly cleared on the non-Scheduled
+         branch -- request scope survives across this forEach's iterations,
+         so a Scheduled row's pillWhen would otherwise leak onto every
+         following row that has no pubTime of its own to show. --%>
     <td>
+        <c:set var="pillStatus" value="${post.status.name()}" scope="request"/>
         <c:choose>
-        <c:when test="${post.status.name() == 'PUBLISHED'}">
-            <span class="badge bg-success"><spring:message code="weblogEdit.published"/></span>
-        </c:when>
-        <c:when test="${post.status.name() == 'PENDING'}">
-            <span class="badge bg-warning"><spring:message code="weblogEdit.pending"/></span>
-        </c:when>
         <c:when test="${post.status.name() == 'SCHEDULED'}">
-            <span class="badge bg-primary"><spring:message code="weblogEdit.scheduled"/></span>
+            <c:set var="pillWhen" value="${post.pubTime}" scope="request"/>
         </c:when>
         <c:otherwise>
-            <span class="badge bg-info"><spring:message code="weblogEdit.draft"/></span>
+            <c:remove var="pillWhen" scope="request"/>
         </c:otherwise>
         </c:choose>
+        <jsp:include page="/WEB-INF/jsps/editor/StatusPill.jsp"/>
     </td>
 
     <td>

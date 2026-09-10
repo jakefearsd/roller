@@ -76,14 +76,9 @@
                         <a href="${editUrl}"><c:out value="${p.title}"/></a>
                     </td>
                     <td>
-                        <c:choose>
-                        <c:when test="${p.status.name() == 'PUBLISHED'}">
-                            <span class="badge bg-success"><spring:message code="weblogEdit.published"/></span>
-                        </c:when>
-                        <c:otherwise>
-                            <span class="badge bg-info"><spring:message code="weblogEdit.draft"/></span>
-                        </c:otherwise>
-                        </c:choose>
+                        <c:set var="pillStatus" value="${p.status.name()}" scope="request"/>
+                        <c:remove var="pillWhen" scope="request"/>
+                        <jsp:include page="/WEB-INF/jsps/editor/StatusPill.jsp"/>
                     </td>
                     <td>${p.showInNav ? '&#10003;' : ''}</td>
                     <td class="data">${p.navOrder}</td>

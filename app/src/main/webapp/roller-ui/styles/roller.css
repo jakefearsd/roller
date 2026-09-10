@@ -1345,41 +1345,15 @@ td.data {
 
 /* entries page */
 
-/* Quiet Instrument: status pills/tints. Draft -> warn tint, Pending ->
-   accent-quiet, Scheduled -> line tint, matching the components-pills card.
-   Class names survive unchanged; only the colors move onto tokens. */
-
-.draftEntryBox,
-.pendingEntryBox,
-.scheduledEntryBox {
-    display: inline-block;
-    border-radius: 4px;
-}
-
-.draftEntryBox {
-    background: color-mix(in srgb, var(--warn) 20%, var(--surface));
-    border: 1px solid color-mix(in srgb, var(--warn) 55%, var(--surface));
-}
-
-.pendingEntryBox {
-    background: var(--accent-quiet);
-    border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--surface));
-}
-
-.scheduledEntryBox {
-    background: var(--paper);
-    border: 1px solid var(--line);
-}
-
-td.pendingentry, tr.pendingentry {
-    background: var(--accent-quiet);
-}
-td.draftentry, tr.draftentry {
-    background: color-mix(in srgb, var(--warn) 10%, var(--surface));
-}
-td.scheduledentry, tr.scheduledentry {
-    background: var(--paper);
-}
+/* ---- Status pills (components-pills card, task B1) ---- */
+.status-pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 99px; font-family: var(--font-ui); font-size: 12px; font-weight: 600; letter-spacing: .04em; color: var(--ink); border: 1px solid transparent; white-space: nowrap; }
+.status-pill .status-when { font-family: var(--font-data); font-weight: 450; font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+.status-pill.status-published { background: color-mix(in srgb, var(--good) 18%, var(--surface)); border-color: color-mix(in srgb, var(--good) 45%, var(--surface)); }
+.status-pill.status-draft { background: color-mix(in srgb, var(--warn) 18%, var(--surface)); border-color: color-mix(in srgb, var(--warn) 45%, var(--surface)); }
+.status-pill.status-pending { background: var(--accent-quiet); border-color: color-mix(in srgb, var(--accent) 40%, var(--surface)); }
+.status-pill.status-scheduled { background: var(--paper); border-color: var(--line); }
+.status-pill.status-trashed { background: color-mix(in srgb, var(--bad) 12%, var(--surface)); border-color: color-mix(in srgb, var(--bad) 35%, var(--surface)); }
+.status-pill.status-unsaved { background: var(--paper); border-color: var(--line); color: var(--ink-soft); }
 
 /* categories */
 
@@ -1648,32 +1622,14 @@ div.image-controls input {
     background: color-mix(in srgb, var(--bad) 20%, var(--surface));
 }
 
-/* Quiet Instrument: status badges (weblogEdit.status on EntryEdit.jsp,
-   the page-list status column on Pages.jsp) keep Bootstrap's bg-* classes
-   -- restyled, not renamed -- to the same quiet tint treatment as the
-   draftEntryBox/pendingEntryBox family above rather than Bootstrap's stock
-   saturated badge colors. Bootstrap's .bg-* utilities set background-color
-   with !important, so overriding needs !important too; .badge.bg-* (two
-   classes) is more specific than Bootstrap's bare .bg-* so it still wins
-   the specificity tie-break within the !important bucket. */
-.badge.bg-success {
-    background-color: color-mix(in srgb, var(--good) 25%, var(--surface)) !important;
-    color: var(--ink) !important;
-}
-.badge.bg-info {
-    background-color: var(--accent-quiet) !important;
-    color: var(--ink) !important;
-}
-.badge.bg-warning {
-    background-color: color-mix(in srgb, var(--warn) 25%, var(--surface)) !important;
-    color: var(--ink) !important;
-}
-.badge.bg-danger {
-    background-color: color-mix(in srgb, var(--bad) 25%, var(--surface)) !important;
-    color: var(--ink) !important;
-}
-/* MainMenu's entry count was the one badge still shipping stock Bootstrap
-   grey next to four tokenized siblings. */
+/* MainMenu's entry count is the one remaining Bootstrap badge. The status
+   badges that used to sit alongside it are gone from this file (task B1):
+   Entries.jsp/Pages.jsp were converted to the .status-pill component above.
+   EntryEdit.jsp/PageEdit.jsp still emit the old badge markup -- they are
+   owned by the parallel editor-rebuild worktree and are converted by the
+   post-merge task M1 -- so their badges render in stock unstyled Bootstrap
+   colors until then; that is a known, accepted transitional gap, not a
+   regression to fix here. */
 .badge.bg-secondary {
     background-color: color-mix(in srgb, var(--line) 55%, var(--surface)) !important;
     color: var(--ink-soft) !important;
