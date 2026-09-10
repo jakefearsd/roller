@@ -82,14 +82,20 @@ public class MessagePlaceholderContractTest {
     private static final Pattern PLACEHOLDER = Pattern.compile("\\{\\s*(\\d+)\\s*[,}]");
 
     /**
-     * The one message deliberately allowed to declare a placeholder that no
-     * server-side call site fills: {@code EntryEdit.jsp} / {@code PageEdit.jsp}
-     * hand the raw pattern to the browser in a {@code data-template} attribute
-     * and {@code roller-draft.js} substitutes {@code &#123;0&#125;} itself with
-     * the draft's local timestamp, which only the browser knows.
+     * Messages deliberately allowed to declare a placeholder that no
+     * server-side call site fills, because the raw pattern is handed to the
+     * browser in a {@code data-template} attribute and JavaScript substitutes
+     * {@code &#123;0&#125;} itself with a value only the browser knows:
+     * {@code EntryEdit.jsp} / {@code PageEdit.jsp}'s {@code
+     * roller-draft.js} substitution with the draft's local timestamp, and
+     * (task B3) every {@code .selection-bar}'s {@code .selection-count} span
+     * on {@code Entries.jsp}/{@code Submissions.jsp}/{@code MediaFileView.jsp},
+     * where {@code roller.js}'s delegated checkbox handler substitutes the
+     * live count of checked rows.
      */
     private static final Set<String> CLIENT_SIDE_SUBSTITUTION = Set.of(
-            "weblogEdit.draftRecovery.message");
+            "weblogEdit.draftRecovery.message",
+            "selection.count");
 
     /**
      * Empty, and it stays empty.

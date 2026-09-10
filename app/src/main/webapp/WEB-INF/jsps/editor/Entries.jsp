@@ -116,12 +116,49 @@
     </c:forEach>
 </nav>
 
+<%-- The selection bar: hidden until roller.js's delegated checkbox handler
+     finds a checked row in #entriesBulkForm, then shows the count and these
+     three actions. Publish/submit and the tag-add control are secondary here
+     -- only one primary action lives on this screen at a time, and while the
+     bar is showing that is the empty-state's Add link, not a bulk action --
+     with delete last because it is the one destructive control. --%>
+<c:if test="${not empty pager.items}">
+    <div class="selection-bar" data-selection-bar="entriesBulkForm" hidden>
+        <span class="selection-count" data-template="<spring:message code='selection.count'/>"></span>
+
+        <button type="submit" class="btn btn-secondary"
+                formaction="${pageContext.request.contextPath}/roller-ui/authoring/entries!bulkPublish.rol">
+            <c:choose>
+                <c:when test="${userAnAuthor}">
+                    <spring:message code="weblogEntryQuery.bulkPublish"/>
+                </c:when>
+                <c:otherwise>
+                    <spring:message code="weblogEntryQuery.bulkSubmit"/>
+                </c:otherwise>
+            </c:choose>
+        </button>
+
+        <div class="input-group" style="width: 22em">
+            <input type="text" name="bulkTag" id="bulkTag" class="form-control"
+                   placeholder="<spring:message code="weblogEntryQuery.bulkTagPlaceholder"/>"/>
+            <button type="submit" class="btn btn-outline-secondary"
+                    formaction="${pageContext.request.contextPath}/roller-ui/authoring/entries!bulkTag.rol">
+                <spring:message code="weblogEntryQuery.bulkTagAdd"/>
+            </button>
+        </div>
+
+        <button type="button" class="btn btn-danger" id="bulkDeleteButton">
+            <spring:message code="weblogEntryQuery.bulkDelete"/>
+        </button>
+    </div>
+</c:if>
+
 <c:if test="${not empty pager.items}">
 <table class="rollertable table table-striped" width="100%">
 
 <tr>
     <th scope="col" class="rollertable" width="3%">
-        <input type="checkbox" id="selectAllEntries" class="form-check-input"
+        <input type="checkbox" id="selectAllEntries" class="form-check-input" data-select-all
                title="<spring:message code="weblogEntryQuery.selectAll"/>"/>
     </th>
     <th scope="col" class="rollertable" width="3%"> </th>
@@ -248,40 +285,6 @@
 </c:forEach>
 
 </table>
-</c:if>
-
-<%-- Bulk action bar. Each button carries its own formaction, so the server
-     endpoint is chosen by which button was pressed rather than by JavaScript
-     rewriting the form's action. Delete is the exception: it opens the
-     confirmation modal instead of submitting, because it is the only one of
-     the three that cannot be undone. --%>
-<c:if test="${not empty pager.items}">
-    <div class="d-flex flex-wrap gap-2 align-items-center mb-3" id="entriesBulkActions">
-        <button type="submit" class="btn btn-primary"
-                formaction="${pageContext.request.contextPath}/roller-ui/authoring/entries!bulkPublish.rol">
-            <c:choose>
-                <c:when test="${userAnAuthor}">
-                    <spring:message code="weblogEntryQuery.bulkPublish"/>
-                </c:when>
-                <c:otherwise>
-                    <spring:message code="weblogEntryQuery.bulkSubmit"/>
-                </c:otherwise>
-            </c:choose>
-        </button>
-
-        <div class="input-group" style="width: 22em">
-            <input type="text" name="bulkTag" id="bulkTag" class="form-control"
-                   placeholder="<spring:message code="weblogEntryQuery.bulkTagPlaceholder"/>"/>
-            <button type="submit" class="btn btn-outline-secondary"
-                    formaction="${pageContext.request.contextPath}/roller-ui/authoring/entries!bulkTag.rol">
-                <spring:message code="weblogEntryQuery.bulkTagAdd"/>
-            </button>
-        </div>
-
-        <button type="button" class="btn btn-danger" id="bulkDeleteButton">
-            <spring:message code="weblogEntryQuery.bulkDelete"/>
-        </button>
-    </div>
 </c:if>
 
 </form>

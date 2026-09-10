@@ -294,3 +294,19 @@ if (typeof jQuery !== "undefined") {
         }
     }, true);
 })();
+
+// Selection bars: shown while any checkbox in the form named by
+// data-selection-bar is checked; the count text comes from the bar's own
+// data-template ("{0} selected"), so the string stays in the bundle.
+document.addEventListener('change', function (event) {
+    var box = event.target;
+    if (!(box instanceof HTMLInputElement) || box.type !== 'checkbox') { return; }
+    var form = box.form;
+    if (!form) { return; }
+    var bar = document.querySelector('.selection-bar[data-selection-bar="' + form.id + '"]');
+    if (!bar) { return; }
+    var checked = form.querySelectorAll('input[type=checkbox]:checked:not([data-select-all])').length;
+    bar.hidden = checked === 0;
+    var count = bar.querySelector('.selection-count');
+    if (count) { count.textContent = count.dataset.template.replace('{0}', checked); }
+});

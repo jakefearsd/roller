@@ -23,8 +23,10 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -117,6 +119,59 @@ class JspConsistencyTest {
 
         String members = Files.readString(JSPS.resolve("editor/Members.jsp"), StandardCharsets.UTF_8);
         assertEquals(1, countOccurrences(members, "btn btn-primary"), "Members has one primary");
+    }
+
+    /**
+     * Task B3: every list screen (Entries, Submissions, MediaFileView) shows
+     * exactly one selection bar -- a {@code .selection-bar} that names, via
+     * {@code data-selection-bar}, the id of the {@code <form>} whose
+     * checkboxes it counts. The bar and its form must live in the same JSP
+     * (the delegated handler in roller.js looks the bar up by the checked
+     * checkbox's own {@code .form.id}), and the old per-file bulk-action
+     * markup ({@code #entriesBulkActions}) must be gone. Trash is
+     * deliberately excluded -- see task-B3's brief: TrashController has no
+     * bulk restore/delete handlers, so Trash.jsp keeps its per-row buttons
+     * and whole-trash "Empty trash" only, with no selection bar at all.
+     */
+    @Test
+    void everySelectionBarNamesItsForm() throws IOException {
+        Pattern barPattern = Pattern.compile("class=\"selection-bar\"[^>]*data-selection-bar=\"([^\"]+)\"");
+        Pattern formIdPattern = Pattern.compile("<form\\b[^>]*\\bid=\"([^\"]+)\"");
+
+        int barsFound = 0;
+        for (Path jsp : jsps().toList()) {
+            String src = Files.readString(jsp, StandardCharsets.UTF_8);
+
+            Set<String> formIds = new HashSet<>();
+            Matcher formMatcher = formIdPattern.matcher(src);
+            while (formMatcher.find()) {
+                formIds.add(formMatcher.group(1));
+            }
+
+            Matcher barMatcher = barPattern.matcher(src);
+            while (barMatcher.find()) {
+                barsFound++;
+                String formId = barMatcher.group(1);
+                assertTrue(formIds.contains(formId), jsp + ": .selection-bar names form \""
+                        + formId + "\", which is not declared in this JSP");
+            }
+        }
+        assertTrue(barsFound >= 3,
+                "Found too few .selection-bar elements -- expected at least one each on "
+                        + "Entries.jsp, Submissions.jsp and MediaFileView.jsp.");
+
+        String entries = Files.readString(JSPS.resolve("editor/Entries.jsp"), StandardCharsets.UTF_8);
+        assertFalse(entries.contains("entriesBulkActions"),
+                "Entries.jsp still has the old #entriesBulkActions div -- its buttons "
+                        + "must move into the .selection-bar");
+
+        String submissions = Files.readString(JSPS.resolve("editor/Submissions.jsp"), StandardCharsets.UTF_8);
+        assertEquals(1, countOccurrences(submissions, "class=\"selection-bar\""),
+                "Submissions.jsp must have exactly one .selection-bar");
+
+        String mediaFileView = Files.readString(JSPS.resolve("editor/MediaFileView.jsp"), StandardCharsets.UTF_8);
+        assertEquals(1, countOccurrences(mediaFileView, "class=\"selection-bar\""),
+                "MediaFileView.jsp must have exactly one .selection-bar");
     }
 
     private static int countOccurrences(String haystack, String needle) {

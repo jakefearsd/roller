@@ -284,38 +284,50 @@
 
         <c:if test="${(empty pager && fn:length(childFiles) > 0) || (not empty pager && fn:length(pager.items) > 0) || (currentDirectory.name != 'default' && empty pager)}">
 
-            <div class="image-controls">
+            <%-- The selection bar: hidden until roller.js's delegated checkbox
+                 handler finds a checked box in #mediaFileViewForm. Toggle,
+                 move (with its target folder) and "new entry" are secondary;
+                 delete is last because it is the one destructive control.
+                 There is no folder-level select-all checkbox on this page --
+                 Toggle is a button that flips every row via toggleFunction(),
+                 not a header checkbox, so onToggle() below fires the recount
+                 by hand once it is done. --%>
+            <c:if test="${(empty pager && fn:length(childFiles) > 0) || (not empty pager && fn:length(pager.items) > 0)}">
+                <div class="selection-bar" data-selection-bar="mediaFileViewForm" hidden>
+                    <span class="selection-count" data-template="<spring:message code='selection.count'/>"></span>
 
-                <c:if test="${(empty pager && fn:length(childFiles) > 0) || (not empty pager && fn:length(pager.items) > 0)}">
-                    <button id="toggleButton" type="button" class="btn btn-secondary" style="display: inline"
+                    <button id="toggleButton" type="button" class="btn btn-secondary"
                             onclick="onToggle()"><spring:message code="generic.toggle"/></button>
 
-                    <button id="deleteButton" type="button" class="btn btn-danger" style="display: inline"
-                            onclick="onDeleteSelected()"><spring:message code="mediaFileView.deleteSelected"/></button>
-
-                    <button id="moveButton" type="button" class="btn btn-secondary" style="display: inline"
+                    <button id="moveButton" type="button" class="btn btn-secondary"
                             onclick="onMoveSelected()"><spring:message code="mediaFileView.moveSelected"/></button>
 
-                    <%-- The one route from "these photos" to "a post about
-                         these photos". #createPostForm has sat below,
-                         reachable by nothing, since the control that used to
-                         drive it was removed. --%>
-                    <button id="newEntryButton" type="button" class="btn btn-secondary" style="display: inline"
-                            onclick="onNewEntryWithSelected()"><spring:message code="mediaFileView.newEntryWithSelected"/></button>
-                </c:if>
-
-                <select name="selectedDirectory" id="moveTargetMenu" class="form-select" style="display: inline; width: 15em">
+                    <select name="selectedDirectory" id="moveTargetMenu" class="form-select" style="display: inline; width: 15em">
 <c:forEach items="${allDirectories}" var="opt">
 <option value="${opt.id}" ${opt.id == selectedDirectory ? 'selected' : ''}>${opt.name}</option>
 </c:forEach>
 </select>
 
-                <c:if test="${currentDirectory.name != 'default' && empty pager}">
-                    <button id="deleteFolderButton" type="button" class="btn btn-secondary" style="display: inline"
-                            onclick="onDeleteFolder()"><spring:message code="mediaFileView.deleteFolder"/></button>
-                </c:if>
+                    <%-- The one route from "these photos" to "a post about
+                         these photos". #createPostForm has sat below,
+                         reachable by nothing, since the control that used to
+                         drive it was removed. --%>
+                    <button id="newEntryButton" type="button" class="btn btn-secondary"
+                            onclick="onNewEntryWithSelected()"><spring:message code="mediaFileView.newEntryWithSelected"/></button>
 
-            </div>
+                    <button id="deleteButton" type="button" class="btn btn-danger"
+                            onclick="onDeleteSelected()"><spring:message code="mediaFileView.deleteSelected"/></button>
+                </div>
+            </c:if>
+
+            <%-- Folder deletion needs no selection, so it sits outside the
+                 selection bar entirely. --%>
+            <c:if test="${currentDirectory.name != 'default' && empty pager}">
+                <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+                    <button id="deleteFolderButton" type="button" class="btn btn-secondary"
+                            onclick="onDeleteFolder()"><spring:message code="mediaFileView.deleteFolder"/></button>
+                </div>
+            </c:if>
 
         </c:if>
 
@@ -462,6 +474,16 @@
             $("#moveButton").attr('disabled', true);
             $("#newEntryButton").attr('disabled', true);
             $("#moveTargetMenu").attr('disabled', true);
+        }
+        <%-- toggleFunction() sets each checkbox's .checked directly and fires
+             no 'change' event of its own, so the selection bar in roller.js
+             -- which only recounts in response to a real checkbox change --
+             would never notice a Toggle click. Dispatch one bubbling change
+             event on any single row; the delegated handler recounts every
+             checkbox in the form, not just the one that dispatched it. --%>
+        var toggledCheckbox = document.querySelector("input[name='selectedMediaFiles']");
+        if (toggledCheckbox) {
+            toggledCheckbox.dispatchEvent(new Event('change', {bubbles: true}));
         }
     }
 
