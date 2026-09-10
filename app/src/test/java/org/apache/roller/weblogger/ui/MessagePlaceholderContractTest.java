@@ -76,8 +76,16 @@ public class MessagePlaceholderContractTest {
     /**
      * {@code &#123;0&#125;} and also {@code &#123;0,date,...&#125;} -- the format
      * type is part of the placeholder, so a pattern matching only the bare form
-     * would read {@code weblogEntryQuery.date.toStringFormat} as taking no
-     * arguments at all.
+     * would read a formatted placeholder as taking no arguments at all.
+     *
+     * <p>No bundle value carries the formatted form today: the last one,
+     * {@code weblogEntryQuery.date.toStringFormat}, was deleted in task M1
+     * when {@code <rc:date>} took over every admin timestamp (a date format
+     * is not a translatable string; see
+     * {@code JspConsistencyTest.noAdminTimestampIsFormattedWithFmtFormatDate},
+     * which now forbids the key from coming back). The alternation stays: it
+     * costs nothing and the next {@code &#123;0,number,...&#125;} anyone adds
+     * would otherwise be miscounted silently.
      */
     private static final Pattern PLACEHOLDER = Pattern.compile("\\{\\s*(\\d+)\\s*[,}]");
 

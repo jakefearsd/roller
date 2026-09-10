@@ -242,7 +242,7 @@
                 <c:remove var="pillWhen" scope="request"/>
                 <jsp:include page="/WEB-INF/jsps/editor/StatusPill.jsp"/>
                 <c:if test="${not empty entry.updateTime}">
-                    <span class="editor-when" title="<spring:message code="weblogEdit.updateTime"/>"><fmt:formatDate value="${entry.updateTime}"/></span>
+                    <span class="editor-when" title="<spring:message code="weblogEdit.updateTime"/>"><rc:date value="${entry.updateTime}"/></span>
                 </c:if>
             </div>
 
@@ -486,8 +486,18 @@
         <p class="rail-group-label"><spring:message code="newsletter.cardTitle"/></p>
         <c:choose>
             <c:when test="${not empty entry.newsletterSentAt}">
+                <%-- The tag writes to the page, so its output is captured
+                     into a variable and handed over as the message's one
+                     argument. Nesting it inside <spring:message> instead
+                     would mean dropping the arguments attribute, and a
+                     <spring:message> with no arguments attribute reads as a
+                     zero-argument call site -- against a message that
+                     declares one. <spring:message> does not HTML-escape
+                     (defaultHtmlEscape is unset), which is what lets the
+                     <time> element through intact. --%>
+                <c:set var="newsletterSentAtText"><rc:date value="${entry.newsletterSentAt}"/></c:set>
                 <p class="pagetip" id="newsletterSentAt">
-                    <spring:message code="newsletter.sentAt" arguments="${entry.newsletterSentAt}"/>
+                    <spring:message code="newsletter.sentAt" arguments="${newsletterSentAtText}"/>
                 </p>
             </c:when>
             <c:when test="${empty actionWeblog.newsletterListUuid}">
@@ -521,8 +531,7 @@
             <c:forEach items="${entryRevisions}" var="revision">
                 <tr>
                     <td>
-                        <spring:message code="weblogEntryQuery.date.toStringFormat"
-                                        arguments="${revision.created}"/>
+                        <rc:date value="${revision.created}"/>
                     </td>
                     <td><c:out value="${revision.creator}"/></td>
                     <td>

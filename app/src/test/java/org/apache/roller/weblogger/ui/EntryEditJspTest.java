@@ -154,6 +154,43 @@ class EntryEditJspTest {
                 "Save draft is a secondary action beside it");
     }
 
+    /**
+     * Task M1 (task B5's date vocabulary, applied to the editor): every
+     * timestamp this screen renders goes through {@code <rc:date>}.
+     *
+     * <p>The three sites disagreed with each other and with the entry's own
+     * pubtime field. The rail's {@code .editor-when} used {@code fmt:formatDate}
+     * (the JVM's zone -- the server's, which is nobody's clock), the revisions
+     * table used {@code weblogEntryQuery.date.toStringFormat} (the request
+     * locale's zone, and a display pattern eight translators could disagree
+     * about), and the newsletter line handed a raw {@code Date} straight to
+     * {@code MessageFormat}. {@code <rc:date>} renders all three in the
+     * weblog's zone -- the zone {@code bean.pubTimeLocal} has always meant --
+     * inside a {@code <time>} whose {@code datetime} is a machine-readable
+     * UTC instant.
+     *
+     * <p>The newsletter line captures the tag's output into a variable rather
+     * than nesting the tag: {@code <spring:message>} takes its arguments as an
+     * attribute, and dropping the attribute entirely would make the call site
+     * read as zero-argument to {@code MessagePlaceholderContractTest} against a
+     * message that declares one.
+     */
+    @Test
+    void everyTimestampInTheEditorGoesThroughTheDateTag() throws IOException {
+        String jsp = read();
+        assertTrue(!jsp.contains("fmt:formatDate"),
+                "fmt:formatDate renders in the server's timezone and emits no "
+                        + "machine-readable datetime -- use <rc:date>");
+        assertTrue(!jsp.contains("weblogEntryQuery.date.toStringFormat"),
+                "a date pattern is not a translatable string -- use <rc:date>");
+        assertTrue(jsp.contains("<rc:date value=\"${entry.updateTime}\"/>"),
+                "the rail's .editor-when must render the update time with <rc:date>");
+        assertTrue(jsp.contains("<rc:date value=\"${revision.created}\"/>"),
+                "each revision row's timestamp must render with <rc:date>");
+        assertTrue(jsp.contains("<rc:date value=\"${entry.newsletterSentAt}\"/>"),
+                "newsletter.sentAt's argument must be built with <rc:date>");
+    }
+
     @Test
     void theNewsletterNoListMessageIsFollowedByItsOwnLinkText() throws IOException {
         String jsp = read();

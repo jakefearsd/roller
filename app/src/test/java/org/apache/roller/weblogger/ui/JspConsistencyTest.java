@@ -210,6 +210,16 @@ class JspConsistencyTest {
      * {@code <time>}. A_OWNED is skipped for the same reason the scans above
      * skip it: post-merge task M1 converts EntryEdit's {@code .editor-when}
      * spans.
+     *
+     * <p>The bundle half is the same rule stated where it can actually be
+     * enforced. While {@code weblogEntryQuery.date.toStringFormat} still
+     * <em>exists</em> as a key, a date format is a translatable string that
+     * eight locale files may disagree about -- {@code ja} declared
+     * {@code yy/MM/dd HH:mm} against the base bundle's
+     * {@code MM/dd/yy hh:mm a} -- and any new call site is one
+     * {@code <spring:message>} away from reintroducing request-locale
+     * timezones to a data cell. Deleting the key is what makes the JSP-side
+     * ban above unbypassable rather than merely observed.
      */
     @Test
     void noAdminTimestampIsFormattedWithFmtFormatDate() throws IOException {
@@ -225,6 +235,24 @@ class JspConsistencyTest {
                     jsp + ": format timestamps with <rc:date>, not fmt:formatDate");
             assertFalse(src.contains("weblogEntryQuery.date.toStringFormat"),
                     jsp + ": format timestamps with <rc:date>, not a message-bundle date pattern");
+        }
+
+        try (Stream<Path> bundles = Files.list(Path.of("src/main/resources"))) {
+            List<Path> declaringTheDatePattern = bundles
+                    .filter(p -> p.getFileName().toString().startsWith("ApplicationResources"))
+                    .filter(p -> {
+                        try {
+                            return Files.readString(p, StandardCharsets.UTF_8)
+                                    .contains("weblogEntryQuery.date.toStringFormat");
+                        } catch (IOException e) {
+                            throw new java.io.UncheckedIOException(e);
+                        }
+                    })
+                    .toList();
+            assertTrue(declaringTheDatePattern.isEmpty(),
+                    "a date format is not a translatable string -- <rc:date> owns the "
+                            + "display pattern now, so no bundle may still declare "
+                            + "weblogEntryQuery.date.toStringFormat: " + declaringTheDatePattern);
         }
     }
 
