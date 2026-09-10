@@ -19,6 +19,7 @@ package org.apache.roller.it;
 
 import com.codeborne.selenide.Selenide;
 import org.apache.roller.it.support.BrowserHealth;
+import org.apache.roller.it.support.Editor;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,10 +28,8 @@ import static com.codeborne.selenide.CollectionCondition.sizeGreaterThanOrEqual;
 import static com.codeborne.selenide.Condition.appear;
 import static com.codeborne.selenide.Condition.exist;
 import static com.codeborne.selenide.Condition.text;
-import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
 import static com.codeborne.selenide.Selenide.$$;
-import static com.codeborne.selenide.Selenide.executeJavaScript;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -65,14 +64,6 @@ class MapIT extends RollerIT {
 
     private static final String ENTRY_ADD = "/roller-ui/authoring/entryAdd.rol?weblog=" + WEBLOG_HANDLE;
 
-    /**
-     * The editor's editable surface. Tests wait for this and then put text in
-     * through {@code rollerSetEntryText}, the page's own seam -- never through
-     * the editor's API directly, so replacing the editor is one change here
-     * rather than one in every journey.
-     */
-    private static final String EDITOR_BODY = ".CodeMirror";
-
     /** Rendered on the edit page only once the entry is actually published. */
     private static final String PERMALINK = "#entry_bean_permalink";
 
@@ -90,10 +81,7 @@ class MapIT extends RollerIT {
         openPath(ENTRY_ADD);
         $("#entry").should(exist);
         $("input[name='bean.title']").setValue("IT Map " + suffix);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript(
-                "rollerSetEntryText(arguments[0]);",
-                "<p>Route notes " + suffix + "</p>"
+        Editor.setText("<p>Route notes " + suffix + "</p>"
                         + "<p>[map route=\"true\"]"
                         + "[pin lat=\"48.8584\" lng=\"2.2945\" label=\"" + label + "\"]"
                         + "[pin lat=\"48.8606\" lng=\"2.3376\" label=\"Louvre\"]"

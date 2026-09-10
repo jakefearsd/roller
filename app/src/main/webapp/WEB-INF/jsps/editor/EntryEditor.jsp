@@ -22,35 +22,57 @@
 <%-- ********************************************************************* --%>
 
 <%-- content --%>
-<textarea name="bean.text" id="edit_content" rows="18" class="col-sm-12">${fn:escapeXml(bean.text)}</textarea>
 
-<%-- The insert menu is generated from the shortcode registry (model attribute
+<%-- The writing surface. RollerEditor (roller-editor.js, built from
+     app/frontend by Maven) mounts on the textarea below; the textarea stays
+     in the form as the posted field and the editor keeps it in sync on every
+     change, so the server side never learns which editor is on the page.
+
+     The insert menu is generated from the shortcode registry (model attribute
      shortcodeCards), so adding a sixth shortcode means writing its handler and
      nothing here. Snippets ride in a data attribute rather than inline
      JavaScript: JSTL escapes them for the attribute, and the browser hands
      back the exact text through dataset. --%>
-<div class="dropdown d-inline-block" id="shortcodeInsertMenu">
-    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
-            id="shortcodeInsertButton" data-bs-toggle="dropdown" aria-expanded="false">
-        <spring:message code="weblogEdit.insertShortcode"/>
-    </button>
-    <ul class="dropdown-menu" aria-labelledby="shortcodeInsertButton">
-        <c:forEach items="${shortcodeCards}" var="card">
-            <li>
-                <button type="button" class="dropdown-item shortcode-card"
-                        data-shortcode="<c:out value='${card.name}'/>"
-                        data-snippet="<c:out value='${card.snippet}'/>"
-                        data-chooser="${card.usesMediaChooser}"><spring:message code="${card.labelKey}"/></button>
-            </li>
-        </c:forEach>
-    </ul>
-</div>
-
-<%-- mb-4 rather than a spacer.png with an inline min-height: the gap before
-     the Summary card is margin, and margin is what should express it. --%>
-<div class="mb-4">
-    <button type="button" class="btn btn-link p-0 align-baseline border-0"
-            onclick="onClickMediaFileInsert();"><spring:message code="weblogEdit.insertMediaFile"/></button>
+<div class="editor-surface" id="editorSurface" data-mode="write">
+    <div class="editor-toolbar" id="editorToolbar" role="toolbar" aria-label="<spring:message code='editor.toolbar'/>">
+        <button type="button" class="editor-tool" data-cmd="bold" title="<spring:message code='editor.bold'/> (Ctrl+B)"><span class="bi bi-type-bold" aria-hidden="true"></span><span class="visually-hidden"><spring:message code='editor.bold'/></span></button>
+        <button type="button" class="editor-tool" data-cmd="italic" title="<spring:message code='editor.italic'/> (Ctrl+I)"><span class="bi bi-type-italic" aria-hidden="true"></span><span class="visually-hidden"><spring:message code='editor.italic'/></span></button>
+        <button type="button" class="editor-tool" data-cmd="heading" title="<spring:message code='editor.heading'/>"><span class="bi bi-type-h2" aria-hidden="true"></span><span class="visually-hidden"><spring:message code='editor.heading'/></span></button>
+        <span class="editor-tool-sep" aria-hidden="true"></span>
+        <button type="button" class="editor-tool" data-cmd="quote" title="<spring:message code='editor.quote'/>"><span class="bi bi-blockquote-left" aria-hidden="true"></span><span class="visually-hidden"><spring:message code='editor.quote'/></span></button>
+        <button type="button" class="editor-tool" data-cmd="ul" title="<spring:message code='editor.bulletList'/>"><span class="bi bi-list-ul" aria-hidden="true"></span><span class="visually-hidden"><spring:message code='editor.bulletList'/></span></button>
+        <button type="button" class="editor-tool" data-cmd="ol" title="<spring:message code='editor.numberedList'/>"><span class="bi bi-list-ol" aria-hidden="true"></span><span class="visually-hidden"><spring:message code='editor.numberedList'/></span></button>
+        <span class="editor-tool-sep" aria-hidden="true"></span>
+        <button type="button" class="editor-tool" data-cmd="link" title="<spring:message code='editor.link'/> (Ctrl+K)"><span class="bi bi-link-45deg" aria-hidden="true"></span><span class="visually-hidden"><spring:message code='editor.link'/></span></button>
+        <button type="button" class="editor-tool" data-cmd="code" title="<spring:message code='editor.code'/>"><span class="bi bi-code" aria-hidden="true"></span><span class="visually-hidden"><spring:message code='editor.code'/></span></button>
+        <button type="button" class="editor-tool" data-cmd="table" title="<spring:message code='editor.table'/>"><span class="bi bi-table" aria-hidden="true"></span><span class="visually-hidden"><spring:message code='editor.table'/></span></button>
+        <button type="button" class="editor-tool" data-cmd="image" title="<spring:message code='weblogEdit.insertMediaFile'/>"><span class="bi bi-image" aria-hidden="true"></span><span class="visually-hidden"><spring:message code='weblogEdit.insertMediaFile'/></span></button>
+        <div class="dropdown d-inline-block" id="shortcodeInsertMenu">
+            <button class="editor-tool dropdown-toggle" type="button" id="shortcodeInsertButton"
+                    data-bs-toggle="dropdown" aria-expanded="false"><spring:message code="weblogEdit.insertShortcode"/></button>
+            <ul class="dropdown-menu" aria-labelledby="shortcodeInsertButton">
+                <c:forEach items="${shortcodeCards}" var="card">
+                    <li><button type="button" class="dropdown-item shortcode-card"
+                                data-shortcode="<c:out value='${card.name}'/>"
+                                data-snippet="<c:out value='${card.snippet}'/>"
+                                data-chooser="${card.usesMediaChooser}"><spring:message code="${card.labelKey}"/></button></li>
+                </c:forEach>
+            </ul>
+        </div>
+        <div class="editor-mode" id="editorMode" role="radiogroup" aria-label="<spring:message code='editor.mode'/>">
+            <button type="button" role="radio" aria-checked="true" data-mode="write"><spring:message code="editor.mode.write"/></button>
+            <button type="button" role="radio" aria-checked="false" data-mode="split"><spring:message code="editor.mode.split"/></button>
+            <button type="button" role="radio" aria-checked="false" data-mode="preview"><spring:message code="editor.mode.preview"/></button>
+        </div>
+        <button type="button" class="editor-tool editor-help" data-cmd="help" title="<spring:message code='editor.guide'/> (Ctrl+/)"><span class="bi bi-question-circle" aria-hidden="true"></span><span class="visually-hidden"><spring:message code='editor.guide'/></span></button>
+    </div>
+    <div class="editor-panes">
+        <div class="editor-write">
+            <textarea name="bean.text" id="edit_content" rows="18">${fn:escapeXml(bean.text)}</textarea>
+        </div>
+        <div class="editor-preview-pane" id="editorPreviewPane" hidden aria-live="polite"></div>
+    </div>
+    <div class="editor-status" id="editorStatus"></div>
 </div>
 
 <%-- summary --%>
@@ -118,6 +140,20 @@
          day, but it would edit Markdown rather than produce HTML. --%>
     var rollerEditor = null;
 
+    <%-- RollerEditor.create takes ONE onChange, and three separate things on
+         this page need to know the text moved: the leave-warning dirty flag,
+         local draft recovery, and (from Task A5) the live preview. The page
+         owns the fan-out rather than each of them reaching into the editor,
+         which is what keeps the editor swappable. --%>
+    var rollerEditorChangeListeners = [];
+
+    <%-- Toolbar commands, assigned once the editor exists. Declared out here
+         because the document-level Ctrl+/ handler reads it too. --%>
+    var commands = {};
+
+    <%-- Per-install, so two Rollers on one origin do not share a mode. --%>
+    var ROLLER_EDITOR_MODE_KEY = 'roller.editor.mode.v1:${pageContext.request.contextPath}';
+
     <%-- Click the real buttons rather than submitting the form: the buttons
          carry the formaction that decides draft-vs-publish, and a bare
          form.submit() would post to the form's own action and silently pick
@@ -137,15 +173,17 @@
     }
 
     $(document).ready(function () {
-        <%-- CodeMirror's extraKeys only fire with focus inside the editor.
-             This covers the title field, the rail and the SEO drawer. --%>
+        <%-- The ONE place the editor shortcuts live, now that the editor has
+             no key bindings of its own for them. Document level, so it covers
+             the title field, the rail and the SEO drawer as well as the
+             writing surface. CodeMirror 6's default keymap claims none of
+             Ctrl-S / Ctrl-Enter / Ctrl-slash. --%>
         document.addEventListener('keydown', function (event) {
-            <%-- CodeMirror's extraKeys calls preventDefault on a key it
-                 handled but does NOT stopPropagation, so the event still
-                 reaches document and this handler fired a SECOND click --
-                 two saves, or a save and a publish, per Ctrl-S. Bailing on
-                 an already-handled event is what keeps the two bindings
-                 from overlapping. --%>
+            <%-- A binding that DID handle the key calls preventDefault without
+                 stopPropagation, so the event still reaches document -- and
+                 this handler would fire a second click, i.e. two saves, or a
+                 save and a publish, per Ctrl-S. Bailing on an already-handled
+                 event is what keeps any such pair from overlapping. --%>
             if (event.defaultPrevented) {
                 return;
             }
@@ -158,31 +196,71 @@
             } else if (event.key === 'Enter') {
                 event.preventDefault();
                 rollerPublish();
+            } else if (event.key === '/') {
+                event.preventDefault();
+                commands.help();
             }
         });
 
-        rollerEditor = new EasyMDE({
-            element: document.getElementById('edit_content'),
-            autoDownloadFontAwesome: false,
-            spellChecker: false,
-            status: false,
-            minHeight: '400px',
-            toolbar: ['bold', 'italic', 'heading', '|',
-                      'quote', 'unordered-list', 'ordered-list', '|',
-                      'link', 'table', '|', 'preview', 'side-by-side', 'guide'],
-            previewRender: rollerRenderPreview,
-            <%-- Ctrl/Cmd-S saves the draft, Ctrl-Enter publishes. Both
-                 preventDefault: without it Ctrl-S opens the browser's Save
-                 dialog over the editor, which is what happens today. These
-                 only fire while focus is INSIDE CodeMirror; the document-level
-                 pair below covers the title field and the rail. --%>
-            extraKeys: {
-                'Cmd-S': rollerSaveDraft,
-                'Ctrl-S': rollerSaveDraft,
-                'Ctrl-Enter': rollerPublish,
-                'Cmd-Enter': rollerPublish
+        <%-- The insert menu is the registry's own list, read back off the
+             DOM: the editor's completion source and the menu therefore
+             cannot disagree about what a shortcode is called. --%>
+        var shortcodes = [];
+        document.querySelectorAll('#shortcodeInsertMenu .shortcode-card').forEach(function (b) {
+            shortcodes.push({ name: b.dataset.shortcode, snippet: b.dataset.snippet, label: b.textContent.trim() });
+        });
+        rollerEditor = RollerEditor.create({
+            textarea: document.getElementById('edit_content'),
+            placeholder: '<spring:message code="editor.placeholder" javaScriptEscape="true"/>',
+            shortcodes: shortcodes,
+            onChange: function () {
+                <%-- A listener that throws must not stop the ones after it:
+                     losing the dirty flag because draft recovery failed would
+                     be a silent loss of the leave warning. --%>
+                rollerEditorChangeListeners.forEach(function (listener) {
+                    try {
+                        listener();
+                    } catch (e) {
+                        /* one bad listener is not the others' problem */
+                    }
+                });
             }
         });
+
+        commands = {
+            bold: function () { rollerEditor.wrapSelection('**', '**', '<spring:message code="editor.boldPlaceholder" javaScriptEscape="true"/>'); },
+            italic: function () { rollerEditor.wrapSelection('*', '*', '<spring:message code="editor.italicPlaceholder" javaScriptEscape="true"/>'); },
+            heading: function () { rollerEditor.toggleLinePrefix('## '); },
+            quote: function () { rollerEditor.toggleLinePrefix('> '); },
+            ul: function () { rollerEditor.toggleLinePrefix('- '); },
+            ol: function () { rollerEditor.toggleLinePrefix('1. '); },
+            link: function () { rollerEditor.wrapSelection('[', '](https://)', '<spring:message code="editor.linkPlaceholder" javaScriptEscape="true"/>'); },
+            code: function () { rollerEditor.wrapSelection('`', '`', 'code'); },
+            table: function () { rollerEditor.insert('\n| <spring:message code="editor.tableHeader" javaScriptEscape="true"/> | <spring:message code="editor.tableHeader" javaScriptEscape="true"/> |\n| --- | --- |\n|  |  |\n'); },
+            image: function () { onClickMediaFileInsert(); },
+            help: function () { if (window.rollerOpenGuide) { window.rollerOpenGuide(); } }
+        };
+        document.getElementById('editorToolbar').addEventListener('click', function (event) {
+            var button = event.target.closest('button[data-cmd]');
+            if (button && commands[button.dataset.cmd]) {
+                event.preventDefault();
+                commands[button.dataset.cmd]();
+            }
+        });
+        document.getElementById('editorMode').addEventListener('click', function (event) {
+            var button = event.target.closest('button[data-mode]');
+            if (button) {
+                rollerSetEditorMode(button.dataset.mode);
+            }
+        });
+        try {
+            var storedMode = window.localStorage.getItem(ROLLER_EDITOR_MODE_KEY);
+            if (storedMode) {
+                rollerSetEditorMode(storedMode);
+            }
+        } catch (e) {
+            /* storage unavailable: write mode */
+        }
 
         <%-- Warn before leaving with unsaved edits, and stand down on submit.
              Bound ONCE, tracking a dirty flag. The previous version registered
@@ -194,7 +272,7 @@
              local snapshot is a recovery mechanism, not a reason to stop
              telling someone they are walking away from unsaved work. --%>
         var rollerEntryDirty = false;
-        rollerEditor.codemirror.on('change', function () {
+        rollerEditorChangeListeners.push(function () {
             rollerEntryDirty = true;
         });
         $("#entry").on('input change', function () {
@@ -241,24 +319,45 @@
                 getText: rollerGetEntryText,
                 setText: rollerSetEntryText,
                 onEditorChange: function (callback) {
-                    rollerEditor.codemirror.on('change', callback);
+                    rollerEditorChangeListeners.push(callback);
                 }
             });
         }
 
         <%-- Every card goes through insertMediaFile, the editor's one insert
-             seam, so the WYSIWYG-for-Markdown surface that may replace EasyMDE
-             inherits the whole menu by reimplementing a single function. --%>
+             seam, so the WYSIWYG-for-Markdown surface that may replace this
+             one inherits the whole menu by reimplementing a single function. --%>
         $(".shortcode-card").on('click', function (event) {
             event.preventDefault();
             if (this.dataset.chooser === 'true') {
                 onClickMediaFileInsert();
             } else {
                 insertMediaFile(this.dataset.snippet);
-                rollerEditor.codemirror.focus();
+                rollerEditor.focus();
             }
         });
     });
+
+    <%-- Mode is a data attribute on the surface; CSS lays the panes out.
+         Preview content arrives via rollerRenderPreview (server fragment)
+         until Task A5 replaces the pane with the theme-true iframe. --%>
+    function rollerSetEditorMode(mode) {
+        var surface = document.getElementById('editorSurface');
+        surface.dataset.mode = mode;
+        document.querySelectorAll('#editorMode button[data-mode]').forEach(function (b) {
+            b.setAttribute('aria-checked', b.dataset.mode === mode ? 'true' : 'false');
+        });
+        var pane = document.getElementById('editorPreviewPane');
+        pane.hidden = (mode === 'write');
+        if (mode !== 'write') {
+            rollerRenderPreview(rollerGetEntryText(), pane);
+        }
+        try {
+            window.localStorage.setItem(ROLLER_EDITOR_MODE_KEY, mode);
+        } catch (e) {
+            /* storage unavailable: the choice simply does not persist */
+        }
+    }
 
     <%-- The preview is rendered by the SERVER, not by a Markdown library in
          the browser. Only the server can expand [gallery], [map] and the rest,
@@ -287,15 +386,15 @@
          tests. Everything else talks to the editor through here, so swapping
          the editor again does not mean hunting down its callers. --%>
     function insertMediaFile(toInsert) {
-        rollerEditor.codemirror.replaceSelection(toInsert);
+        rollerEditor.insert(toInsert);
     }
 
     function rollerSetEntryText(text) {
-        rollerEditor.value(text);
+        rollerEditor.setValue(text);
     }
 
     function rollerGetEntryText() {
-        return rollerEditor.value();
+        return rollerEditor.getValue();
     }
 
     <%-- Common functions --%>

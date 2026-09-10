@@ -283,8 +283,8 @@
          * options.getText() is the caller's editor read seam, and every
          * other operation in this module is guarded against failure -- this
          * one was not. A caller that installs before its editor is fully
-         * constructed (CLAUDE.md already documents one such race, EasyMDE
-         * against the page's own ready handler) would have thrown a
+         * constructed (CLAUDE.md already documents one such race, the
+         * editor against the page's own ready handler) would have thrown a
          * TypeError straight out of install(), into the host page's
          * $(document).ready, aborting the rest of that handler. Returning
          * null here instead means a broken read seam disables the module for

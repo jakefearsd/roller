@@ -24,6 +24,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 
 import org.apache.roller.it.support.BrowserHealth;
+import org.apache.roller.it.support.Editor;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,7 +37,6 @@ import static com.codeborne.selenide.Condition.text;
 import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
 import static com.codeborne.selenide.Selenide.$$;
-import static com.codeborne.selenide.Selenide.executeJavaScript;
 import static com.codeborne.selenide.Selenide.webdriver;
 import static com.codeborne.selenide.WebDriverConditions.urlContaining;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -85,10 +85,7 @@ class PageIT extends RollerIT {
         $("#pageEditForm").should(exist);
         $("#page_bean_slug").setValue("about");
         $("#page_bean_title").setValue("About Us");
-        $(".CodeMirror").should(visible);
-        executeJavaScript(
-                "rollerSetEntryText(arguments[0]);",
-                "This page has **bold** text.\n\n"
+        Editor.setText("This page has **bold** text.\n\n"
                         + "[cta href=\"https://example.com/book\" label=\"Book now\" "
                         + "note=\"Free cancellation\"]");
         saveOpenPage();

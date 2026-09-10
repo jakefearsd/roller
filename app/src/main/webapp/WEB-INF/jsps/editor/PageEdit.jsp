@@ -154,8 +154,9 @@
     <div id="accordion">
 
         <%-- ============================================================ --%>
-        <%-- Content editor. Same Markdown-with-preview surface the entry
-             editor uses, driven through the same three functions
+        <%-- Content editor. The same RollerEditor core the entry editor
+             mounts (toolbar and mode control arrive with Task A9), driven
+             through the same three functions
              (insertMediaFile, rollerSetEntryText, rollerGetEntryText) so a
              future editor swap only means reimplementing those. Not a
              literal jsp:include of EntryEditor.jsp: that partial binds to
@@ -330,6 +331,11 @@
 
     var rollerEditor = null;
 
+    <%-- RollerEditor.create takes ONE onChange; the dirty flag and local
+         draft recovery both need it, so the page owns the fan-out. Same
+         shape as EntryEditor.jsp. --%>
+    var rollerEditorChangeListeners = [];
+
     function rollerSavePage() {
         var button = document.querySelector("#pageEditForm button[type='submit']");
         if (button) {
@@ -338,33 +344,36 @@
     }
 
     $(document).ready(function () {
-        rollerEditor = new EasyMDE({
-            element: document.getElementById('edit_content'),
-            autoDownloadFontAwesome: false,
-            spellChecker: false,
-            status: false,
-            minHeight: '400px',
-            toolbar: ['bold', 'italic', 'heading', '|',
-                      'quote', 'unordered-list', 'ordered-list', '|',
-                      'link', 'table', '|', 'preview', 'side-by-side', 'guide'],
-            <%-- Same shortcuts as the entry editor. The page form has one
-                 Save button, so Ctrl-Enter and Ctrl-S do the same thing here
-                 rather than one of them doing nothing. --%>
-            extraKeys: {
-                'Cmd-S': rollerSavePage,
-                'Ctrl-S': rollerSavePage,
-                'Ctrl-Enter': rollerSavePage,
-                'Cmd-Enter': rollerSavePage
+        <%-- The minimal RollerEditor mount: no toolbar, no mode control.
+             Task A9 rebuilds this page on the entry editor's surface; until
+             then a page author gets the same editing core through the same
+             three seam functions, and nothing else changes here. --%>
+        var shortcodes = [];
+        document.querySelectorAll('#shortcodeInsertMenu .shortcode-card').forEach(function (b) {
+            shortcodes.push({ name: b.dataset.shortcode, snippet: b.dataset.snippet, label: b.textContent.trim() });
+        });
+        rollerEditor = RollerEditor.create({
+            textarea: document.getElementById('edit_content'),
+            placeholder: '<spring:message code="editor.placeholder" javaScriptEscape="true"/>',
+            shortcodes: shortcodes,
+            onChange: function () {
+                rollerEditorChangeListeners.forEach(function (listener) {
+                    try {
+                        listener();
+                    } catch (e) {
+                        /* one bad listener is not the others' problem */
+                    }
+                });
             }
         });
 
         document.addEventListener('keydown', function (event) {
-            <%-- CodeMirror's extraKeys calls preventDefault on a key it
-                 handled but does NOT stopPropagation, so the event still
-                 reaches document and this handler fired a SECOND click --
-                 two saves, or a save and a publish, per Ctrl-S. Bailing on
-                 an already-handled event is what keeps the two bindings
-                 from overlapping. --%>
+            <%-- The one place this page's shortcuts live. A binding that DID
+                 handle the key calls preventDefault without stopPropagation,
+                 so the event still reaches document -- and this handler would
+                 fire a second click, i.e. two saves per Ctrl-S. Bailing on an
+                 already-handled event is what keeps any such pair from
+                 overlapping. --%>
             if (event.defaultPrevented) {
                 return;
             }
@@ -382,7 +391,7 @@
              callback left one submit handler per keystroke on the form about
              to be posted. --%>
         var rollerPageDirty = false;
-        rollerEditor.codemirror.on('change', function () {
+        rollerEditorChangeListeners.push(function () {
             rollerPageDirty = true;
         });
         $("#pageEditForm").on('input change', function () {
@@ -419,7 +428,7 @@
                 getText: rollerGetEntryText,
                 setText: rollerSetEntryText,
                 onEditorChange: function (callback) {
-                    rollerEditor.codemirror.on('change', callback);
+                    rollerEditorChangeListeners.push(callback);
                 }
             });
         }
@@ -430,22 +439,22 @@
                 onClickPageMediaFileInsert();
             } else {
                 insertMediaFile(this.dataset.snippet);
-                rollerEditor.codemirror.focus();
+                rollerEditor.focus();
             }
         });
     });
 
     <%-- The one seam for putting text into the editor. --%>
     function insertMediaFile(toInsert) {
-        rollerEditor.codemirror.replaceSelection(toInsert);
+        rollerEditor.insert(toInsert);
     }
 
     function rollerSetEntryText(text) {
-        rollerEditor.value(text);
+        rollerEditor.setValue(text);
     }
 
     function rollerGetEntryText() {
-        return rollerEditor.value();
+        return rollerEditor.getValue();
     }
 
     <%-- Opens the media chooser. With no argument the chosen file is

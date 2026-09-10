@@ -27,6 +27,7 @@ import java.util.Optional;
 import com.codeborne.selenide.Configuration;
 import com.codeborne.selenide.Selenide;
 import org.apache.roller.it.support.BrowserHealth;
+import org.apache.roller.it.support.Editor;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -40,7 +41,6 @@ import static com.codeborne.selenide.Condition.text;
 import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
 import static com.codeborne.selenide.Selenide.$$;
-import static com.codeborne.selenide.Selenide.executeJavaScript;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -102,9 +102,6 @@ class VirtualHostIT extends RollerIT {
 
     /** The Weblog Settings admin path, where a custom domain is edited. */
     private static final String GLOBAL_CONFIG_PATH = "/roller-ui/admin/globalConfig.rol";
-
-    /** The editor's editable surface; text goes in through the page's own seam. */
-    private static final String EDITOR_BODY = ".CodeMirror";
 
     /** Rendered on the entry edit page only once the entry is actually published. */
     private static final String PERMALINK = "#entry_bean_permalink";
@@ -656,8 +653,7 @@ class VirtualHostIT extends RollerIT {
         openPath("/roller-ui/authoring/entryAdd.rol?weblog=" + handle);
         $("#entry").should(exist);
         $("input[name='bean.title']").setValue(title);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript("rollerSetEntryText(arguments[0]);", "Body of " + title);
+        Editor.setText("Body of " + title);
         $("button[formaction$='entryAdd!publish.rol']").click();
 
         $(PERMALINK).should(exist);
@@ -682,8 +678,7 @@ class VirtualHostIT extends RollerIT {
         $("#pageEditForm").should(exist);
         $("#page_bean_slug").setValue(slug);
         $("#page_bean_title").setValue(title);
-        $(".CodeMirror").should(visible);
-        executeJavaScript("rollerSetEntryText(arguments[0]);", body);
+        Editor.setText(body);
         saveOpenPage();
 
         openPath("/roller-ui/authoring/pages.rol?weblog=" + handle);

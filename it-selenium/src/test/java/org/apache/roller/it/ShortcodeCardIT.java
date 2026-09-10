@@ -17,6 +17,7 @@
  */
 package org.apache.roller.it;
 
+import org.apache.roller.it.support.Editor;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,7 +27,6 @@ import static com.codeborne.selenide.Condition.exist;
 import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
 import static com.codeborne.selenide.Selenide.$$;
-import static com.codeborne.selenide.Selenide.executeJavaScript;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -43,9 +43,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ShortcodeCardIT extends RollerIT {
 
     private static final String ENTRY_ADD = "/roller-ui/authoring/entryAdd.rol?weblog=" + WEBLOG_HANDLE;
-
-    /** The editor's editable surface; text goes in and out through the page's own seam. */
-    private static final String EDITOR_BODY = ".CodeMirror";
 
     @BeforeEach
     void logIn() {
@@ -73,7 +70,7 @@ class ShortcodeCardIT extends RollerIT {
         $("#shortcodeInsertMenu .shortcode-card[data-shortcode='gallery']")
                 .shouldBe(visible).click();
 
-        String text = executeJavaScript("return rollerGetEntryText();");
+        String text = Editor.getText();
         assertTrue(text != null && text.contains("[gallery dir=\"default\" row=\"320\"]"),
                 "The gallery snippet did not reach the editor intact; it holds: " + text);
     }
@@ -91,7 +88,7 @@ class ShortcodeCardIT extends RollerIT {
         $("#shortcodeInsertMenu .shortcode-card[data-shortcode='faq']")
                 .shouldBe(visible).click();
 
-        String text = executeJavaScript("return rollerGetEntryText();");
+        String text = Editor.getText();
         assertTrue(text != null && text.contains("[faq]\n[q]"),
                 "The FAQ snippet lost its line breaks; it holds: " + text);
     }
@@ -99,6 +96,6 @@ class ShortcodeCardIT extends RollerIT {
     private void openEditor() {
         openPath(ENTRY_ADD);
         $("#entry").should(exist);
-        $(EDITOR_BODY).should(visible);
+        Editor.root();
     }
 }

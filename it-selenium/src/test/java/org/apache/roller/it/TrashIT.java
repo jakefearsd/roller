@@ -24,6 +24,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 
 import org.apache.roller.it.support.BrowserHealth;
+import org.apache.roller.it.support.Editor;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -67,7 +68,6 @@ class TrashIT extends RollerIT {
     private static final String ENTRIES_LIST = "/roller-ui/authoring/entries.rol?weblog=" + WEBLOG_HANDLE;
     private static final String TRASH = "/roller-ui/authoring/trash.rol?weblog=" + WEBLOG_HANDLE;
 
-    private static final String EDITOR_BODY = ".CodeMirror";
     private static final String PERMALINK = "#entry_bean_permalink";
 
     @BeforeEach
@@ -132,8 +132,7 @@ class TrashIT extends RollerIT {
         openPath(ENTRY_ADD);
         $("#entry").should(exist);
         $("input[name='bean.title']").setValue(title);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript("rollerSetEntryText(arguments[0]);", "Body of " + title);
+        Editor.setText("Body of " + title);
         $("button[formaction$='entryAdd!publish.rol']").click();
 
         $(PERMALINK).should(exist);

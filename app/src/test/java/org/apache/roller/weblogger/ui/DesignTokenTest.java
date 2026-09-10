@@ -66,8 +66,15 @@ public class DesignTokenTest {
     private static final Path TOKENS_CSS =
             Paths.get("src/main/webapp/roller-ui/styles/roller-tokens.css");
 
-    private static final Path ROLLER_CSS =
-            Paths.get("src/main/webapp/roller-ui/styles/roller.css");
+    /**
+     * The stylesheets that load alongside {@code roller-tokens.css} and may
+     * therefore declare NO color of their own. Both are admin-UI files served
+     * from the same {@code <head>} as the token file, so every color they
+     * need is already available as a {@code var(--token)}.
+     */
+    private static final List<Path> TOKENS_ONLY_STYLESHEETS = List.of(
+            Paths.get("src/main/webapp/roller-ui/styles/roller.css"),
+            Paths.get("src/main/webapp/roller-ui/styles/roller-editor.css"));
 
     private static final Path HEAD_JSP =
             Paths.get("src/main/webapp/WEB-INF/jsps/tiles/head.jsp");
@@ -89,9 +96,10 @@ public class DesignTokenTest {
 
     /**
      * Strips CSS block comments before the roller.css audit runs -- unlike
-     * roller-tokens.css, roller.css's own comments legitimately document hex
-     * values it does not itself declare (e.g. easymde.min.css's hardcoded
-     * caret color), so those must not trip the literal check below.
+     * roller-tokens.css, an admin stylesheet's own comments legitimately
+     * document hex values it does not itself declare (a third-party
+     * stylesheet's hardcoded caret color, say), so those must not trip the
+     * literal check below.
      */
     private static final Pattern CSS_COMMENT = Pattern.compile("/\\*.*?\\*/", Pattern.DOTALL);
 
@@ -136,7 +144,7 @@ public class DesignTokenTest {
     }
 
     /**
-     * roller.css is deliberately tokens-only -- design-system.md's whole
+     * roller.css and roller-editor.css are deliberately tokens-only -- design-system.md's whole
      * point is that a color is chosen once, in roller-tokens.css's 21-value
      * spec, and every other stylesheet references it through
      * {@code var(--token)} rather than picking its own literal. The
@@ -145,8 +153,8 @@ public class DesignTokenTest {
      * background-image} caret) shipped as a hex/literal-shaped mistake, so
      * this audits the same failure class the roller-tokens.css test above
      * does -- a bare {@code #RRGGBB} outside a comment -- but expects ZERO
-     * matches rather than checking against the spec set, since roller.css
-     * is not supposed to declare any hex at all. Named CSS color keywords
+     * matches rather than checking against the spec set, since neither file
+     * is supposed to declare any hex at all. Named CSS color keywords
      * are deliberately out of scope: this locks down the specific regression
      * class the design wave hit, not a general-purpose CSS color linter.
      * (The named colors this exemption was written for are all gone as of the
@@ -156,28 +164,30 @@ public class DesignTokenTest {
      * stands, because a keyword is a different failure mode from a hex.)
      */
     @Test
-    public void rollerCssHasNoHexColorLiteralsOutsideComments() throws IOException {
-        assertTrue(Files.exists(ROLLER_CSS), "Expected to find " + ROLLER_CSS.toAbsolutePath());
-        String css = Files.readString(ROLLER_CSS, StandardCharsets.UTF_8);
-        String withoutComments = CSS_COMMENT.matcher(css).replaceAll(" ");
+    public void tokensOnlyStylesheetsHaveNoHexColorLiteralsOutsideComments() throws IOException {
+        for (Path stylesheet : TOKENS_ONLY_STYLESHEETS) {
+            assertTrue(Files.exists(stylesheet), "Expected to find " + stylesheet.toAbsolutePath());
+            String css = Files.readString(stylesheet, StandardCharsets.UTF_8);
+            String withoutComments = CSS_COMMENT.matcher(css).replaceAll(" ");
 
-        Matcher matcher = HEX_LITERAL.matcher(withoutComments);
-        Set<String> found = new TreeSet<>();
-        while (matcher.find()) {
-            found.add(matcher.group());
+            Matcher matcher = HEX_LITERAL.matcher(withoutComments);
+            Set<String> found = new TreeSet<>();
+            while (matcher.find()) {
+                found.add(matcher.group());
+            }
+
+            assertTrue(found.isEmpty(),
+                    stylesheet + " must stay tokens-only -- found hex color literal(s) outside "
+                            + "comments (should be var(--token) references instead): "
+                            + String.join(", ", found));
         }
-
-        assertTrue(found.isEmpty(),
-                ROLLER_CSS + " must stay tokens-only -- found hex color literal(s) outside "
-                        + "comments (should be var(--token) references instead): "
-                        + String.join(", ", found));
     }
 
     /**
      * Every OTHER stylesheet in the directory, not just the one named above.
      *
-     * <p>{@link #rollerCssHasNoHexColorLiteralsOutsideComments()} names
-     * {@code roller.css} explicitly, which is exactly how {@code atom.xsl} and
+     * <p>{@link #tokensOnlyStylesheetsHaveNoHexColorLiteralsOutsideComments()}
+     * names its files explicitly, which is exactly how {@code atom.xsl} and
      * {@code rss.xsl} kept an entire off-spec red/tan palette
      * ({@code #ad3537}, {@code #c6ab74}, {@code #f00}) sitting in the policed
      * directory, on a public surface, with no dark mode -- they were never

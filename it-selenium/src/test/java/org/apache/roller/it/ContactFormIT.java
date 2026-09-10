@@ -25,6 +25,7 @@ import java.time.Duration;
 
 import com.codeborne.selenide.CollectionCondition;
 import org.apache.roller.it.support.BrowserHealth;
+import org.apache.roller.it.support.Editor;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,7 +37,6 @@ import static com.codeborne.selenide.Condition.text;
 import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
 import static com.codeborne.selenide.Selenide.$$;
-import static com.codeborne.selenide.Selenide.executeJavaScript;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -178,8 +178,7 @@ class ContactFormIT extends RollerIT {
         $("#pageEditForm").should(exist);
         $("#page_bean_slug").setValue("contact");
         $("#page_bean_title").setValue("Contact");
-        $(".CodeMirror").should(visible);
-        executeJavaScript("rollerSetEntryText(arguments[0]);", "[contact]");
+        Editor.setText("[contact]");
         saveOpenPage();
 
         openPath("/roller-ui/authoring/pages.rol?weblog=" + handle);

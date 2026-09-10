@@ -54,3 +54,7 @@ deploy/config/roller-production.properties
 # app/frontend/package.json + package-lock.json, which ARE committed.
 app/frontend/node_modules/
 app/frontend/node/
+# The editor bundle: a build output that has to sit under the webapp root,
+# because that is the only static location this deployment serves (see
+# app/frontend/build.mjs).
+app/src/main/webapp/roller-ui/scripts/roller-editor.js

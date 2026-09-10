@@ -21,6 +21,7 @@ import java.net.URI;
 import java.time.Duration;
 
 import org.apache.roller.it.support.BrowserHealth;
+import org.apache.roller.it.support.Editor;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,7 +49,6 @@ class EntryAutosaveIT extends RollerIT {
     private static final String ENTRY_ADD = "/roller-ui/authoring/entryAdd.rol?weblog=" + WEBLOG_HANDLE;
     private static final String PAGE_ADD = "/roller-ui/authoring/pageEdit.rol?weblog=" + WEBLOG_HANDLE;
 
-    private static final String EDITOR_BODY = ".CodeMirror";
     private static final String DRAFT_BAR = "#draftRecoveryBar";
     private static final String DRAFT_RESTORE = ".draft-bar-restore";
     private static final String DRAFT_DISCARD = ".draft-bar-discard";
@@ -97,8 +97,7 @@ class EntryAutosaveIT extends RollerIT {
         openPath(ENTRY_ADD);
         $("#entry").should(exist);
         $("input[name='bean.title']").setValue("IT Autosave " + suffix);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript("rollerSetEntryText(arguments[0]);", body);
+        Editor.setText(body);
 
         waitForDraftSnapshot(entryDraftKey("entryAdd", "new"));
         reloadWithoutLeaveWarning();
@@ -107,7 +106,7 @@ class EntryAutosaveIT extends RollerIT {
         $(DRAFT_BAR).shouldBe(visible);
         $(DRAFT_RESTORE).click();
 
-        String recovered = executeJavaScript("return rollerGetEntryText();");
+        String recovered = Editor.getText();
         assertTrue(recovered != null && recovered.contains(body),
                 "restore did not bring the unsaved text back; the editor holds: " + recovered);
     }
@@ -120,8 +119,7 @@ class EntryAutosaveIT extends RollerIT {
         openPath(ENTRY_ADD);
         $("#entry").should(exist);
         $("input[name='bean.title']").setValue("IT Autosave Saved " + suffix);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript("rollerSetEntryText(arguments[0]);", body);
+        Editor.setText(body);
 
         String newDraftKey = entryDraftKey("entryAdd", "new");
         waitForDraftSnapshot(newDraftKey);
@@ -169,8 +167,7 @@ class EntryAutosaveIT extends RollerIT {
         openPath("/roller-ui/authoring/entryEdit.rol?weblog=" + WEBLOG_HANDLE
                 + "&bean.id=" + entryId);
         $("#entry").should(exist);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript("rollerSetEntryText(arguments[0]);", body + " (revised)");
+        Editor.setText(body + " (revised)");
 
         String editKey = entryDraftKey("entryEdit", entryId);
         waitForDraftSnapshot(editKey);
@@ -202,8 +199,7 @@ class EntryAutosaveIT extends RollerIT {
         openPath(ENTRY_ADD);
         $("#entry").should(exist);
         $("input[name='bean.title']").setValue("IT Autosave Discard " + suffix);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript("rollerSetEntryText(arguments[0]);", body);
+        Editor.setText(body);
 
         waitForDraftSnapshot(entryDraftKey("entryAdd", "new"));
         reloadWithoutLeaveWarning();
@@ -225,8 +221,7 @@ class EntryAutosaveIT extends RollerIT {
 
         openPath(PAGE_ADD);
         $("#pageEditForm").should(exist);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript("rollerSetEntryText(arguments[0]);", body);
+        Editor.setText(body);
 
         waitForDraftSnapshot(pageDraftKey("new"));
         reloadWithoutLeaveWarning();
@@ -235,7 +230,7 @@ class EntryAutosaveIT extends RollerIT {
         $(DRAFT_BAR).shouldBe(visible);
         $(DRAFT_RESTORE).click();
 
-        String recovered = executeJavaScript("return rollerGetEntryText();");
+        String recovered = Editor.getText();
         assertTrue(recovered != null && recovered.contains(body),
                 "restore did not bring the unsaved page text back; the editor holds: " + recovered);
     }
@@ -247,8 +242,7 @@ class EntryAutosaveIT extends RollerIT {
         openPath(ENTRY_ADD);
         $("#entry").should(exist);
         $("input[name='bean.title']").setValue(title);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript("rollerSetEntryText(arguments[0]);", body);
+        Editor.setText(body);
         $("button[formaction$='entryAdd!saveDraft.rol']").click();
         $("input[name='bean.id']").should(exist);
         return $("input[name='bean.id']").getValue();

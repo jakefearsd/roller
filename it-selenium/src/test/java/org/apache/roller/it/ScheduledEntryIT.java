@@ -20,6 +20,7 @@ package org.apache.roller.it;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
+import org.apache.roller.it.support.Editor;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceAccessMode;
@@ -62,9 +63,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @ResourceLock(value = RollerIT.GLOBAL_CONFIG, mode = ResourceAccessMode.READ)
 class ScheduledEntryIT extends RollerIT {
-
-    /** The editor's editable surface; text goes in through the page's own seam. */
-    private static final String EDITOR_BODY = ".CodeMirror";
 
     /** Rendered on the edit page only once the entry has been saved. */
     private static final String PERMALINK = "#entry_bean_permalink";
@@ -131,8 +129,7 @@ class ScheduledEntryIT extends RollerIT {
         openPath("/roller-ui/authoring/entryAdd.rol?weblog=" + handle);
         $("#entry").should(exist);
         $("input[name='bean.title']").setValue(title);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript("rollerSetEntryText(arguments[0]);", "Body of " + title);
+        Editor.setText("Body of " + title);
 
         executeJavaScript("document.getElementsByName('bean.pubTimeLocal')[0].value = arguments[0];",
                 LocalDate.now().plusYears(1).atStartOfDay().format(ENTRY_PUB_TIME));
@@ -167,8 +164,7 @@ class ScheduledEntryIT extends RollerIT {
         openPath("/roller-ui/authoring/entryAdd.rol?weblog=" + handle);
         $("#entry").should(exist);
         $("input[name='bean.title']").setValue(title);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript("rollerSetEntryText(arguments[0]);", "Body of " + title);
+        Editor.setText("Body of " + title);
         $("button[formaction$='entryAdd!publish.rol']").click();
 
         $(PERMALINK).should(exist);

@@ -17,6 +17,7 @@
  */
 package org.apache.roller.it;
 
+import org.apache.roller.it.support.Editor;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -59,14 +60,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class AuthoringJourneyIT extends RollerIT {
 
     private static final String ENTRY_ADD = "/roller-ui/authoring/entryAdd.rol?weblog=" + WEBLOG_HANDLE;
-
-    /**
-     * The editor's editable surface. Tests wait for this and then put text in
-     * through {@code rollerSetEntryText}, the page's own seam -- never through
-     * the editor's API directly, so replacing the editor is one change here
-     * rather than one in every journey.
-     */
-    private static final String EDITOR_BODY = ".CodeMirror";
 
     /** Rendered on the edit page only once the entry is actually published — see EntryEdit.jsp. */
     private static final String PERMALINK = "#entry_bean_permalink";
@@ -174,10 +167,7 @@ class AuthoringJourneyIT extends RollerIT {
         $("#entry").should(exist);
         $("input[name='bean.title']").setValue(title);
 
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript(
-                "rollerSetEntryText(arguments[0]);",
-                body);
+        Editor.setText(body);
     }
 
     /** Submits via the publish button, whose formaction differs between add and edit. */

@@ -129,7 +129,7 @@ class EditorAutosaveWiringTest {
     @Test
     void theLeaveWarningIsBoundOnceRatherThanPerKeystroke() throws IOException {
         // The original registered $(window).on("beforeunload", ...) and
-        // $("#entry").on('submit', ...) INSIDE the codemirror change callback,
+        // $("#entry").on('submit', ...) INSIDE the editor's change callback,
         // so a thousand-word entry left a thousand submit handlers on the form
         // it was about to post.
         String jsp = codeOnly(read(ENTRY_EDITOR));
@@ -323,16 +323,22 @@ class EditorAutosaveWiringTest {
      */
     private static String firstEditorChangeCallbackBody(String jsp) {
         // Anchored on the dirty-flag assignment rather than on "the first
-        // codemirror.on('change')" in the file. Both JSPs register a SECOND
-        // change handler inside install()'s onEditorChange, so an ordinal
+        // change registration" in the file. Both JSPs register a SECOND
+        // change listener inside install()'s onEditorChange, so an ordinal
         // anchor means simply moving the install() block above the
         // leave-warning block makes these assertions inspect a one-line
         // callback and pass vacuously -- with the per-keystroke leak fully
         // reintroduced.
+        //
+        // The registration is a push onto the page's own listener array:
+        // RollerEditor.create takes ONE onChange, so the page fans it out.
+        // That is what this anchors on now; the editor's own API is
+        // deliberately not named here, since swapping the editor again must
+        // not mean rewriting this test.
         int flag = jsp.indexOf("Dirty = true;");
         assertTrue(flag > 0, "the leave-warning must still track a dirty flag");
-        int start = jsp.lastIndexOf("rollerEditor.codemirror.on('change'", flag);
-        assertTrue(start > 0, "the dirty flag must be set from the editor's change handler");
+        int start = jsp.lastIndexOf("rollerEditorChangeListeners.push(", flag);
+        assertTrue(start > 0, "the dirty flag must be set from an editor change listener");
         int open = jsp.indexOf('{', jsp.indexOf("function", start));
         assertTrue(open > 0, "the change handler must have a function body");
 
