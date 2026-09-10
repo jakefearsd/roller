@@ -31,11 +31,11 @@
 <nav>
     <div class="d-flex justify-content-between">
         <c:if test="${pager.prevLink != null}">
-            <a href='${pager.prevLink}' class="btn btn-outline-secondary previous">
+            <a href="${fn:escapeXml(pager.prevLink)}" class="btn btn-outline-secondary previous">
                 <span aria-hidden="true">&larr;</span><spring:message code="pager.newer"/></a>
         </c:if>
         <c:if test="${pager.nextLink != null}">
-            <a href='${pager.nextLink}' class="btn btn-outline-secondary next ms-auto"><spring:message code="pager.older"/>
+            <a href="${fn:escapeXml(pager.nextLink)}" class="btn btn-outline-secondary next ms-auto"><spring:message code="pager.older"/>
                 <span aria-hidden="true">&rarr;</span></a>
         </c:if>
     </div>
@@ -93,26 +93,30 @@
     <input type="hidden" name="bean.endDateString" value="${fn:escapeXml(bean.endDateString)}"/>
 </c:if>
 
-<%-- Status filter as link-chips: a GET per option, reusing the same
-     statusOptions the sidebar select is built from so the two can never
-     offer different sets. Possible only because Task 1 made the filter form
-     a GET -- before that the filter lived in a POST body and had no URL. --%>
+<%-- Status filter as link-chips, and the ONE status control on this screen --
+     the sidebar's radio set is gone, because two controls for one filter is
+     how a list ends up showing DRAFT while the sidebar claims ALL.
+
+     The hrefs come from the controller (statusChipUrls), not from a <c:url>
+     here. A chip has to carry the author's whole filter -- text, tags,
+     category, date range, sort -- with only the status swapped, and listing
+     those fields by hand in the JSP means the one that gets forgotten is
+     dropped silently on every chip click. The controller builds them from
+     the same filterParams the pager's base url and the bulk redirect use.
+
+     fn:escapeXml on the href is not decoration: URLUtilities.getQueryString
+     does NOT url-encode its values, so bean.text -- raw, reflected straight
+     off the query string -- reaches this attribute as typed. Without the
+     escape a crafted bean.text closes the attribute. --%>
 <nav class="entries-status-chips d-flex flex-wrap gap-2 mb-3" aria-label="<spring:message code='weblogEdit.status'/>">
     <c:forEach items="${statusOptions}" var="opt">
-        <c:url var="chipUrl" value="/roller-ui/authoring/entries.rol">
-            <c:param name="weblog" value="${actionWeblog.handle}"/>
-            <c:param name="bean.status" value="${opt.key}"/>
-            <c:if test="${not empty bean.categoryName}">
-                <c:param name="bean.categoryName" value="${bean.categoryName}"/>
-            </c:if>
-        </c:url>
         <%-- A blank bean.status means the same thing as ALL, so both mark
              the ALL chip -- otherwise the unfiltered default list shows no
              chip active at all. --%>
         <c:set var="chipActive" value="${opt.key == bean.status
                 or (opt.key == 'ALL' and empty bean.status)}"/>
         <a class="btn btn-sm ${chipActive ? 'btn-secondary' : 'btn-outline-secondary'}"
-           href="${chipUrl}" ${chipActive ? 'aria-current="page"' : ''}>${opt.value}</a>
+           href="${fn:escapeXml(statusChipUrls[opt.key])}" ${chipActive ? 'aria-current="page"' : ''}>${opt.value}</a>
     </c:forEach>
 </nav>
 
@@ -161,7 +165,6 @@
         <input type="checkbox" id="selectAllEntries" class="form-check-input" data-select-all
                title="<spring:message code="weblogEntryQuery.selectAll"/>"/>
     </th>
-    <th scope="col" class="rollertable" width="3%"> </th>
     <th scope="col" class="rollertable" width="7%">
         <spring:message code="weblogEntryQuery.pubTime"/>
     </th>
@@ -189,41 +192,40 @@
                aria-label="${fn:escapeXml(post.title)}"/>
     </td>
 
-    <td>
+    <%-- <rc:date/> renders nothing at all for a null value and formats in
+         the WEBLOG's timezone, which is the clock an entry's pubtime has
+         always meant (see DateTag). The <c:if>s these cells used to carry
+         and the message-bundle date pattern they used to resolve are both
+         the tag's job now. --%>
+    <td class="data"><rc:date value="${post.pubTime}"/></td>
+
+    <td class="data"><rc:date value="${post.updateTime}"/></td>
+
+    <%-- The title is the row's primary target and it opens the EDITOR. This
+         is the authoring surface: clicking a post's name here means "open
+         this to work on it". The published page is still one click away as
+         the quiet secondary link below -- demoted, not lost -- and the
+         pencil column that existed only to reach the editor is gone, since
+         the title now does its whole job.
+
+         post.displayTitle is entry title text, which EntryBean.copyTo stored
+         HTML-escaped at save time; it is emitted bare here for the same
+         reason every theme emits $entry.title bare (escaping again renders
+         &amp;amp;). post.anchor is machine-derived from the title
+         (createAnchorBase strips every non-alphanumeric character) and so
+         cannot carry markup today -- it is escaped anyway, because that
+         property is an invariant of one method somewhere else, not of this
+         page. --%>
+    <td class="entry-cell">
         <c:url var="editUrl" value="/roller-ui/authoring/entryEdit.rol">
             <c:param name="weblog" value="${actionWeblog.handle}"/>
             <c:param name="bean.id" value="${post.id}"/>
         </c:url>
-        <a href="${editUrl}" aria-label="<spring:message code='generic.edit'/>: ${fn:escapeXml(post.title)}">
-            <span class="bi bi-pencil-square" aria-hidden="true"
-                  title="<spring:message code="generic.edit"/>">
-            </span>
-        </a>
-    </td>
-
-    <td class="data">
-        <c:if test="${post.pubTime != null}">
-            <spring:message code="weblogEntryQuery.date.toStringFormat" arguments="${post.pubTime}"/>
-        </c:if>
-    </td>
-
-    <td class="data">
-        <c:if test="${post.updateTime != null}">
-            <spring:message code="weblogEntryQuery.date.toStringFormat" arguments="${post.updateTime}"/>
-        </c:if>
-    </td>
-    
-    <td>
-        <c:choose>
-        <c:when test="${post.status.name() == 'PUBLISHED'}">
-            <a href='${urls.entry(post)}'>
-                <str:truncateNicely upper="80">${post.displayTitle}</str:truncateNicely>
-            </a>
-        </c:when>
-        <c:otherwise>
-            <str:truncateNicely upper="80">${post.displayTitle}</str:truncateNicely>
-        </c:otherwise>
-        </c:choose>
+        <a class="entry-title" href="${editUrl}">${post.displayTitle}</a>
+        <div class="entry-meta">
+            <span class="data">${fn:escapeXml(post.anchor)}</span><c:if test="${post.status.name() == 'PUBLISHED'}"> &#183;
+            <a class="quiet-link" href="${fn:escapeXml(urls.entry(post))}" target="_blank" rel="noopener"><spring:message code="generic.view"/></a></c:if>
+        </div>
     </td>
 
     <%-- The status pill, not just a row tint: colour alone is not information
@@ -296,11 +298,11 @@
 <nav>
     <div class="d-flex justify-content-between">
         <c:if test="${pager.prevLink != null}">
-            <a href='${pager.prevLink}' class="btn btn-outline-secondary previous">
+            <a href="${fn:escapeXml(pager.prevLink)}" class="btn btn-outline-secondary previous">
                 <span aria-hidden="true">&larr;</span> <spring:message code="pager.newer"/></a>
         </c:if>
         <c:if test="${pager.nextLink != null}">
-            <a href='${pager.nextLink}' class="btn btn-outline-secondary next ms-auto"><spring:message code="pager.older"/>
+            <a href="${fn:escapeXml(pager.nextLink)}" class="btn btn-outline-secondary next ms-auto"><spring:message code="pager.older"/>
                 <span aria-hidden="true">&rarr;</span></a>
         </c:if>
     </div>

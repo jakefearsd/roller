@@ -22,6 +22,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -129,7 +130,9 @@ public class EntriesController extends BaseController {
         model.addAttribute("pager", new EntriesPager(baseUrl, bean.getPage(), entries, hasMore));
         model.addAttribute("categories", getCategories(request));
         model.addAttribute("sortByOptions", getSortByOptions(request));
-        model.addAttribute("statusOptions", getStatusOptions(request));
+        List<KeyValueObject> statusOptions = getStatusOptions(request);
+        model.addAttribute("statusOptions", statusOptions);
+        model.addAttribute("statusChipUrls", statusChipUrls(request, bean, statusOptions));
 
         return ".Entries";
     }
@@ -408,6 +411,48 @@ public class EntriesController extends BaseController {
             params.put("bean.sortBy", bean.getSortBy().toString());
         }
         return params;
+    }
+
+    /**
+     * One url per status chip, each carrying the author's whole filter with
+     * only the status swapped.
+     *
+     * <p>The status filter used to be a radio set inside the sidebar's filter
+     * form, where carrying the rest of the filter was free -- submitting the
+     * form posted every other field along with it. A chip is a plain link with
+     * no form behind it, so each url has to be built with the filter baked in
+     * or clicking "Drafts" silently discards the text search, tag, category
+     * and date range the author had narrowed to. That loss is invisible while
+     * developing, because nobody clicks a chip on an unfiltered list.
+     *
+     * <p>It builds on {@link #filterParams}, the same source the pager's base
+     * url and the bulk-action redirect use, so the three cannot disagree about
+     * which filters survive a click. {@code bean.page} is deliberately not
+     * among them: changing the status filter changes the result set, and page
+     * 4 of the old one means nothing in the new one.
+     *
+     * <p>"ALL" carries no status parameter at all rather than the literal
+     * sentinel -- {@link #execute} already reads "ALL" as no filter, so
+     * spelling it out would lengthen a url the author can see while saying
+     * nothing.
+     */
+    private Map<String, String> statusChipUrls(HttpServletRequest request, EntriesBean bean,
+                                               List<KeyValueObject> statusOptions) {
+        Map<String, String> shared = filterParams(bean);
+        shared.remove("bean.status");
+        String handle = getActionWeblog(request).getHandle();
+
+        Map<String, String> urls = new LinkedHashMap<>();
+        for (KeyValueObject option : statusOptions) {
+            String key = String.valueOf(option.getKey());
+            Map<String, String> params = new HashMap<>(shared);
+            if (!"ALL".equals(key)) {
+                params.put("bean.status", key);
+            }
+            urls.put(key, weblogger.getUrlStrategy().getActionURL(
+                    "entries", "/roller-ui/authoring", handle, params, false));
+        }
+        return urls;
     }
 
     // No synthetic "Any" entry here -- that choice is an <option value="">

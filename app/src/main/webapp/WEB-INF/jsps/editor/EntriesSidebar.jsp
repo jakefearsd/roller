@@ -68,20 +68,33 @@
     <br/>
 
     <%-- ========================================================= --%>
-    <%-- filter by status --%>
+    <%-- the status the chips chose --%>
 
-    <c:forEach items="${statusOptions}" var="opt">
-<div class="form-check"><label class="form-check-label"><input type="radio" class="form-check-input" name="bean.status" value="${opt.key}" ${opt.key == bean.status ? 'checked' : ''}/> ${opt.value}</label></div>
-</c:forEach>
+    <%-- Not a control -- the status filter's one control is the chip row on
+         the list itself (task B5), and a second control for the same filter
+         is how a page ends up showing DRAFT while the sidebar claims ALL.
+         This hidden field exists only so that submitting the sidebar (to
+         filter, or to change the sort) does not silently discard whichever
+         chip the author had chosen. --%>
+    <input type="hidden" name="bean.status" value="${fn:escapeXml(bean.status)}"/>
 
     <%-- ========================================================= --%>
     <%-- sort by --%>
 
-    <c:forEach items="${sortByOptions}" var="opt">
-<div class="form-check"><label class="form-check-label"><input type="radio" class="form-check-input" name="bean.sortBy" value="${opt.key}" ${opt.key == bean.sortBy ? 'checked' : ''}/> ${opt.value}</label></div>
+    <%-- One select rather than a radio per option: sort is a single choice
+         among a closed set, and it applies the moment it is made. The submit
+         is wired by a delegated listener in roller.js keyed off
+         data-submit-on-change, never an inline onchange -- behaviour lives
+         in the script, the same rule data-confirm follows. --%>
+    <label for="entries_bean_sortBy"><spring:message code="weblogEntryQuery.label.sortBy"/></label>
+    <select id="entries_bean_sortBy" name="bean.sortBy" class="form-select" size="1" data-submit-on-change>
+<c:forEach items="${sortByOptions}" var="opt">
+<option value="${opt.key}" ${opt.key == bean.sortBy ? 'selected' : ''}>${opt.value}</option>
 </c:forEach>
+</select>
 
-    
+    <br/>
+
     <%-- ========================================================= --%>
     <%-- filter button --%>
 

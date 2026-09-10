@@ -197,6 +197,34 @@ class JspConsistencyTest {
         assertFalse(head.contains("jquery-ui"), "head.jsp still loads jquery-ui");
     }
 
+    /**
+     * Task B5: one date vocabulary across the admin UI. {@code fmt:formatDate}
+     * formats in the JVM's default timezone -- the server's, which on this
+     * application is nobody's clock in particular -- and emits no
+     * machine-readable {@code datetime} attribute. {@code <rc:date>} formats
+     * in the action weblog's zone, which is the clock every pubtime on this
+     * application is already expressed in, and wraps the result in a
+     * {@code <time>}. A_OWNED is skipped for the same reason the scans above
+     * skip it: post-merge task M1 converts EntryEdit's {@code .editor-when}
+     * spans.
+     */
+    @Test
+    void noAdminTimestampIsFormattedWithFmtFormatDate() throws IOException {
+        List<Path> nonAOwned = jsps()
+                .filter(p -> !A_OWNED.contains(p.getFileName().toString()))
+                .toList();
+        assertTrue(nonAOwned.size() > 20,
+                "Found too few JSPs -- the scan is not looking where it thinks it is.");
+
+        for (Path jsp : nonAOwned) {
+            String src = Files.readString(jsp, StandardCharsets.UTF_8);
+            assertFalse(src.contains("fmt:formatDate"),
+                    jsp + ": format timestamps with <rc:date>, not fmt:formatDate");
+            assertFalse(src.contains("weblogEntryQuery.date.toStringFormat"),
+                    jsp + ": format timestamps with <rc:date>, not a message-bundle date pattern");
+        }
+    }
+
     private static int countOccurrences(String haystack, String needle) {
         int count = 0;
         int idx = 0;

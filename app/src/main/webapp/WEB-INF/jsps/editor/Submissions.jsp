@@ -94,12 +94,7 @@
                                name="deleteIds" value="${fn:escapeXml(s.id)}"
                                aria-label="${fn:escapeXml(s.subject)}"/>
                     </td>
-                    <td class="data">
-                        <c:if test="${s.created != null}">
-                            <fmt:formatDate value="${s.created}" type="both"
-                                            dateStyle="short" timeStyle="short"/>
-                        </c:if>
-                    </td>
+                    <td class="data"><rc:date value="${s.created}"/></td>
                     <td>
                         <c:out value="${s.name}"/><br/>
                         <a href="mailto:${fn:escapeXml(s.email)}"><c:out value="${s.email}"/></a>

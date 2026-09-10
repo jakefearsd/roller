@@ -67,11 +67,7 @@
 <c:forEach items="${trashedEntries}" var="entry">
     <tr>
         <td>${entry.displayTitle}</td>
-        <td class="data">
-            <c:if test="${entry.trashedAt != null}">
-                <spring:message code="weblogEntryQuery.date.toStringFormat" arguments="${entry.trashedAt}"/>
-            </c:if>
-        </td>
+        <td class="data"><rc:date value="${entry.trashedAt}"/></td>
         <td>${fn:escapeXml(entry.category.name)}</td>
         <td>
             <%-- The clicked submit button is the only one whose name/value is

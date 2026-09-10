@@ -1202,10 +1202,39 @@ table.rollertable > tbody > tr:hover > * {
 /* Additive utility -- opt a date/count/slug cell into the mono/tabular
    data face without renaming or removing anything it already carries.
    JSPs that want it add class="data" alongside the cell's existing
-   attributes. */
-td.data {
+   attributes.
+
+   time.data is the same face for the element <rc:date> emits (task B5).
+   It has to be named separately rather than folded into a bare .data:
+   the tag renders a <time class="data"> INSIDE a <td class="data">, and
+   also inside a <span> in the status pill and the entry-meta line, none
+   of which the td.data selector reaches. */
+td.data,
+time.data {
     font-family: var(--font-data);
     font-variant-numeric: tabular-nums;
+}
+
+/* ---- Entries list rows (task B5) ----
+   The title is the row's primary target, so it carries the weight -- 600,
+   not a larger size: emphasis in this system is weight, never size. Under
+   it sits one quiet metadata line, the anchor in the mono data face plus a
+   secondary link to the published page for rows that have one. */
+.entry-title {
+    font-weight: 600;
+}
+
+.entry-meta {
+    font-size: 12px;
+    color: var(--ink-soft);
+}
+
+/* A link that must be reachable without competing with the title above it:
+   underlined so it still reads as a link at --ink-soft, which on its own is
+   too quiet to announce one. */
+.quiet-link {
+    color: var(--ink-soft);
+    text-decoration: underline;
 }
 
 /* ---- Empty states: invitations, not shrugs ----

@@ -32,8 +32,9 @@
 
   Request scope, not page scope: <jsp:include> runs the included page in a
   fresh JspContext whose page scope does not see the includer's attributes,
-  but request scope is shared by both. Until task B5 adds a <roller:date>
-  tag, the timestamp is formatted inline with a fixed pattern.
+  but request scope is shared by both. The timestamp goes through <rc:date>
+  (task B5), which reads actionWeblog off that same shared request -- so it
+  renders in the weblog's timezone here exactly as it does in the caller.
 
   The message code below is composed via EL (weblogEdit.${fn:toLowerCase
   (pillStatus)}), so MessageKeyTest's literal-code scan cannot see which
@@ -46,4 +47,4 @@
   weblogEdit.trashed.
 --%>
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
-<span class="status-pill status-${fn:toLowerCase(pillStatus)}"><spring:message code="weblogEdit.${fn:toLowerCase(pillStatus)}"/><c:if test="${not empty pillWhen}"> <span class="status-when"><fmt:formatDate value="${pillWhen}" pattern="yyyy-MM-dd HH:mm"/></span></c:if></span>
+<span class="status-pill status-${fn:toLowerCase(pillStatus)}"><spring:message code="weblogEdit.${fn:toLowerCase(pillStatus)}"/><c:if test="${not empty pillWhen}"> <span class="status-when"><rc:date value="${pillWhen}"/></span></c:if></span>

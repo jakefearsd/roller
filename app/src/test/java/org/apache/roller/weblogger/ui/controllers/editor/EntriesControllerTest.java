@@ -185,6 +185,73 @@ class EntriesControllerTest extends EditorControllerTestSupport {
         assertEquals(5, ((List<?>) model.getAttribute("statusOptions")).size());
     }
 
+    /**
+     * A status chip changes exactly ONE thing about the query and leaves every
+     * other filter where the author put it.
+     *
+     * <p>The chips replaced a radio set that lived inside the sidebar's filter
+     * form, where "carry the rest of the filter" was free -- the form posted
+     * all of its own fields. A link has no such form behind it, so each chip
+     * url has to be built with the whole filter baked in, or clicking "Drafts"
+     * silently discards the text search, the tag, the category and the date
+     * range the author had narrowed to. That is the failure this test exists
+     * for: it is invisible on an unfiltered list, which is the only state
+     * anyone clicks a chip in while developing.
+     *
+     * <p>The urls come from the same {@code filterParams} the pager's base url
+     * and the bulk-action redirect are built from, so the three cannot drift
+     * on which filters they carry.
+     */
+    @Test
+    void aStatusChipUrlCarriesEveryOtherFilterTheAuthorHasSet() throws Exception {
+        bean.setStatus("PUBLISHED");
+        bean.setText("cinque terre");
+        bean.setTagsAsString("liguria");
+        bean.setCategoryName("Travel");
+        bean.setStartDateString("2026-01-01");
+        bean.setEndDateString("2026-12-31");
+        stubActionUrlWithContextPath("");
+
+        controller.execute(request, model, bean);
+
+        @SuppressWarnings("unchecked")
+        Map<String, String> chipUrls = (Map<String, String>) model.getAttribute("statusChipUrls");
+        assertNotNull(chipUrls, "the JSP has no chip urls to render");
+        String draftChip = chipUrls.get("DRAFT");
+        assertNotNull(draftChip, "no chip url for DRAFT");
+
+        assertTrue(draftChip.contains("bean.text=cinque terre"), draftChip);
+        assertTrue(draftChip.contains("bean.tagsAsString=liguria"), draftChip);
+        assertTrue(draftChip.contains("bean.categoryName=Travel"), draftChip);
+        assertTrue(draftChip.contains("bean.startDateString=2026-01-01"), draftChip);
+        assertTrue(draftChip.contains("bean.endDateString=2026-12-31"), draftChip);
+        assertTrue(draftChip.contains("weblog=" + WEBLOG_HANDLE), draftChip);
+
+        // The one thing the chip does change.
+        assertTrue(draftChip.contains("bean.status=DRAFT"), draftChip);
+        assertFalse(draftChip.contains("bean.status=PUBLISHED"), draftChip);
+    }
+
+    /**
+     * "All" means no status filter, so its chip carries no status parameter at
+     * all rather than the sentinel string -- {@code execute} already treats a
+     * literal "ALL" as no filter, so putting it in the url would say nothing
+     * while making the url the author sees longer.
+     */
+    @Test
+    void theAllChipClearsTheStatusParameterRatherThanSpellingOutTheSentinel() throws Exception {
+        bean.setStatus("DRAFT");
+        stubActionUrlWithContextPath("");
+
+        controller.execute(request, model, bean);
+
+        @SuppressWarnings("unchecked")
+        Map<String, String> chipUrls = (Map<String, String>) model.getAttribute("statusChipUrls");
+        String allChip = chipUrls.get("ALL");
+        assertNotNull(allChip, "no chip url for ALL");
+        assertFalse(allChip.contains("bean.status="), allChip);
+    }
+
     @Test
     void aFailedEntryLookupIsReportedAndStillProducesAPager() throws Exception {
         when(weblogger.getWeblogEntryManager().getWeblogEntries(any()))

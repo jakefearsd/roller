@@ -310,3 +310,28 @@ document.addEventListener('change', function (event) {
     var count = bar.querySelector('.selection-count');
     if (count) { count.textContent = count.dataset.template.replace('{0}', checked); }
 });
+
+/*
+ * A control marked data-submit-on-change submits its own form the moment its
+ * value changes -- the Entries sidebar's sort <select> is the first caller.
+ *
+ * Delegated and attribute-driven for the same reason data-confirm is (see the
+ * long comment above): an inline onchange="this.form.submit()" is JavaScript
+ * living in an HTML attribute, where the HTML parser has already decoded
+ * whatever the JSP escaped before the script ever compiles.
+ *
+ * requestSubmit(), not submit(): the native submit() method skips the form's
+ * own submit handlers, which on this page would step around the data-confirm
+ * prompt above and any future guard registered the same way.
+ */
+document.addEventListener('change', function (event) {
+    var control = event.target;
+    if (!control || !control.hasAttribute || !control.hasAttribute('data-submit-on-change')) { return; }
+    var form = control.form || (control.closest && control.closest('form'));
+    if (!form) { return; }
+    if (form.requestSubmit) {
+        form.requestSubmit();
+    } else {
+        form.submit();
+    }
+});

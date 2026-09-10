@@ -8,6 +8,37 @@
     <short-name>rollerConfig</short-name>
     <uri>http://roller.apache.org/tags/config</uri>
 
+    <!--
+      The admin UI's one timestamp renderer. Declared in THIS taglib rather
+      than a second one of its own: every admin JSP already reaches this uri
+      through taglibs-spring.jsp's rc: prefix, so a new tld would have bought
+      a second taglib directive on every page and nothing else.
+
+      The schema fixes this order: every <tag> must precede every <function>.
+      Putting it after getProp/getBooleanProp below parses as invalid XML and
+      fails the build at JSP compile time, not at runtime.
+    -->
+    <tag>
+        <name>date</name>
+        <tag-class>org.apache.roller.weblogger.ui.tags.DateTag</tag-class>
+        <body-content>empty</body-content>
+        <attribute>
+            <name>value</name>
+            <required>true</required>
+            <rtexprvalue>true</rtexprvalue>
+            <type>java.util.Date</type>
+        </attribute>
+        <!-- Optional override of the yyyy-MM-dd HH:mm data face. Developer-
+             authored and formatted with Locale.ROOT, never a translated
+             value: see DateTag's class comment. -->
+        <attribute>
+            <name>pattern</name>
+            <required>false</required>
+            <rtexprvalue>true</rtexprvalue>
+            <type>java.lang.String</type>
+        </attribute>
+    </tag>
+
     <function>
         <name>getProp</name>
         <function-class>org.apache.roller.weblogger.config.WebloggerRuntimeConfig</function-class>

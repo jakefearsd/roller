@@ -1,0 +1,145 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  The ASF licenses this file to You
+ * under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.  For additional information regarding
+ * copyright in this work, please see the NOTICE file in the top level
+ * directory of this distribution.
+ */
+package org.apache.roller.weblogger.ui.tags;
+
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.TimeZone;
+
+import org.apache.roller.weblogger.pojos.Weblog;
+import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.mock.web.MockPageContext;
+import org.springframework.mock.web.MockServletContext;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+/**
+ * Tests for {@link DateTag}, the one place the admin UI turns a
+ * {@code java.util.Date} into a timestamp a reader sees.
+ *
+ * <p>The two halves of the element answer different questions and must not be
+ * confused. {@code datetime} is machine-readable and therefore absolute -- an
+ * ISO-8601 instant in UTC, the same string whoever is looking -- while the
+ * text is the wall clock a human is expected to reconcile against their own,
+ * which for this application means <em>the weblog's</em> timezone, not the
+ * server's and not the browser's. An author in Berlin editing a weblog set to
+ * America/New_York schedules posts against New York's clock (see
+ * {@code EntryEditController}'s pubTime handling), so a list that showed
+ * Berlin time would disagree with the field the author typed into.
+ */
+class DateTagTest {
+
+    /** 2026-09-09T14:30:00Z, chosen so every timezone under test lands on a different date-time. */
+    private static final Date WHEN = utc(2026, 9, 9, 14, 30);
+
+    private static Date utc(int year, int month, int day, int hour, int minute) {
+        Calendar cal = new GregorianCalendar(TimeZone.getTimeZone("UTC"));
+        cal.clear();
+        cal.set(year, month - 1, day, hour, minute, 0);
+        return cal.getTime();
+    }
+
+    private static Weblog weblogIn(String timeZoneId) {
+        Weblog weblog = new Weblog();
+        weblog.setHandle("testblog");
+        weblog.setTimeZone(timeZoneId);
+        return weblog;
+    }
+
+    private static String render(Object actionWeblog, Date value, String pattern) throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        if (actionWeblog != null) {
+            request.setAttribute("actionWeblog", actionWeblog);
+        }
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockPageContext context = new MockPageContext(new MockServletContext(), request, response);
+
+        DateTag tag = new DateTag();
+        tag.setJspContext(context);
+        tag.setValue(value);
+        if (pattern != null) {
+            tag.setPattern(pattern);
+        }
+        tag.doTag();
+        context.getOut().flush();
+        return response.getContentAsString();
+    }
+
+    @Test
+    void theDatetimeAttributeIsAnAbsoluteIsoInstantAndTheTextIsTheWeblogsWallClock() throws Exception {
+        assertEquals("<time datetime=\"2026-09-09T14:30:00Z\" class=\"data\">2026-09-09 14:30</time>",
+                render(weblogIn("UTC"), WHEN, null));
+    }
+
+    /**
+     * Same instant, a weblog nine hours ahead: the machine-readable half must
+     * not move, the human-readable half must.
+     */
+    @Test
+    void theWeblogsTimeZoneDecidesTheDisplayedWallClock() throws Exception {
+        assertEquals("<time datetime=\"2026-09-09T14:30:00Z\" class=\"data\">2026-09-09 23:30</time>",
+                render(weblogIn("Asia/Tokyo"), WHEN, null));
+    }
+
+    @Test
+    void withNoActionWeblogOnTheRequestTheJvmDefaultZoneIsUsed() throws Exception {
+        SimpleDateFormat expected = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+        expected.setTimeZone(TimeZone.getDefault());
+
+        assertEquals("<time datetime=\"2026-09-09T14:30:00Z\" class=\"data\">"
+                        + expected.format(WHEN) + "</time>",
+                render(null, WHEN, null));
+    }
+
+    /**
+     * The request attribute is set by {@code RollerHandlerInterceptor} and is
+     * a {@code Weblog} on every admin screen -- but a tag that renders a date
+     * must degrade rather than throw if it is ever something else, because the
+     * date is never the reason anyone opened the page.
+     */
+    @Test
+    void anActionWeblogAttributeThatIsNotAWeblogFallsBackInsteadOfThrowing() throws Exception {
+        SimpleDateFormat expected = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+        expected.setTimeZone(TimeZone.getDefault());
+
+        assertEquals("<time datetime=\"2026-09-09T14:30:00Z\" class=\"data\">"
+                        + expected.format(WHEN) + "</time>",
+                render("not a weblog", WHEN, null));
+    }
+
+    @Test
+    void anExplicitPatternOverridesTheDefaultDisplayFormat() throws Exception {
+        assertEquals("<time datetime=\"2026-09-09T14:30:00Z\" class=\"data\">09 Sep 2026</time>",
+                render(weblogIn("UTC"), WHEN, "dd MMM yyyy"));
+    }
+
+    /**
+     * A null date renders nothing at all -- no empty {@code <time>} element.
+     * Every caller in this codebase used to wrap the format call in a
+     * {@code <c:if test="${x != null}">}; the tag owning that check is what
+     * lets those disappear.
+     */
+    @Test
+    void aNullValueRendersNothing() throws Exception {
+        assertEquals("", render(weblogIn("UTC"), null, null));
+    }
+}
