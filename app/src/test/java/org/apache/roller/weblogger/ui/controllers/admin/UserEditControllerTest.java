@@ -635,4 +635,25 @@ class UserEditControllerTest {
                 .map(row -> ((WeblogPermissionView) row).getPermission())
                 .toList();
     }
+
+    // --- errors point at the field they name (B8) ---
+
+    @Test
+    void aRefusedUserNameAndPasswordEachMarkTheirOwnField() throws Exception {
+        CreateUserBean bean = new CreateUserBean();
+
+        controller.createUserSave(ControllerTestFixture.requestFor(null), model, bean);
+
+        assertEquals(List.of("bean_userName", "bean_password"),
+                ControllerTestFixture.invalidFields(model));
+    }
+
+    @Test
+    void aUserNameWithForbiddenCharactersMarksOnlyTheUserNameField() throws Exception {
+        CreateUserBean bean = beanFor("jake fear", "secret");
+
+        controller.createUserSave(ControllerTestFixture.requestFor(null), model, bean);
+
+        assertEquals(List.of("bean_userName"), ControllerTestFixture.invalidFields(model));
+    }
 }

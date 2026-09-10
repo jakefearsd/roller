@@ -352,3 +352,50 @@ document.addEventListener('change', function (event) {
         form.submit();
     }
 });
+
+/*
+ * Validation errors point at the field they name.
+ *
+ * A controller that refuses a value calls BaseController.addFieldError, which
+ * records the control's DOM id alongside the message; the three admin layouts
+ * render the joined ids as <body data-invalid-fields="a b c">. This marks each
+ * one and focuses the first, so a form with thirty fields does not leave the
+ * author hunting for whichever box the banner is about.
+ *
+ * Every step is null-guarded because THIS FILE ALSO LOADS ON PUBLIC WEBLOG
+ * PAGES (see the jQuery guard above), where no layout ever writes the
+ * attribute -- a page with nothing wrong must be a silent no-op, not a
+ * console error on every blog post.
+ *
+ * The class and the aria state are set together on purpose: .is-invalid is
+ * the red border a sighted reader sees (roller.css defines it in terms of
+ * --bad), aria-invalid is the same fact for a screen reader, and shipping one
+ * without the other means the marker exists for only half the audience.
+ */
+document.addEventListener('DOMContentLoaded', function () {
+    var body = document.body;
+    if (!body || !body.dataset) { return; }
+    var ids = body.dataset.invalidFields;
+    if (!ids) { return; }
+
+    var first = null;
+    ids.trim().split(/\s+/).forEach(function (id) {
+        if (!id) { return; }
+        var field = document.getElementById(id);
+        // A field that is not on this page is not an error: a validation may
+        // name a control the current branch of the form did not render (the
+        // template Action select only exists once actions are available).
+        if (!field) { return; }
+        field.classList.add('is-invalid');
+        field.setAttribute('aria-invalid', 'true');
+        if (!first) { first = field; }
+    });
+
+    // Scrolling is wanted, not suppressed -- the refused field is frequently
+    // below the fold on a long settings form, which is the whole reason the
+    // banner alone was not enough. This runs on DOMContentLoaded, so it wins
+    // over any autofocus attribute the page carries, which is correct: the
+    // field that needs fixing outranks the field you would start a fresh form
+    // in.
+    if (first) { first.focus({ preventScroll: false }); }
+});

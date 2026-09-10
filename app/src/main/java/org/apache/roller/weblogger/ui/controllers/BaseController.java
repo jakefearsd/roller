@@ -19,7 +19,9 @@
 package org.apache.roller.weblogger.ui.controllers;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -199,6 +201,69 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
      */
     protected void addError(Model model, String key, Object[] args, HttpServletRequest request) {
         addToModel(model, "errors", getText(key, args, request));
+    }
+
+    /**
+     * The ordered set of DOM ids naming the form controls a validation
+     * refused. Read by tests; the page reads {@link #INVALID_FIELD_IDS}.
+     */
+    public static final String INVALID_FIELDS = "invalidFields";
+
+    /**
+     * The same ids, space-joined, which is the form the three layouts render
+     * into {@code <body data-invalid-fields>}. Joined here rather than in the
+     * page because JSTL's {@code fn:join} only accepts a {@code String[]}.
+     */
+    public static final String INVALID_FIELD_IDS = "invalidFieldIds";
+
+    /**
+     * An error message, plus the DOM id of the control it is about.
+     *
+     * <p>Identical to {@link #addError(Model, String, HttpServletRequest)} in
+     * every respect the caller's {@code hasErrors} gate can see -- the message
+     * lands in the same list and refuses the save the same way. The addition
+     * is the id, which travels to the page as {@code
+     * <body data-invalid-fields>} and lets {@code roller.js} put
+     * {@code .is-invalid} and {@code aria-invalid} on the control and focus
+     * the first one. A banner at the top of a long settings form says
+     * <em>that</em> something was refused; only the marker says <em>which</em>
+     * of thirty fields.
+     *
+     * <p>The id must be the control's real {@code id} attribute in the JSP
+     * this controller renders -- {@code JspConsistencyTest} checks every id
+     * named here against that file, so a renamed field fails the build rather
+     * than silently marking nothing.
+     */
+    protected void addFieldError(Model model, String fieldId, String key, HttpServletRequest request) {
+        addError(model, key, request);
+        markInvalidField(model, fieldId);
+    }
+
+    /**
+     * The {@link #addError(Model, String, Object[], HttpServletRequest)}
+     * counterpart of {@link #addFieldError(Model, String, String,
+     * HttpServletRequest)}, for a message whose text names the offending value.
+     */
+    protected void addFieldError(Model model, String fieldId, String key, Object[] args,
+                                 HttpServletRequest request) {
+        addError(model, key, args, request);
+        markInvalidField(model, fieldId);
+    }
+
+    /**
+     * A {@link LinkedHashSet}, so two complaints about one control mark it
+     * once and the joined string is deterministic (the first id named is the
+     * one the page focuses).
+     */
+    @SuppressWarnings("unchecked")
+    private void markInvalidField(Model model, String fieldId) {
+        Set<String> fields = (Set<String>) model.getAttribute(INVALID_FIELDS);
+        if (fields == null) {
+            fields = new LinkedHashSet<>();
+            model.addAttribute(INVALID_FIELDS, fields);
+        }
+        fields.add(fieldId);
+        model.addAttribute(INVALID_FIELD_IDS, String.join(" ", fields));
     }
 
     /**

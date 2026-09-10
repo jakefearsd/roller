@@ -235,20 +235,21 @@ public class TemplatesController extends BaseController {
     private void myValidate(String newTmplName, ComponentType newTmplAction,
                             HttpServletRequest request, Model model) {
         if (StringUtils.isEmpty(newTmplName)) {
-            addError(model, "Template.error.nameNull", request);
+            addFieldError(model, "newTmplName", "Template.error.nameNull", request);
         } else if (newTmplName.length() > RollerConstants.TEXTWIDTH_255) {
-            addError(model, "Template.error.nameSize", request);
+            addFieldError(model, "newTmplName", "Template.error.nameSize", request);
         }
 
         if (newTmplAction == null) {
-            addError(model, "Template.error.actionNull", request);
+            addFieldError(model, "newTmplAction", "Template.error.actionNull", request);
         }
 
         try {
             WeblogTemplate existingPage = weblogger.getWeblogManager()
                     .getTemplateByName(getActionWeblog(request), newTmplName);
             if (existingPage != null) {
-                addError(model, "pagesForm.error.alreadyExists", newTmplName, request);
+                addFieldError(model, "newTmplName", "pagesForm.error.alreadyExists",
+                        new Object[]{newTmplName}, request);
             }
         } catch (WebloggerException ex) {
             // Fail closed: the caller adds this template only when no errors

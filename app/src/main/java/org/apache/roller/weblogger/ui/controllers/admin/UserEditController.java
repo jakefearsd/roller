@@ -374,15 +374,15 @@ public class UserEditController extends BaseController {
             String safe = CharSetUtils.keep(bean.getUserName(), allowed);
 
             if (StringUtils.isEmpty(bean.getUserName())) {
-                addError(model, "error.add.user.missingUserName", request);
+                addFieldError(model, "bean_userName", "error.add.user.missingUserName", request);
             } else if (!safe.equals(bean.getUserName())) {
-                addError(model, "error.add.user.badUserName", request);
+                addFieldError(model, "bean_userName", "error.add.user.badUserName", request);
             }
             // A blank password is only safe to accept when mail is ready to
             // deliver a set-password link instead -- otherwise there is no
             // way to hand the account over at all, so the old rule stands.
             if (StringUtils.isEmpty(bean.getPassword()) && !PasswordLinkMailer.isReady()) {
-                addError(model, "error.add.user.missingPassword", request);
+                addFieldError(model, "bean_password", "error.add.user.missingPassword", request);
             }
         } else {
             if (user.getUserName() == null) {

@@ -531,4 +531,15 @@ class MembersControllerTest extends EditorControllerTestSupport {
                 .map(row -> ((WeblogPermissionView) row).getPermission())
                 .toList();
     }
+
+    // --- errors point at the field they name (B8) ---
+
+    @Test
+    void anUnknownUsernameMarksTheUsernameField() throws Exception {
+        when(weblogger.getUserManager().getUserByUserName("ghost")).thenReturn(null);
+
+        controller.grant(request, model, "ghost", WeblogPermission.POST);
+
+        assertEquals(List.of("grantUserName"), invalidFields(model));
+    }
 }

@@ -23,7 +23,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceAccessMode;
 import org.junit.jupiter.api.parallel.ResourceLock;
 
+import static com.codeborne.selenide.Condition.attribute;
 import static com.codeborne.selenide.Condition.checked;
+import static com.codeborne.selenide.Condition.cssClass;
 import static com.codeborne.selenide.Condition.exist;
 import static com.codeborne.selenide.Condition.value;
 import static com.codeborne.selenide.Condition.visible;
@@ -167,6 +169,45 @@ class WeblogConfigMatrixIT extends RollerIT {
     }
 
     // -------------------------------------------------------- settings edits
+
+    /**
+     * A refused value marks its own field and puts the cursor in it (B8).
+     *
+     * <p>Weblog Settings is the screen this matters most on: the newsletter
+     * list uuid sits in the fifth section of a long form, so the error banner
+     * that renders at the top of the page can be the ONLY thing visible while
+     * the offending box is far below the fold. Two independent facts are
+     * asserted because the marker and the focus come from different halves of
+     * the mechanism (a class on the element, and a focus() call that runs only
+     * for the first id): a browser is also the only place either one can be
+     * observed at all -- the unit test proves the controller named the field,
+     * not that the page did anything with it.
+     */
+    @Test
+    void anInvalidListUuidMarksAndFocusesTheField() {
+        loginAsAdmin();
+        String handle = createWeblog();
+
+        openSettings(handle);
+        $("#weblog_bean_newsletterListUuid").setValue("not-a-uuid");
+        $("button[type='submit'].btn-primary").should(visible).click();
+
+        $("#errors").should(exist);
+        $("#weblog_bean_newsletterListUuid").shouldHave(cssClass("is-invalid"));
+        $("#weblog_bean_newsletterListUuid").shouldHave(attribute("aria-invalid", "true"));
+        assertEquals("weblog_bean_newsletterListUuid",
+                executeJavaScript("return document.activeElement.id;"),
+                "the refused field must also hold the cursor, so the fix needs no scrolling");
+
+        // A form with nothing wrong must carry no marker at all -- otherwise
+        // the attribute would be sticky and every later save would look
+        // refused.
+        $("#weblog_bean_newsletterListUuid").setValue("");
+        saveSettings();
+        $("#weblog_bean_newsletterListUuid").shouldNotHave(cssClass("is-invalid"));
+        assertTrue($$("body[data-invalid-fields]").isEmpty(),
+                "a clean save must not leave data-invalid-fields on the body");
+    }
 
     /**
      * Ticks or unticks one checkbox on Weblog Settings and saves.

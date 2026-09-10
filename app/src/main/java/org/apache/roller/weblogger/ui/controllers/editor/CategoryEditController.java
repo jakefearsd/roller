@@ -155,16 +155,18 @@ public class CategoryEditController extends BaseController {
 
     private void myValidate(CategoryBean bean, boolean isAdd, HttpServletRequest request, Model model) {
         if (bean.getName() == null || !bean.getName().equals(StringEscapeUtils.escapeHtml4(bean.getName()))) {
-            addError(model, "categoryForm.error.invalidName", request);
+            addFieldError(model, "category_bean_name", "categoryForm.error.invalidName", request);
         } else if (isAdd) {
             if (getActionWeblog(request).hasCategory(bean.getName())) {
-                addError(model, "categoryForm.error.duplicateName", bean.getName(), request);
+                addFieldError(model, "category_bean_name", "categoryForm.error.duplicateName",
+                        new Object[]{bean.getName()}, request);
             }
         } else {
             try {
                 WeblogCategory wc = categoryNamed(getActionWeblog(request), bean.getName());
                 if (wc != null && !wc.getId().equals(bean.getId())) {
-                    addError(model, "categoryForm.error.duplicateName", bean.getName(), request);
+                    addFieldError(model, "category_bean_name", "categoryForm.error.duplicateName",
+                            new Object[]{bean.getName()}, request);
                 }
             } catch (WebloggerException ex) {
                 // Fail closed. A uniqueness check that could not run is not a

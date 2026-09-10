@@ -200,12 +200,12 @@ public class MembersController extends BaseController {
         UserManager userMgr = weblogger.getUserManager();
         User user = null;
         if (StringUtils.isBlank(userName)) {
-            addError(model, "inviteMember.error.userNotFound", request);
+            addFieldError(model, "grantUserName", "inviteMember.error.userNotFound", request);
         } else {
             try {
                 user = userMgr.getUserByUserName(userName);
                 if (user == null) {
-                    addError(model, "inviteMember.error.userNotFound", request);
+                    addFieldError(model, "grantUserName", "inviteMember.error.userNotFound", request);
                 }
             } catch (WebloggerException ex) {
                 log.error("Error looking up user by name - {}", userName, ex);

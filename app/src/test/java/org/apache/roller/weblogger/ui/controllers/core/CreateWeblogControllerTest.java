@@ -358,4 +358,16 @@ class CreateWeblogControllerTest {
         user.setEnabled(Boolean.TRUE);
         return user;
     }
+
+    // --- errors point at the field they name (B8) ---
+
+    @Test
+    void aRefusedHandleMarksTheHandleField() throws Exception {
+        CreateWeblogBean bean = new CreateWeblogBean();
+        bean.setHandle("my blog!");
+
+        controller.save(ControllerTestFixture.requestFor(user("jake")), model, bean, redirectAttributes);
+
+        assertEquals(List.of("handle"), ControllerTestFixture.invalidFields(model));
+    }
 }

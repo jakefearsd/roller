@@ -17,6 +17,8 @@
  */
 package org.apache.roller.weblogger.ui.controllers.editor;
 
+import java.util.List;
+
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
@@ -332,5 +334,26 @@ class CategoryEditControllerTest extends EditorControllerTestSupport {
         category.setName(name);
         category.setWeblog(weblog);
         return category;
+    }
+
+    // --- errors point at the field they name (B8) ---
+
+    @Test
+    void aRefusedCategoryNameMarksTheNameField() throws Exception {
+        weblog.getWeblogCategories().add(categoryNamed("cat-1", "Travel"));
+        bean.setName("Travel");
+
+        controller.categoryAddSave(request, model, bean, redirectAttributes);
+
+        assertEquals(List.of("category_bean_name"), invalidFields(model));
+    }
+
+    @Test
+    void anUnescapedCategoryNameMarksTheSameField() throws Exception {
+        bean.setName("<b>Travel</b>");
+
+        controller.categoryAddSave(request, model, bean, redirectAttributes);
+
+        assertEquals(List.of("category_bean_name"), invalidFields(model));
     }
 }

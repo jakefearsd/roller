@@ -19,6 +19,7 @@ package org.apache.roller.weblogger.ui.controllers.admin;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -130,6 +131,17 @@ final class ControllerTestFixture {
     static List<String> errors(Model model) {
         List<String> errors = (List<String>) model.getAttribute("errors");
         return errors == null ? Collections.emptyList() : errors;
+    }
+
+    /**
+     * The DOM ids of the controls a controller marked invalid, in the order it
+     * named them -- {@code BaseController.addFieldError}'s half that
+     * {@code addError} does not have.
+     */
+    @SuppressWarnings("unchecked")
+    static List<String> invalidFields(Model model) {
+        Collection<String> fields = (Collection<String>) model.getAttribute("invalidFields");
+        return fields == null ? Collections.emptyList() : List.copyOf(fields);
     }
 
     /** The messages a controller reported as successes, in the order it added them. */

@@ -522,4 +522,20 @@ class TemplatesControllerTest extends EditorControllerTestSupport {
 
         verify(weblogger.getWeblogManager(), never()).removeTemplate(any());
     }
+
+    // --- errors point at the field they name (B8) ---
+
+    @Test
+    void aRefusedTemplateNameMarksTheNameField() throws Exception {
+        controller.add(request, model, "", ComponentType.CUSTOM);
+
+        assertEquals(List.of("newTmplName"), invalidFields(model));
+    }
+
+    @Test
+    void aMissingTemplateActionMarksTheActionSelect() throws Exception {
+        controller.add(request, model, "MyTemplate", null);
+
+        assertEquals(List.of("newTmplAction"), invalidFields(model));
+    }
 }

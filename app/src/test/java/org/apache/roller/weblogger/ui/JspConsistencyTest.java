@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -366,6 +367,123 @@ class JspConsistencyTest {
         assertTrue(modalFooterViolations.isEmpty(),
                 ".modal-footer buttons out of order -- dismiss/cancel first, "
                         + "primary/destructive last: " + modalFooterViolations);
+    }
+
+    // --- B8: errors point at the field they name ---
+
+    /**
+     * Every controller that calls {@code addFieldError} and the JSP(s) whose
+     * form it renders. An explicit table rather than a derivation from
+     * {@code RollerViewResolver}: the field a validation names is often on a
+     * SIDEBAR tile ({@code TemplatesSidebar.jsp}) or in a modal on the list
+     * screen ({@code Categories.jsp}), neither of which the view name spells
+     * out. Adding a controller to {@code addFieldError} without adding it here
+     * fails {@link #everyFieldErrorNamesAnIdThatExistsInItsJsp} -- an unmapped
+     * caller is not silently skipped.
+     */
+    private static final Map<String, List<String>> FIELD_ERROR_JSPS = Map.of(
+            "editor/WeblogConfigController.java", List.of("editor/WeblogConfig.jsp"),
+            "editor/CategoryEditController.java", List.of("editor/Categories.jsp"),
+            "editor/PageEditController.java", List.of("editor/PageEdit.jsp"),
+            "editor/TemplatesController.java", List.of("editor/TemplatesSidebar.jsp"),
+            "editor/MembersController.java", List.of("editor/Members.jsp"),
+            "core/CreateWeblogController.java", List.of("core/CreateWeblog.jsp"),
+            "core/ProfileController.java", List.of("core/Profile.jsp"),
+            "admin/UserEditController.java", List.of("admin/UserEdit.jsp"));
+
+    private static final Path CONTROLLERS =
+            Path.of("src/main/java/org/apache/roller/weblogger/ui/controllers");
+
+    private static final Pattern FIELD_ERROR_CALL =
+            Pattern.compile("addFieldError\\(\\s*model\\s*,\\s*\"([^\"]+)\"");
+
+    /**
+     * A field id a controller names must be an id the page actually renders.
+     *
+     * <p>The marker is invisible when it misses: {@code getElementById} of a
+     * renamed control simply returns null and {@code roller.js} moves on, so
+     * the form comes back with a banner and nothing highlighted -- which looks
+     * exactly like the behaviour before this feature existed. Nothing else
+     * catches that, which is why it is a source scan rather than a convention.
+     */
+    @Test
+    void everyFieldErrorNamesAnIdThatExistsInItsJsp() throws IOException {
+        List<Path> controllers;
+        try (Stream<Path> walk = Files.walk(CONTROLLERS)) {
+            controllers = walk.filter(p -> p.toString().endsWith(".java")).toList();
+        }
+
+        List<String> violations = new ArrayList<>();
+        int idsChecked = 0;
+
+        for (Path controller : controllers) {
+            String src = Files.readString(controller, StandardCharsets.UTF_8);
+            Matcher m = FIELD_ERROR_CALL.matcher(src);
+            Set<String> fieldIds = new java.util.LinkedHashSet<>();
+            while (m.find()) {
+                fieldIds.add(m.group(1));
+            }
+            if (fieldIds.isEmpty()) {
+                continue;
+            }
+
+            String key = controller.getParent().getFileName() + "/" + controller.getFileName();
+            List<String> jspNames = FIELD_ERROR_JSPS.get(key);
+            if (jspNames == null) {
+                violations.add(key + " calls addFieldError but names no JSP in FIELD_ERROR_JSPS");
+                continue;
+            }
+
+            StringBuilder markup = new StringBuilder();
+            for (String jspName : jspNames) {
+                markup.append(Files.readString(JSPS.resolve(jspName), StandardCharsets.UTF_8));
+            }
+            for (String fieldId : fieldIds) {
+                idsChecked++;
+                if (!markup.toString().contains("id=\"" + fieldId + "\"")) {
+                    violations.add(key + " names field id \"" + fieldId
+                            + "\", which no longer exists in " + jspNames);
+                }
+            }
+        }
+
+        assertTrue(idsChecked >= 15,
+                "Found only " + idsChecked + " addFieldError ids -- the scan is not looking "
+                        + "where it thinks it is");
+        assertTrue(violations.isEmpty(), String.join("\n", violations));
+    }
+
+    /**
+     * The three layouts an admin form can render through must all put the
+     * joined ids on {@code <body>}; {@code roller.js} reads them from nowhere
+     * else. Miss one and every form on it silently loses the marker --
+     * {@code .Profile} and {@code .CreateWeblog} are simplepage, the editor
+     * screens are tabbedpage, and {@code .MainMenu} is mainmenupage.
+     */
+    @Test
+    void layoutsRenderInvalidFieldIds() throws IOException {
+        for (String layout : List.of("tiles-tabbedpage.jsp", "tiles-simplepage.jsp",
+                "tiles-mainmenupage.jsp")) {
+            String src = Files.readString(JSPS.resolve("tiles").resolve(layout),
+                    StandardCharsets.UTF_8);
+            assertTrue(src.contains("data-invalid-fields=\"${fn:escapeXml(invalidFieldIds)}\""),
+                    layout + " does not render data-invalid-fields on <body>");
+            assertTrue(src.contains("${not empty invalidFieldIds}"),
+                    layout + " emits the attribute unconditionally; a form with nothing "
+                            + "wrong must carry no attribute at all");
+            assertFalse(src.contains("<body>"),
+                    layout + " still has a bare <body> tag -- the conditional attribute "
+                            + "replaced it, so two body tags means the edit went to the "
+                            + "wrong place");
+        }
+
+        String js = Files.readString(
+                Path.of("src/main/webapp/theme/scripts/roller.js"), StandardCharsets.UTF_8);
+        assertTrue(js.contains("invalidFields"),
+                "roller.js does not read document.body.dataset.invalidFields, so nothing "
+                        + "consumes what the layouts render");
+        assertTrue(js.contains("is-invalid") && js.contains("aria-invalid"),
+                "roller.js must set both the visual class and the accessible state");
     }
 
     /**
