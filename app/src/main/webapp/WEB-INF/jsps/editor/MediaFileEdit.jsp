@@ -192,7 +192,7 @@
 <c:if test="${bean.croppable}">
     <hr/>
     <%-- id kept: MediaCropIT identifies the crop section by #cropSectionTitle. --%>
-    <h5 id="cropSectionTitle" class="section-head"><spring:message code="mediaFileEdit.crop.title"/></h5>
+    <h3 id="cropSectionTitle" class="section-head"><spring:message code="mediaFileEdit.crop.title"/></h3>
     <p class="pagetip"><spring:message code="mediaFileEdit.crop.tip"/></p>
 
     <cropper-canvas id="cropCanvas" background style="width:100%; height:360px">
