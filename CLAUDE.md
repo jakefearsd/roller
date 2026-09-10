@@ -1492,9 +1492,9 @@ excused whatever its type.
   `data-confirm-when` prompts unconditionally, unchanged). This is the
   **only** confirm idiom in the admin UI — `data-confirm`(`-when`) on
   `click` or `submit` — and `JspConsistencyTest.oneConfirmIdiomAndOneModalShape`
-  bans both `confirm(` and `onsubmit=` anywhere outside the CodeMirror
-  editor screens, so a reintroduced inline `window.confirm()` fails the
-  build, not just the review.
+  bans both `confirm(` and `onsubmit=` across every JSP the scan covers, so
+  a reintroduced inline `window.confirm()` fails the build, not just the
+  review.
 - **Buttons theme through Bootstrap's `--bs-btn-*` custom properties**
   (`--bs-btn-hover-bg`, `--bs-btn-active-bg`, `--bs-btn-disabled-bg`, …),
   never literal `:hover`/`:active` rules of our own — Bootstrap's own
@@ -1840,7 +1840,7 @@ in a local index file worth clearing, not a search-correctness bug.
   registry is presently empty, so this is a no-op today; it is the seam a
   future plugin would register into.
 - **Editor**: CodeMirror 6, not EasyMDE. The bundle is built by Maven from
-  `app/frontend/` (see "Frontend build" below) and exposes one global,
+  `app/frontend/` (see "Frontend build" above) and exposes one global,
   `RollerEditor.create(options)`, called from `EditorScript.jsp` — the
   script half of the two files (`EditorSurface.jsp` markup,
   `EditorScript.jsp` script) shared verbatim by both the entry and the page
