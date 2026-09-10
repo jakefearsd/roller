@@ -131,6 +131,58 @@ class AdminJspBugSweepTest {
                 "non-editor-rebuild JSPs must not skip a heading level to h4/h5: " + violations);
     }
 
+    // --- B11 bullet 5: dead <str:truncateNicely> markup (no str taglib) ---
+
+    /**
+     * {@code MediaFileImageChooser.jsp} and {@code MediaFileView.jsp} (twice)
+     * wrapped a filename in {@code <str:truncateNicely>}, a Struts tag from
+     * before the Struts-to-Spring-MVC migration. No {@code str} taglib is
+     * declared anywhere under {@code webapp/} (confirmed by
+     * {@link #noStrTaglibIsDeclaredAnywhere} below), so the JSP container
+     * treats the unrecognised prefix as literal markup: the opening and
+     * closing tags rendered verbatim around the filename instead of doing
+     * any truncation at all, on every media tile.
+     */
+    @Test
+    void noStrTagRendersInAnyJsp() throws IOException {
+        List<Path> allJsps = jsps().toList();
+        assertTrue(allJsps.size() > 20,
+                "Found too few JSPs -- the scan is not looking where it thinks it is.");
+
+        List<String> violations = new ArrayList<>();
+        for (Path jsp : allJsps) {
+            String src = withoutJspComments(Files.readString(jsp, StandardCharsets.UTF_8));
+            if (src.contains("<str:")) {
+                violations.add(jsp.toString());
+            }
+        }
+
+        assertTrue(violations.isEmpty(), "dead <str:...> markup (no str taglib exists): " + violations);
+    }
+
+    /**
+     * Confirms the premise {@link #noStrTagRendersInAnyJsp} depends on: no
+     * {@code str} taglib is declared anywhere, so {@code <str:...>} could
+     * never have been a real custom tag -- it was always going to render as
+     * literal text.
+     */
+    @Test
+    void noStrTaglibIsDeclaredAnywhere() throws IOException {
+        try (Stream<Path> walk = Files.walk(Path.of("src/main/webapp"))) {
+            List<Path> withStrPrefix = walk
+                    .filter(p -> p.toString().endsWith(".jsp") || p.toString().endsWith(".tld"))
+                    .filter(p -> {
+                        try {
+                            return Files.readString(p, StandardCharsets.UTF_8).contains("prefix=\"str\"");
+                        } catch (IOException e) {
+                            throw new java.io.UncheckedIOException(e);
+                        }
+                    })
+                    .toList();
+            assertTrue(withStrPrefix.isEmpty(), "expected no str taglib declaration, found: " + withStrPrefix);
+        }
+    }
+
     private static int countMatches(String haystack, Pattern pattern) {
         Matcher m = pattern.matcher(haystack);
         int count = 0;

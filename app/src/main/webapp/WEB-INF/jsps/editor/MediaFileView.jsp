@@ -203,9 +203,7 @@
                                            value="${mediaFile.id}"
                                            aria-label="${fn:escapeXml(mediaFile.name)}"/>
 
-                                    <str:truncateNicely lower="47" upper="47">
-                                        ${fn:escapeXml(mediaFile.name)}
-                                    </str:truncateNicely>
+                                    ${fn:escapeXml(mediaFile.name)}
 
                                     <c:if test="${mediaFile.imageFile and empty fn:trim(mediaFile.altText)}">
                                         <button type="button" class="media-alt-missing" data-alt-fix
@@ -257,9 +255,7 @@
                                            value="${mediaFile.id}"
                                            aria-label="${fn:escapeXml(mediaFile.name)}"/>
 
-                                    <str:truncateNicely lower="40" upper="50">
-                                        ${fn:escapeXml(mediaFile.name)}
-                                    </str:truncateNicely>
+                                    ${fn:escapeXml(mediaFile.name)}
 
                                     <c:if test="${mediaFile.imageFile and empty fn:trim(mediaFile.altText)}">
                                         <button type="button" class="media-alt-missing" data-alt-fix

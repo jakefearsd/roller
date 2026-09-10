@@ -108,9 +108,7 @@
                                 </div>
 
                                 <div class="mediaObjectInfo">
-                                    <str:truncateNicely upper="60">
-                                        ${fn:escapeXml(mediaFile.name)}
-                                    </str:truncateNicely>
+                                    ${fn:escapeXml(mediaFile.name)}
                                 </div>
 
                             </li>
