@@ -26,6 +26,8 @@ import org.apache.roller.it.support.Routes.Route;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.parallel.ResourceAccessMode;
+import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.openqa.selenium.Cookie;
@@ -63,8 +65,22 @@ import static org.junit.jupiter.api.Assumptions.assumeFalse;
  * <p>Console errors and 404ing sub-resources are checked by the
  * BrowserHealthExtension that {@link RollerIT} registers -- this class does not
  * repeat that work.
+ *
+ * <p><b>This class holds {@code GLOBAL_CONFIG} in READ mode, and it has to.</b>
+ * It visits every admin route, so it is sensitive to <em>every</em> site-wide
+ * runtime flag any other class permutes -- and the symptom is never an obvious
+ * concurrency error, it is a marker that "should" be on the page and isn't.
+ * Observed: {@code GlobalConfigMatrixIT} turns {@code groupblogging.enabled}
+ * off to prove a second weblog is refused, and while it is off
+ * {@code CreateWeblogController} answers {@code .GenericError} for an admin who
+ * already owns a weblog -- a healthy 200 carrying full site chrome and no form,
+ * which is precisely the {@code categoryEdit.rol} failure mode this sweep exists
+ * to catch. Same shape as the {@code uploads.enabled} collision CLAUDE.md
+ * records for the media classes. READ mode is what matters: it excludes the
+ * five writers without serialising this class against the other readers.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@ResourceLock(value = RollerIT.GLOBAL_CONFIG, mode = ResourceAccessMode.READ)
 class RouteSweepIT extends RollerIT {
 
     /**
