@@ -643,7 +643,7 @@ class VirtualHostIT extends RollerIT {
     }
 
     private void saveWeblogSettings() {
-        $("button[type='submit'].btn-success").should(visible).click();
+        $("button[type='submit'].btn-primary").should(visible).click();
         $("#messages").should(exist);
         assertTrue($$("#errors").isEmpty(),
                 "saving the weblog settings reported an error: "

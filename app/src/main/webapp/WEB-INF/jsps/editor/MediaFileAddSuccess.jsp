@@ -193,7 +193,7 @@
             <c:param name="directoryId" value="${bean.directoryId}"/>
         </c:url>
 
-        <button type="submit" id="createPostButton" class="btn btn-success" formaction="${pageContext.request.contextPath}/roller-ui/authoring/entryAddWithMediaFile.rol"><spring:message code="mediaFileSuccess.createPost"/></button>
+        <button type="submit" id="createPostButton" class="btn btn-primary" formaction="${pageContext.request.contextPath}/roller-ui/authoring/entryAddWithMediaFile.rol"><spring:message code="mediaFileSuccess.createPost"/></button>
 
         <%-- Anchors, not buttons. These two navigate; only "create post" above
              submits. As typeless <button>s inside this action-less form they
@@ -208,7 +208,7 @@
             <spring:message code="mediaFileSuccess.uploadMore"/>
         </a>
 
-        <a href="${mediaFileViewURL}" class="btn">
+        <a href="${mediaFileViewURL}" class="btn btn-secondary">
             <spring:message code="generic.cancel"/>
         </a>
     </div>

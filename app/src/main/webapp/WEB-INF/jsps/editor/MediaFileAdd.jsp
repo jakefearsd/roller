@@ -82,7 +82,7 @@
         <c:param name="weblog" value="${actionWeblog.handle}"/>
         <c:param name="directoryId" value="${bean.directoryId}"/>
     </c:url>
-    <a class="btn" href="${mediaFileCancelURL}"><spring:message code="generic.cancel"/></a>
+    <a class="btn btn-secondary" href="${mediaFileCancelURL}"><spring:message code="generic.cancel"/></a>
 
 <sec:csrfInput/>
 </form>

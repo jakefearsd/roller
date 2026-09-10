@@ -52,39 +52,33 @@ function confirmMemberRemoval() {
      the menu gate only hides the tab -- so the form has to be gated here too,
      not merely left off the menu. --%>
 <c:if test="${rc:getBooleanProp('groupblogging.enabled')}">
-<form class="form-stacked mb-4"
+<form class="d-flex flex-wrap align-items-end gap-2 mb-4"
       action="${pageContext.request.contextPath}/roller-ui/authoring/members!grant.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
-    <div class="row mb-3">
-        <label for="grantUserName" class="col-sm-3 col-form-label">
+    <div>
+        <label for="grantUserName" class="form-label">
             <spring:message code="memberPermissions.userName"/>
         </label>
-        <div class="col-sm-9">
-            <input type="text" class="form-control" name="userName" id="grantUserName"
-                   size="30" maxlength="255"/>
-        </div>
+        <input type="text" class="form-control" name="userName" id="grantUserName"
+               size="30" maxlength="255"/>
     </div>
-    <div class="row mb-3">
-        <label for="grantPermission" class="col-sm-3 col-form-label">
+    <div>
+        <label for="grantPermission" class="form-label">
             <spring:message code="yourWebsites.permission"/>
         </label>
-        <div class="col-sm-9">
-            <select class="form-select" name="permissionString" id="grantPermission">
-                <option value="post" selected>
-                    <spring:message code="memberPermissions.author"/>
-                </option>
-                <option value="admin">
-                    <spring:message code="memberPermissions.administrator"/>
-                </option>
-                <option value="edit_draft">
-                    <spring:message code="memberPermissions.limited"/>
-                </option>
-            </select>
-        </div>
+        <select class="form-select" name="permissionString" id="grantPermission">
+            <option value="post" selected>
+                <spring:message code="memberPermissions.author"/>
+            </option>
+            <option value="admin">
+                <spring:message code="memberPermissions.administrator"/>
+            </option>
+            <option value="edit_draft">
+                <spring:message code="memberPermissions.limited"/>
+            </option>
+        </select>
     </div>
-    <div class="control">
-        <button type="submit" class="btn btn-primary"><spring:message code="generic.save"/></button>
-    </div>
+    <button type="submit" class="btn btn-secondary"><spring:message code="memberPermissions.add"/></button>
 <sec:csrfInput/>
 </form>
 </c:if>
@@ -151,7 +145,7 @@ function confirmMemberRemoval() {
     <br />
 
     <div class="control">
-       <button type="submit" class="btn"><spring:message code="generic.save"/></button>
+       <button type="submit" class="btn btn-primary"><spring:message code="generic.save"/></button>
     </div>
 
     </c:if>

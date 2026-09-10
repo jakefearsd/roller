@@ -35,7 +35,7 @@
 </select>
     </c:if>
 
-    <button type="submit" class="btn"><spring:message code="pagesForm.add"/></button>
+    <button type="submit" class="btn btn-secondary"><spring:message code="pagesForm.add"/></button>
 
 <sec:csrfInput/>
 </form>

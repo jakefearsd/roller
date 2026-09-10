@@ -360,7 +360,7 @@
                 </div>
 
                 <div class="modal-footer">
-                    <button type="submit" class="btn"><spring:message code="generic.yes"/></button>
+                    <button type="submit" class="btn btn-danger"><spring:message code="generic.yes"/></button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         <spring:message code="generic.no"/>
                     </button>

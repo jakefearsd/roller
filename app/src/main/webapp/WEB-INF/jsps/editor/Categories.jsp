@@ -169,7 +169,7 @@
                 <button id="category-save-button" type="button" onclick="submitEditedCategory()" class="btn btn-primary">
                     <spring:message code="generic.save"/>
                 </button>
-                <button type="button" class="btn" data-bs-dismiss="modal">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <spring:message code="generic.cancel"/>
                 </button>
             </div>

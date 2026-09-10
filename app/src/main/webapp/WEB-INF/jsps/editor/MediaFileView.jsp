@@ -287,22 +287,21 @@
             <div class="image-controls">
 
                 <c:if test="${(empty pager && fn:length(childFiles) > 0) || (not empty pager && fn:length(pager.items) > 0)}">
-                    <input id="toggleButton" type="button" class="btn" style="display: inline"
-                           value='<spring:message code="generic.toggle"/>' onclick="onToggle()"/>
+                    <button id="toggleButton" type="button" class="btn btn-secondary" style="display: inline"
+                            onclick="onToggle()"><spring:message code="generic.toggle"/></button>
 
-                    <input id="deleteButton" type="button" class="btn btn-danger" style="display: inline"
-                           value='<spring:message code="mediaFileView.deleteSelected"/>' onclick="onDeleteSelected()"/>
+                    <button id="deleteButton" type="button" class="btn btn-danger" style="display: inline"
+                            onclick="onDeleteSelected()"><spring:message code="mediaFileView.deleteSelected"/></button>
 
-                    <input id="moveButton" type="button" class="btn btn-primary" style="display: inline"
-                           value='<spring:message code="mediaFileView.moveSelected"/>' onclick="onMoveSelected()"/>
+                    <button id="moveButton" type="button" class="btn btn-secondary" style="display: inline"
+                            onclick="onMoveSelected()"><spring:message code="mediaFileView.moveSelected"/></button>
 
                     <%-- The one route from "these photos" to "a post about
                          these photos". #createPostForm has sat below,
                          reachable by nothing, since the control that used to
                          drive it was removed. --%>
-                    <input id="newEntryButton" type="button" class="btn" style="display: inline"
-                           value='<spring:message code="mediaFileView.newEntryWithSelected"/>'
-                           onclick="onNewEntryWithSelected()"/>
+                    <button id="newEntryButton" type="button" class="btn btn-secondary" style="display: inline"
+                            onclick="onNewEntryWithSelected()"><spring:message code="mediaFileView.newEntryWithSelected"/></button>
                 </c:if>
 
                 <select name="selectedDirectory" id="moveTargetMenu" class="form-select" style="display: inline; width: 15em">
@@ -312,8 +311,8 @@
 </select>
 
                 <c:if test="${currentDirectory.name != 'default' && empty pager}">
-                    <input id="deleteFolderButton" type="button" class="btn" style="display: inline"
-                           value='<spring:message code="mediaFileView.deleteFolder"/>' onclick="onDeleteFolder()"/>
+                    <button id="deleteFolderButton" type="button" class="btn btn-secondary" style="display: inline"
+                            onclick="onDeleteFolder()"><spring:message code="mediaFileView.deleteFolder"/></button>
                 </c:if>
 
             </div>

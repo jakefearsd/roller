@@ -99,7 +99,7 @@
     <button type="submit" id="searchButton" class="btn btn-primary" style="margin:5px 0;"><spring:message code="mediaFileView.search"/></button>
 
     <c:if test="${not empty pager}">
-        <input id="resetButton" style="margin:5px 0;" type="button" class="btn"
+        <input id="resetButton" style="margin:5px 0;" type="button" class="btn btn-secondary"
                name="reset" value='<spring:message code="mediaFileView.reset"/>'/>
     </c:if>
 

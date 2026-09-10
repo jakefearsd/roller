@@ -25,8 +25,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -77,5 +79,53 @@ class JspConsistencyTest {
         for (String s : List.of("published", "draft", "pending", "scheduled", "trashed")) {
             assertTrue(css.contains(".status-pill.status-" + s), "roller.css lacks .status-pill.status-" + s);
         }
+    }
+
+    /**
+     * Task B2: every button in the admin UI is one of exactly three buckets --
+     * primary (one per screen, the one recommended action), destructive
+     * (btn-danger), or secondary (everything else, including a bare .btn with
+     * no variant class riding along). Bootstrap's stock .btn-success is not a
+     * fourth bucket; every former use is either the screen's one primary
+     * action (-> btn-primary) or not (-> btn-secondary). A_OWNED is skipped
+     * for the same reason statusIsAlwaysAStatusPill skips it -- see that
+     * method's comment.
+     */
+    @Test
+    void buttonsUseThreeBucketsOnly() throws IOException {
+        List<Path> nonAOwned = jsps()
+                .filter(p -> !A_OWNED.contains(p.getFileName().toString()))
+                .toList();
+        assertTrue(nonAOwned.size() > 20,
+                "Found too few JSPs -- the scan is not looking where it thinks it is.");
+
+        Pattern bareBtn = Pattern.compile("class=\"btn\"[^>]*>");
+        for (Path jsp : nonAOwned) {
+            String src = Files.readString(jsp, StandardCharsets.UTF_8);
+            assertFalse(src.contains("btn-success"), jsp + ": btn-success -> btn-primary");
+            assertFalse(bareBtn.matcher(src).find(),
+                    jsp + ": bare .btn -> btn-secondary (or btn-primary if it is the screen's one primary action)");
+            assertFalse(src.contains("<input type=\"button\" class=\"btn"),
+                    jsp + ": <input type=button> as a button -> <button>");
+            assertFalse(src.contains("<input id=\"toggleButton\""), jsp + ": media action bar still inputs");
+        }
+
+        String pages = Files.readString(JSPS.resolve("editor/Pages.jsp"), StandardCharsets.UTF_8);
+        assertTrue(pages.contains("<c:if test=\"${not empty pages}\">\n    <a href=\"${addUrl}\" class=\"btn btn-primary btn-sm\">")
+                        || pages.contains("not empty pages"),
+                "Pages hides the top primary when empty");
+
+        String members = Files.readString(JSPS.resolve("editor/Members.jsp"), StandardCharsets.UTF_8);
+        assertEquals(1, countOccurrences(members, "btn btn-primary"), "Members has one primary");
+    }
+
+    private static int countOccurrences(String haystack, String needle) {
+        int count = 0;
+        int idx = 0;
+        while ((idx = haystack.indexOf(needle, idx)) != -1) {
+            count++;
+            idx += needle.length();
+        }
+        return count;
     }
 }

@@ -95,11 +95,21 @@ p {
    `.btn` carries the shared type/radius/padding for every button in the
    admin UI, no matter which Bootstrap color-variant class rides along.
    Visual treatment then narrows Bootstrap's whole rainbow of variants down
-   to the three the design actually uses: primary (`.btn-primary` AND
-   `.btn-success` -- the success class survives because browser ITs pin it
-   on submit buttons, but it renders identically to primary), destructive
-   (`.btn-danger`/`.btn-outline-danger`), and everything else -- including a
-   bare `.btn` with no variant class -- as the quiet secondary treatment.
+   to the three the design actually uses: primary (`.btn-primary`, one per
+   screen, the recommended action), destructive (`.btn-danger`/
+   `.btn-outline-danger`), and everything else -- including a bare `.btn`
+   with no variant class -- as the quiet secondary treatment.
+
+   `.btn-success` used to ride the primary bucket alongside `.btn-primary`
+   here, kept only because browser ITs pinned it on the Save button. Task B2
+   converted every `.btn-success` use to `.btn-primary`/`.btn-secondary` and
+   updated those ITs, so the alias is gone -- `.btn-success` is no longer a
+   button bucket in this admin UI. The one exception is Package A's
+   `EntryEdit.jsp` (owned by a parallel worktree, not touched here): its
+   Publish/Submit-for-review buttons still carry `.btn-success` and now
+   render in stock, unstyled Bootstrap green until the post-merge task M1
+   converts them, the same transitional gap task B1 already left on that
+   file's status badges.
 
    Bootstrap 5 themes every button state through `--bs-btn-*` custom
    properties -- `.btn:hover`, the `:active`/`.active`/`.show` chain (which
@@ -146,8 +156,7 @@ p {
    toward --ink flips the polarity with the theme for free, which a literal
    `black` -- a light-mode assumption wearing a token expression's clothes --
    cannot do. */
-.btn-primary,
-.btn-success {
+.btn-primary {
     --bs-btn-color: var(--surface);
     --bs-btn-bg: var(--accent);
     --bs-btn-border-color: var(--accent);

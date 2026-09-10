@@ -112,7 +112,7 @@ class AnalyticsInjectionIT extends RollerIT {
 
         openSettings(handle);
         $("input[name='bean.analyticsSiteId']").setValue("not-a-uuid");
-        $("button[type='submit'].btn-success").should(visible).click();
+        $("button[type='submit'].btn-primary").should(visible).click();
 
         $("#errors").should(exist);
         $("#errors").shouldHave(text("not a website ID"));
@@ -159,7 +159,7 @@ class AnalyticsInjectionIT extends RollerIT {
     private void setAnalyticsSiteId(String handle, String siteId) {
         openSettings(handle);
         $("input[name='bean.analyticsSiteId']").setValue(siteId);
-        $("button[type='submit'].btn-success").should(visible).click();
+        $("button[type='submit'].btn-primary").should(visible).click();
         $("#messages").should(exist);
         assertTrue($$("#errors").isEmpty(),
                 "saving a valid analytics site id must not report an error");

@@ -25,9 +25,11 @@
     <c:url var="addUrl" value="/roller-ui/authoring/pageEdit.rol">
         <c:param name="weblog" value="${actionWeblog.handle}"/>
     </c:url>
+    <c:if test="${not empty pages}">
     <a href="${addUrl}" class="btn btn-primary btn-sm">
         <spring:message code="weblogPagesForm.add"/>
     </a>
+    </c:if>
 </p>
 
 <%-- One form around the whole table, following Entries.jsp's pattern: the

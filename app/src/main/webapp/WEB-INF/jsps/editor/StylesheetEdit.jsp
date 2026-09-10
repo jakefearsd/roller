@@ -34,10 +34,10 @@
         </div>
 
         <%-- Save, Close and Resize text area buttons--%>
-        <button type="submit" class="btn btn-success"><spring:message code="generic.save"/></button>
+        <button type="submit" class="btn btn-primary"><spring:message code="generic.save"/></button>
 
         <c:if test="${!customTheme}">
-            <button type="button" class="btn" onclick="revertStylesheet();"><spring:message code="stylesheetEdit.revert"/></button>
+            <button type="button" class="btn btn-secondary" onclick="revertStylesheet();"><spring:message code="stylesheetEdit.revert"/></button>
         </c:if>
 
         <%-- Only delete if we have no custom templates ie website.customStylesheetPath=null --%>
@@ -58,7 +58,7 @@
 
         <form action="${pageContext.request.contextPath}/roller-ui/authoring/stylesheetEdit!copyStylesheet.rol" method="post" class="form-vertical">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
-            <button type="submit" class="btn btn-success"><spring:message code="stylesheetEdit.copyStylesheet"/></button>
+            <button type="submit" class="btn btn-primary"><spring:message code="stylesheetEdit.copyStylesheet"/></button>
         <sec:csrfInput/>
 </form>
 

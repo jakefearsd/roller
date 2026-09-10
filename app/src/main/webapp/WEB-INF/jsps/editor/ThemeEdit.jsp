@@ -132,14 +132,13 @@
 
         <%-- Preview and Update buttons --%>
         <p> <spring:message code="themeEditor.previewDescription"/> </p>
-        <input type="button" name="themePreview" class="btn"
-            value="<spring:message code="themeEditor.preview"/>"
-            onclick="fullPreview($('#themeSelector').get(0))"/>
+        <button type="button" name="themePreview" class="btn btn-secondary"
+            onclick="fullPreview($('#themeSelector').get(0))"><spring:message code="themeEditor.preview"/></button>
 
         <button type="submit" class="btn btn-secondary"
                 data-busy-label="<spring:message code='themeEditor.saving'/>"><spring:message code="themeEditor.save"/></button>
 
-        <input type="button" class="btn" onclick="cancelChanges()" value="<spring:message code="generic.cancel"/>" />
+        <button type="button" class="btn btn-secondary" onclick="cancelChanges()"><spring:message code="generic.cancel"/></button>
 
     </div>
 
@@ -164,7 +163,7 @@
         <button type="submit" class="btn btn-secondary"
                 data-busy-label="<spring:message code='themeEditor.saving'/>"><spring:message code="themeEditor.save"/></button>
 
-        <input type="button" class="btn" onclick="cancelChanges()" value="<spring:message code="generic.cancel"/>" />
+        <button type="button" class="btn btn-secondary" onclick="cancelChanges()"><spring:message code="generic.cancel"/></button>
 
     </div>
 
@@ -183,14 +182,13 @@
 
         <%-- Preview and Update buttons --%>
         <p> <spring:message code="themeEditor.previewDescription"/> </p>
-        <input type="button" name="themePreview" class="btn"
-            value="<spring:message code="themeEditor.preview"/>"
-            onclick="fullPreview($('#themeSelector').get(0))"/>
+        <button type="button" name="themePreview" class="btn btn-secondary"
+            onclick="fullPreview($('#themeSelector').get(0))"><spring:message code="themeEditor.preview"/></button>
 
         <button type="submit" class="btn btn-secondary"
                 data-busy-label="<spring:message code='themeEditor.saving'/>"><spring:message code="themeEditor.save"/></button>
 
-        <input type="button" class="btn" onclick="cancelChanges()" value="<spring:message code="generic.cancel"/>" />
+        <button type="button" class="btn btn-secondary" onclick="cancelChanges()"><spring:message code="generic.cancel"/></button>
 
     </div>
 

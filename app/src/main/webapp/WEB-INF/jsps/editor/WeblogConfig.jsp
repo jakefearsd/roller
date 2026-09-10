@@ -225,7 +225,7 @@
     </div>
 
     <div class="rail-box">
-        <button type="submit" class="btn btn-success w-100"><spring:message code="websiteSettings.button.update"/></button>
+        <button type="submit" class="btn btn-primary w-100"><spring:message code="websiteSettings.button.update"/></button>
     </div>
 
     <%-- Removal is a quiet text link, matching the editor's delete: it opens

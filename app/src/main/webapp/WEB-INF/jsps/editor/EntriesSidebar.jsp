@@ -99,7 +99,7 @@
     <%-- ========================================================= --%>
     <%-- filter button --%>
 
-    <button type="submit" class="btn"><spring:message code="weblogEntryQuery.button.query"/></button>
+    <button type="submit" class="btn btn-secondary"><spring:message code="weblogEntryQuery.button.query"/></button>
 
 </form>
 

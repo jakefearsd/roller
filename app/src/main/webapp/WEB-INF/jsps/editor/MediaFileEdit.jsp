@@ -177,10 +177,10 @@
     </c:if>
 
 
-    <input type="submit" class="btn btn-success"
+    <input type="submit" class="btn btn-primary"
            value="<spring:message code="generic.save"/>" name="saveButton"/>
-    <input type="button" class="btn"
-           value="<spring:message code="generic.cancel"/>" onClick="window.parent.onEditCancelled();"/>
+    <button type="button" class="btn btn-secondary"
+            onClick="window.parent.onEditCancelled();"><spring:message code="generic.cancel"/></button>
 
 <sec:csrfInput/>
 </form>
