@@ -311,7 +311,11 @@ PMD, CPD and SpotBugs run at `verify` in the `app` module and fail the build
 on **any** violation. Config: `config/pmd/ruleset.xml`,
 `config/spotbugs/exclude.xml`; wiring in the parent `pluginManagement`,
 executions in `app/pom.xml`. `bin/quality-report.sh` prints current counts and
-sites; `bin/quality-report.sh <RuleName>` lists one rule's sites.
+sites; `bin/quality-report.sh <RuleName>` lists one rule's sites. It **derives**
+the CPD token threshold from the pom rather than restating it, and
+`QualityGatePomTest` pins that: it printed `CPD @200` against a gate of 110 for
+eighteen days after the threshold moved, with a correct count underneath a wrong
+label, which is the kind of thing nobody re-checks.
 
 The tree started this wave at 362 PMD / 134 SpotBugs / 4 CPD violations (=
 500) against this exact ruleset/filter, whittled down batch by batch across
@@ -1210,12 +1214,17 @@ variance.
 `it-selenium/src/test/resources/junit-platform.properties` runs test **classes**
 concurrently (fixed parallelism 4) while keeping **methods** on one thread. The
 suite was 14.1 minutes of test time across 34 classes on a single thread of a
-16-core machine; it is now ~7.8 minutes wall clock end to end, verified over
-four consecutive green runs.
+16-core machine, and class-parallelism first brought that to ~7.8 minutes wall
+clock. **Re-measured 2026-09-09 across 35 classes, after the browser-reuse /
+HTTP-sign-in / heap-bound work: 412s of test time compressed into 3m18s of
+module wall clock**, i.e. both halves of the original figure roughly halved
+again. The figures above were three weeks old and about 2x wrong when they
+were checked, so treat any performance number in this file as needing a
+re-measurement before it is quoted, not as a fact.
 
 Methods stay serial on purpose: an IT class here is a narrative — create a
 weblog, edit it, publish, assert the rendered page — whose methods share
-fixtures built in `@BeforeAll`. The parallelism worth having is across 34
+fixtures built in `@BeforeAll`. The parallelism worth having is across the 35
 classes, not within one.
 
 **Two resource locks carry the whole safety story, and both failure modes look
@@ -1244,13 +1253,47 @@ nothing about it suggesting a shared-state problem. Readers exclude the
 mutators but not each other; blanket-serialising them would have worked and
 thrown away most of the gain.
 
-The critical path is now the `GLOBAL_CONFIG` write chain — ~266s, of which
-`VirtualHostIT` alone is 164s because each of its tests drives the admin UI to
-set a custom domain. Hoisting that to once-per-class, and giving the media
-classes their own weblogs instead of sharing `WEBLOG_HANDLE`, are the next two
-levers; both would remove serialisation rather than add it.
+**The `GLOBAL_CONFIG` write chain used to be the critical path and is not any
+more.** It was ~266s, of which `VirtualHostIT` alone was 164s because each of
+its tests drove the admin UI to set a custom domain; hoisting that to
+once-per-class was named here as the next lever, and it was pulled — that
+class now runs in **20.4s** and the whole write chain is **~90s**, well under
+the 198s of serial wall clock the run takes anyway. The profile is flat now:
+the slowest class is `ThemeIT` at 27.2s and nothing else exceeds 25s, so there
+is no single lever left worth pulling. The remaining suggestion from that era —
+giving the media classes their own weblogs instead of sharing `WEBLOG_HANDLE` —
+would still remove serialisation, but it is now worth doing for isolation
+rather than for speed.
 
-### BrowserHealth: two checks, not one
+### BrowserHealth: three checks, and the third watches the watcher
+
+**Every check here reports by finding something wrong in what it recorded, so
+every one of them passes vacuously when nothing is recorded at all.** An empty
+response list produces an empty report, which reads exactly like a clean page —
+so a recorder that has stopped seeing traffic turns all 126 tests green at once
+and says nothing. That is the failure this class is most exposed to, because
+the listeners ride a CDP binding pinned to one Chrome major
+(`selenium-devtools-v153`) and Chrome ships a new major every few weeks;
+Selenium answers a mismatch by silently falling back to its nearest binding and
+logging a line nobody reads. Chrome went 152 → 153 during the afternoon that
+pin was written.
+
+`blindnessReport` closes it: if the browser is on an http(s) page and the
+recorder saw **zero** responses, that is a broken monitor, not a clean page, and
+it fails loudly saying so. **The discriminator has to come from outside CDP or
+it is circular** — the `page` field is itself set by a CDP event, so a blind
+recorder also believes it is still on `about:blank`; `getCurrentUrl()` goes over
+the WebDriver protocol, a separate channel, and the two disagreeing is the
+signal. A test that never navigates (several drive endpoints over plain HTTP)
+stays parked on `about:blank` and is correctly exempt. Proven the way the
+static-analysis gates were: with the `Network.responseReceived` listener
+disabled, 29 of `RouteSweepIT`'s 31 tests fail; before the check, all 31 passed.
+
+**Keep `selenium-devtools-vNNN` at the newest version the pinned Selenium
+ships** — it is pinned explicitly in `it-selenium/pom.xml` rather than taken
+transitively, so a Selenium bump that drops that version breaks the build
+instead of degrading at runtime (4.49.0 drops v150, which 4.47.0 shipped).
+
 `assertNoBrokenResources` catches any sub-resource that came back 4xx/5xx.
 `assertNoFailedRequests` catches requests that produced **no response at all**,
 and exists because the first has a blind spot: a stylesheet whose URL 404s is
