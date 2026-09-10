@@ -17,6 +17,8 @@
  */
 package org.apache.roller.weblogger.ui.controllers.editor;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -32,6 +34,7 @@ import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
+import org.apache.roller.weblogger.util.URLUtilities;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -220,16 +223,53 @@ class EntriesControllerTest extends EditorControllerTestSupport {
         String draftChip = chipUrls.get("DRAFT");
         assertNotNull(draftChip, "no chip url for DRAFT");
 
-        assertTrue(draftChip.contains("bean.text=cinque terre"), draftChip);
-        assertTrue(draftChip.contains("bean.tagsAsString=liguria"), draftChip);
-        assertTrue(draftChip.contains("bean.categoryName=Travel"), draftChip);
-        assertTrue(draftChip.contains("bean.startDateString=2026-01-01"), draftChip);
-        assertTrue(draftChip.contains("bean.endDateString=2026-12-31"), draftChip);
-        assertTrue(draftChip.contains("weblog=" + WEBLOG_HANDLE), draftChip);
+        Map<String, String> params = queryParams(draftChip);
+        assertEquals("cinque terre", params.get("bean.text"), draftChip);
+        assertEquals("liguria", params.get("bean.tagsAsString"), draftChip);
+        assertEquals("Travel", params.get("bean.categoryName"), draftChip);
+        assertEquals("2026-01-01", params.get("bean.startDateString"), draftChip);
+        assertEquals("2026-12-31", params.get("bean.endDateString"), draftChip);
+        assertEquals(WEBLOG_HANDLE, params.get("weblog"), draftChip);
 
         // The one thing the chip does change.
-        assertTrue(draftChip.contains("bean.status=DRAFT"), draftChip);
-        assertFalse(draftChip.contains("bean.status=PUBLISHED"), draftChip);
+        assertEquals("DRAFT", params.get("bean.status"), draftChip);
+    }
+
+    /**
+     * A filter value full of query punctuation reaches the chip intact.
+     *
+     * <p>This is the case that used to be corrupted three different ways at
+     * once, none of them visible on the page: {@code &} started a new
+     * parameter (so the search became "R"), {@code #} started the fragment and
+     * took every parameter after it -- {@code bean.status} included -- out of
+     * the request entirely, and {@code +} came back as a space. Escaping the
+     * href with {@code fn:escapeXml} does not touch any of it, because the
+     * browser decodes {@code &amp;} back to {@code &} before building the
+     * request; the encoding has to happen when the url is built.
+     *
+     * <p>Note this asserts on the DECODED parameters, so it is a statement
+     * about what the next request will carry rather than about a particular
+     * spelling of the escape.
+     */
+    @Test
+    void aStatusChipUrlKeepsAFilterValueThatIsFullOfQueryPunctuation() throws Exception {
+        bean.setStatus("ALL");
+        bean.setText("R&D #1");
+        bean.setCategoryName("C# / R+D");
+        stubActionUrlWithContextPath("");
+
+        controller.execute(request, model, bean);
+
+        @SuppressWarnings("unchecked")
+        Map<String, String> chipUrls = (Map<String, String>) model.getAttribute("statusChipUrls");
+        String draftChip = chipUrls.get("DRAFT");
+
+        Map<String, String> params = queryParams(draftChip);
+        assertEquals("R&D #1", params.get("bean.text"), draftChip);
+        assertEquals("C# / R+D", params.get("bean.categoryName"), draftChip);
+        // The status filter survives a '#' earlier in the query -- unencoded it
+        // would have been swallowed by the fragment along with everything else.
+        assertEquals("DRAFT", params.get("bean.status"), draftChip);
     }
 
     /**
@@ -405,8 +445,17 @@ class EntriesControllerTest extends EditorControllerTestSupport {
                         + "nothing to rebuild it from. Missing: " + missing);
     }
 
-    /** Answers the way {@code AbstractURLStrategy} does under a servlet prefix:
-     *  a context-relative url that already begins with the context path. */
+    /**
+     * Answers the way {@code AbstractURLStrategy} does under a servlet prefix:
+     * a context-relative url that already begins with the context path.
+     *
+     * <p>It joins the parameters through the REAL {@link URLUtilities#
+     * getQueryString}, not a hand-rolled {@code key=value} concatenation.
+     * That matters: the encoding of a filter value is the behaviour under
+     * test in {@link #aStatusChipUrlKeepsAFilterValueThatIsFullOfQueryPunctuation},
+     * and a stub that joined the pairs itself would assert against a url
+     * shape the application never produces.
+     */
     private void stubActionUrlWithContextPath(String contextPath) {
         when(weblogger.getUrlStrategy().getActionURL(any(), any(), any(), any(), org.mockito.ArgumentMatchers.anyBoolean()))
                 .thenAnswer(invocation -> {
@@ -414,11 +463,24 @@ class EntriesControllerTest extends EditorControllerTestSupport {
                     Map<String, String> params = new LinkedHashMap<>(
                             (Map<String, String>) invocation.getArgument(3));
                     params.put("weblog", invocation.getArgument(2));
-                    return contextPath + "/roller-ui/authoring/entries.rol?"
-                            + params.entrySet().stream()
-                                    .map(e -> e.getKey() + "=" + e.getValue())
-                                    .collect(Collectors.joining("&"));
+                    return contextPath + "/roller-ui/authoring/entries.rol"
+                            + URLUtilities.getQueryString(params);
                 });
+    }
+
+    /** The parameters of a built url, percent-decoded back to what they mean. */
+    private static Map<String, String> queryParams(String url) {
+        Map<String, String> params = new LinkedHashMap<>();
+        int q = url.indexOf('?');
+        if (q < 0) {
+            return params;
+        }
+        for (String pair : url.substring(q + 1).split("&")) {
+            int eq = pair.indexOf('=');
+            params.put(URLDecoder.decode(pair.substring(0, eq), StandardCharsets.UTF_8),
+                    URLDecoder.decode(pair.substring(eq + 1), StandardCharsets.UTF_8));
+        }
+        return params;
     }
 
     /**

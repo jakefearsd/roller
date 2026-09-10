@@ -36,7 +36,31 @@ public final class URLUtilities {
     
     
     /**
-     * Compose a map of key=value params into a query string.
+     * Compose a map of key=value params into a query string, encoding both
+     * halves of every pair.
+     *
+     * <p><strong>Callers pass RAW values and must not pre-encode.</strong>
+     * This method used to concatenate them untouched, which made every
+     * structural character in a value silently rewrite the query instead of
+     * travelling inside it: {@code &} started the next parameter (a search for
+     * {@code R&D} arrived as {@code R}), {@code #} started the fragment and so
+     * dropped every parameter after it before the request was even sent, and
+     * {@code +} decoded back as a space. Encoding here fixes all three for
+     * every caller at once, and closes the injection class the same way --
+     * escaping the finished url at the output site cannot, because
+     * {@code &amp;} in an href is decoded back to {@code &} by the browser
+     * before it builds the request.
+     *
+     * <p>Encoding a value twice is now the way to get this wrong. The callers
+     * that used to compensate for the old behaviour by calling
+     * {@link #encode} themselves -- the {@code cat}/{@code q}/{@code tags}
+     * parameters in {@code MultiWeblogURLStrategy} and the {@code theme}/
+     * {@code previewEntry} parameters in {@code PreviewURLStrategy} -- had
+     * that call removed when this changed.
+     *
+     * <p>Path segments are a different job and still encode themselves: see
+     * {@link #encodePath} and {@link #getEncodedTagsString}, both of which
+     * build parts of a url path, never a query string.
      */
     public static String getQueryString(Map<String, String> params) {
         
@@ -53,9 +77,9 @@ public final class URLUtilities {
                 queryString.append("&");
             }
 
-            queryString.append(entry.getKey());
+            queryString.append(encode(entry.getKey()));
             queryString.append("=");
-            queryString.append(entry.getValue());
+            queryString.append(encode(entry.getValue()));
         }
 
         return queryString.toString();

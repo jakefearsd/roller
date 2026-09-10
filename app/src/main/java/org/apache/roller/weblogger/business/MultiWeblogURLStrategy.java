@@ -225,7 +225,7 @@ public class MultiWeblogURLStrategy extends AbstractURLStrategy {
                 params.put("date", dateString);
             }
             if(cat != null) {
-                params.put("cat", URLUtilities.encode(cat));
+                params.put("cat", cat);
             }
         }
 
@@ -268,10 +268,10 @@ public class MultiWeblogURLStrategy extends AbstractURLStrategy {
                 params.put("date", dateString);
             }
             if(category != null) {
-                params.put("cat", URLUtilities.encode(category));
+                params.put("cat", category);
             }
             if(tags != null && !tags.isEmpty()) {
-                params.put("tags", URLUtilities.getEncodedTagsString(tags));
+                params.put("tags", String.join(" ", tags));
             }
             if(pageNum > 0) {
                 params.put("page", Integer.toString(pageNum));
@@ -310,13 +310,13 @@ public class MultiWeblogURLStrategy extends AbstractURLStrategy {
         
         Map<String, String> params = new HashMap<>(commonParams());
         if(category != null && !category.isBlank()) {
-            params.put("cat", URLUtilities.encode(category));
+            params.put("cat", category);
         }
         if(tags != null && !tags.isEmpty()) {
-          params.put("tags", URLUtilities.getEncodedTagsString(tags));
+          params.put("tags", String.join(" ", tags));
         }
         if(term != null && !term.isBlank()) {
-            params.put("q", URLUtilities.encode(term.trim()));
+            params.put("q", term.trim());
         }
         if(excerpts) {
             params.put("excerpts", "true");
@@ -348,11 +348,11 @@ public class MultiWeblogURLStrategy extends AbstractURLStrategy {
         
         Map<String, String> params = new HashMap<>(commonParams());
         if(query != null) {
-            params.put("q", URLUtilities.encode(query));
+            params.put("q", query);
             
             // other stuff only makes sense if there is a query
             if(category != null) {
-                params.put("cat", URLUtilities.encode(category));
+                params.put("cat", category);
             }
             if(pageNum > 0) {
                 params.put("page", Integer.toString(pageNum));
@@ -398,10 +398,17 @@ public class MultiWeblogURLStrategy extends AbstractURLStrategy {
         
         url.append(weblogRoot(weblog, null, true));
         url.append("search");
-        
-        Map<String, String> params = Map.of("q", "{searchTerms}", "page", "{startPage}");
-        
-        return url.append(URLUtilities.getQueryString(params)).toString();
+
+        // Built by hand rather than through getQueryString, and that is the
+        // point of the comment: the braces are OpenSearch template
+        // placeholders that the CONSUMER substitutes, not values to send. Run
+        // through getQueryString they would come back percent-encoded as
+        // %7BsearchTerms%7D and no consumer would recognise them. This is the
+        // one url on this class whose query string is a template rather than
+        // data, which is exactly why it does not share the encoder.
+        url.append("?q={searchTerms}&page={startPage}");
+
+        return url.toString();
     }
 
 

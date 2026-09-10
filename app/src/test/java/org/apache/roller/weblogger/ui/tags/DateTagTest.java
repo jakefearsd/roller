@@ -21,6 +21,7 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.Locale;
 import java.util.TimeZone;
 
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -102,7 +103,11 @@ class DateTagTest {
 
     @Test
     void withNoActionWeblogOnTheRequestTheJvmDefaultZoneIsUsed() throws Exception {
-        SimpleDateFormat expected = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+        // Locale.ROOT, matching DateTag: with the JVM default locale this
+        // expectation would drift from the tag on a non-Gregorian calendar
+        // locale (th-TH, ja-JP-u-ca-japanese), where the same instant
+        // formats to a different YEAR.
+        SimpleDateFormat expected = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.ROOT);
         expected.setTimeZone(TimeZone.getDefault());
 
         assertEquals("<time datetime=\"2026-09-09T14:30:00Z\" class=\"data\">"
@@ -118,7 +123,11 @@ class DateTagTest {
      */
     @Test
     void anActionWeblogAttributeThatIsNotAWeblogFallsBackInsteadOfThrowing() throws Exception {
-        SimpleDateFormat expected = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+        // Locale.ROOT, matching DateTag: with the JVM default locale this
+        // expectation would drift from the tag on a non-Gregorian calendar
+        // locale (th-TH, ja-JP-u-ca-japanese), where the same instant
+        // formats to a different YEAR.
+        SimpleDateFormat expected = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.ROOT);
         expected.setTimeZone(TimeZone.getDefault());
 
         assertEquals("<time datetime=\"2026-09-09T14:30:00Z\" class=\"data\">"

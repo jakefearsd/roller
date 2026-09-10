@@ -108,8 +108,14 @@ class EntriesJspTest {
         String jsp = read(ENTRIES);
 
         assertFalse(jsp.contains("bi-pencil-square"), "Entries.jsp still renders the pencil edit icon");
-        assertFalse(jsp.contains("code='generic.edit'") || jsp.contains("code=\"generic.edit\""),
-                "Entries.jsp still labels an edit control");
+        // Two assertions, not one disjunction: a <spring:message> code can be
+        // written with either quote style, and a combined assertFalse reports
+        // the same message whichever one is present -- so the failure would
+        // not say which spelling to go and look for.
+        assertFalse(jsp.contains("code='generic.edit'"),
+                "Entries.jsp still labels an edit control (single-quoted code)");
+        assertFalse(jsp.contains("code=\"generic.edit\""),
+                "Entries.jsp still labels an edit control (double-quoted code)");
     }
 
     /**

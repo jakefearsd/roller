@@ -20,12 +20,16 @@ package org.apache.roller.weblogger.util;
 
 import org.junit.jupiter.api.Test;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests the URL helpers behind every link the URL strategy builds.
@@ -59,6 +63,71 @@ public class URLUtilitiesTest {
     @Test
     public void aNullParameterMapGivesNullSoCallersCanSkipTheSuffix() {
         assertNull(URLUtilities.getQueryString(null));
+    }
+
+    /**
+     * The value is encoded, and that is a correctness property before it is a
+     * security one.
+     *
+     * <p>This method used to concatenate values raw, which meant any character
+     * that is structural in a query string silently rewrote the query rather
+     * than travelling inside it. Three separate corruptions, all invisible
+     * until someone typed the wrong character into a filter box:
+     *
+     * <ul>
+     *   <li>{@code &} starts the next parameter, so a search for {@code R&D}
+     *       arrived as {@code bean.text=R} plus a stray parameter named
+     *       {@code D}, and the list searched for "R".</li>
+     *   <li>{@code #} starts the fragment, which the browser never sends, so
+     *       EVERY parameter after it -- including the status filter -- was
+     *       dropped on the way to the server.</li>
+     *   <li>{@code +} is form encoding for a space, so a category named
+     *       {@code R+D} came back as {@code R D} and matched nothing.</li>
+     * </ul>
+     *
+     * <p>Escaping at the output site (fn:escapeXml on the href) does not fix
+     * any of this: it turns {@code &} into {@code &amp;}, which the browser
+     * decodes straight back to {@code &} before it ever builds the request.
+     * That escape is still correct for the attribute context -- it is defence
+     * against markup injection, not a repair for the parameter split.
+     */
+    @Test
+    public void aValueCarryingQueryPunctuationSurvivesInsteadOfRewritingTheQuery() {
+        String hostile = "R&D #1+x";
+
+        String queryString = URLUtilities.getQueryString(Map.of("bean.text", hostile));
+
+        assertTrue(queryString.startsWith("?bean.text="), queryString);
+        String encodedValue = queryString.substring("?bean.text=".length());
+        assertFalse(encodedValue.contains("&"), "a raw & splits the query: " + queryString);
+        assertFalse(encodedValue.contains("#"), "a raw # truncates the query: " + queryString);
+        assertEquals(hostile, URLDecoder.decode(encodedValue, StandardCharsets.UTF_8),
+                "the value must decode back to exactly what the caller passed");
+    }
+
+    /**
+     * Keys go through the same encoding. No key in this codebase needs it today
+     * -- {@code URLEncoder} leaves letters, digits, {@code .}, {@code -} and
+     * {@code _} alone, which covers every one of them, so {@code
+     * bean.categoryName} is untouched -- but a map key is not always a literal
+     * a developer chose, and the rule "everything structural is escaped" is
+     * cheaper to keep than to re-derive.
+     */
+    @Test
+    public void keysAreEncodedTooAndOrdinaryDottedKeysAreUnchangedByIt() {
+        assertEquals("?bean.categoryName=news",
+                URLUtilities.getQueryString(Map.of("bean.categoryName", "news")));
+        assertEquals("?a%26b=c", URLUtilities.getQueryString(Map.of("a&b", "c")));
+    }
+
+    /**
+     * A space is {@code +} rather than {@code %20}: this is form encoding, the
+     * same convention {@link URLUtilities#encode} already used and the one the
+     * servlet container decodes a query string with.
+     */
+    @Test
+    public void aSpaceInAValueBecomesPlusTheWayFormEncodingRequires() {
+        assertEquals("?cat=Cinque+Terre", URLUtilities.getQueryString(Map.of("cat", "Cinque Terre")));
     }
 
     @Test
