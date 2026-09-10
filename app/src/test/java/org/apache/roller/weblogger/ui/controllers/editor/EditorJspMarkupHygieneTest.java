@@ -174,8 +174,11 @@ class EditorJspMarkupHygieneTest {
                         "the canonical [image] embed string must be shown and copyable"),
                 new Expected("PageEdit.jsp", "id=\"page_permalink\"",
                         "a saved page must show its own URL"),
-                new Expected("Pages.jsp", "${urls.weblogAbsolute(actionWeblog)}page/${p.slug}",
-                        "a published page's slug must link to the live page"),
+                new Expected("Pages.jsp", "${urls.weblogAbsolute(actionWeblog)}page/${fn:escapeXml(p.slug)}",
+                        "a published page's slug must link to the live page, with the "
+                                + "author-controlled slug escaped in the href (a page slug is "
+                                + "restricted only against '/' and reserved names, not against "
+                                + "quote/angle-bracket characters)"),
                 new Expected("ThemeEdit.jsp", "themeEditor.viewYourBlog",
                         "a persistent view-the-blog link, not only the Preview button"),
                 new Expected("WeblogConfig.jsp", "id=\"weblogAbsoluteUrl\"",

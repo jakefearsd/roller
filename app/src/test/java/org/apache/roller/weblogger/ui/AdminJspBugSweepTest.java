@@ -183,6 +183,38 @@ class AdminJspBugSweepTest {
         }
     }
 
+    // --- B11 bullet 6: user-controlled URL text unescaped in an href ---
+
+    /**
+     * A starting-point sweep -- {@code grep -rn 'href="${' WEB-INF/jsps |
+     * grep -v escapeXml | grep -v 'c:url\|urls\.'} -- turns out to be almost
+     * entirely false positives: every {@code href="${var}"} in the admin UI
+     * is fed by a {@code <c:url>}-built variable (which URL-encodes its
+     * params and entity-encodes the joining {@code &}) or a {@code urls.*}
+     * helper call (which builds a server-side URL from ids/handles, not raw
+     * text), so grepping by variable name misses the one real gap: a
+     * {@code urls.*} call with a raw field appended directly after it.
+     * {@code PageEdit.jsp} (A-owned, unrelated to this fix) already gets this
+     * right -- {@code href="${urls.weblogAbsolute(actionWeblog)}page/${fn:
+     * escapeXml(bean.slug)}"} -- because a page slug is author-controlled and
+     * restricted only against containing {@code '/'} or a reserved name
+     * (see {@code JPAWeblogPageManagerImpl.savePage}), not against quote or
+     * angle-bracket characters. {@code Pages.jsp}'s list-page equivalent
+     * left the same {@code ${p.slug}} unescaped in the href -- a slug like
+     * {@code x" onmouseover="alert(1)} breaks out of the attribute -- while
+     * the adjacent link TEXT on the same line already correctly went through
+     * {@code <c:out value="${p.slug}"/>}.
+     */
+    @Test
+    void pagesListEscapesTheSlugInThePermalinkHref() throws IOException {
+        String src = Files.readString(JSPS.resolve("editor/Pages.jsp"), StandardCharsets.UTF_8);
+
+        assertTrue(src.contains(
+                        "href=\"${urls.weblogAbsolute(actionWeblog)}page/${fn:escapeXml(p.slug)}\""),
+                "Pages.jsp's permalink href must escape the author-controlled page slug, "
+                        + "the same way PageEdit.jsp's own permalink already does:\n" + src);
+    }
+
     private static int countMatches(String haystack, Pattern pattern) {
         Matcher m = pattern.matcher(haystack);
         int count = 0;
