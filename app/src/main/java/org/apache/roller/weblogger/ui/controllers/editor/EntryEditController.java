@@ -595,7 +595,7 @@ public class EntryEditController extends BaseController {
         try {
             return bean.getPubTime(getActionWeblog(request).getTimeZoneInstance());
         } catch (DateTimeParseException e) {
-            addError(model, "entryEdit.pubTimeInvalid", request);
+            addFieldError(model, "entry_bean_pubTimeLocal", "entryEdit.pubTimeInvalid", request);
             return null;
         }
     }

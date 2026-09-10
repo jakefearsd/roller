@@ -413,6 +413,7 @@ class JspConsistencyTest {
             "editor/WeblogConfigController.java", List.of("editor/WeblogConfig.jsp"),
             "editor/CategoryEditController.java", List.of("editor/Categories.jsp"),
             "editor/PageEditController.java", List.of("editor/PageEdit.jsp"),
+            "editor/EntryEditController.java", List.of("editor/EntryEdit.jsp"),
             "editor/TemplatesController.java", List.of("editor/TemplatesSidebar.jsp"),
             "editor/MembersController.java", List.of("editor/Members.jsp"),
             "core/CreateWeblogController.java", List.of("core/CreateWeblog.jsp"),

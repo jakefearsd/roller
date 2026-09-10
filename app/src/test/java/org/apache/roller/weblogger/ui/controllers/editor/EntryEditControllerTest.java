@@ -645,6 +645,26 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
         verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(any());
     }
 
+    /**
+     * Task M1 (task B8's field errors, applied to the entry editor). The
+     * banner says a save was refused; only the marker says which of the
+     * editor's thirty-odd controls did it -- and the pubtime field is in a
+     * rail an author may well have scrolled past, next to an SEO drawer that
+     * is collapsed by default. Package B converted every other admin
+     * controller and deliberately skipped this one because Package A owned
+     * the file it renders.
+     */
+    @Test
+    void aMalformedPubTimeLocalMarksTheFieldItNames() throws Exception {
+        bean.setPubTimeLocal("not-a-datetime");
+
+        controller.entryAddSaveDraft(request, model, bean);
+
+        assertEquals(java.util.List.of("entry_bean_pubTimeLocal"), invalidFields(model),
+                "the refusal must name the control's own id, which EntryEdit.jsp renders "
+                        + "on the datetime-local input");
+    }
+
     @Test
     void theEditorOffersTheWeblogsCategories() throws Exception {
         controller.entryAddExecute(request, model, bean);
