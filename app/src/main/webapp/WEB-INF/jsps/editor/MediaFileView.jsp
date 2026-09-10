@@ -316,7 +316,8 @@
                             onclick="onNewEntryWithSelected()"><spring:message code="mediaFileView.newEntryWithSelected"/></button>
 
                     <button id="deleteButton" type="button" class="btn btn-danger"
-                            onclick="onDeleteSelected()"><spring:message code="mediaFileView.deleteSelected"/></button>
+                            onclick="onDeleteSelected()"
+                            data-confirm="<spring:message code='mediaFile.delete.confirm'/>"><spring:message code="mediaFileView.deleteSelected"/></button>
                 </div>
             </c:if>
 
@@ -325,7 +326,8 @@
             <c:if test="${currentDirectory.name != 'default' && empty pager}">
                 <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
                     <button id="deleteFolderButton" type="button" class="btn btn-secondary"
-                            onclick="onDeleteFolder()"><spring:message code="mediaFileView.deleteFolder"/></button>
+                            onclick="onDeleteFolder()"
+                            data-confirm="<spring:message code='mediaFile.deleteFolder.confirm'/>"><spring:message code="mediaFileView.deleteFolder"/></button>
                 </div>
             </c:if>
 
@@ -414,9 +416,9 @@
         <div class="modal-content">
 
             <div class="modal-header">
-                <h3 id="mediafile-edit-lightbox-title" class="subtitle">
+                <p id="mediafile-edit-lightbox-title" class="modal-title">
                     <spring:message code="mediaFileEdit.subtitle"/><b><span id="edit-subtitle"></span></b>
-                </h3>
+                </p>
             </div>
 
             <div class="modal-body">
@@ -487,18 +489,17 @@
         }
     }
 
+    // Confirmation is handled upstream now, by data-confirm on each
+    // triggering button (see roller.js): a click that fails to confirm never
+    // reaches here.
     function onDeleteSelected() {
-        if (confirm("<spring:message code="mediaFile.delete.confirm"/>")) {
-            document.mediaFileViewForm.action = '<c:url value="/roller-ui/authoring/mediaFileView!deleteSelected.rol"/>';
-            document.mediaFileViewForm.submit();
-        }
+        document.mediaFileViewForm.action = '<c:url value="/roller-ui/authoring/mediaFileView!deleteSelected.rol"/>';
+        document.mediaFileViewForm.submit();
     }
 
     function onDeleteFolder() {
-        if (confirm("<spring:message code="mediaFile.deleteFolder.confirm"/>")) {
-            document.mediaFileViewForm.action = '<c:url value="/roller-ui/authoring/mediaFileView!deleteFolder.rol"/>';
-            document.mediaFileViewForm.submit();
-        }
+        document.mediaFileViewForm.action = '<c:url value="/roller-ui/authoring/mediaFileView!deleteFolder.rol"/>';
+        document.mediaFileViewForm.submit();
     }
 
     function onMoveSelected() {

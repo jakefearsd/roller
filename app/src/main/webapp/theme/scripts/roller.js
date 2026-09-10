@@ -253,6 +253,14 @@ if (typeof jQuery !== "undefined") {
  * seeing the same attribute -- prompts again. That is not hypothetical; it
  * shipped for one round on UserEdit's send-password-link form.
  *
+ * A form-level data-confirm may also carry data-confirm-when, a CSS selector
+ * evaluated against the form itself: the prompt fires only when the form
+ * currently has a match. Members.jsp is the one caller -- whether removing a
+ * member needs confirming depends on which of several radios across the whole
+ * table is checked, a decision no single control can answer for itself, so
+ * this is the one legitimate reason for a form-level (rather than
+ * per-control) data-confirm.
+ *
  * Capture phase, so this runs before any other handler commits to the action.
  */
 (function () {
@@ -261,6 +269,14 @@ if (typeof jQuery !== "undefined") {
     function confirmed(element) {
         var message = element.getAttribute("data-confirm");
         return !message || window.confirm(message);
+    }
+
+    // A form's own data-confirm is unconditional unless it also names
+    // data-confirm-when, in which case it only applies while the form has a
+    // live match for that selector.
+    function formNeedsConfirming(form) {
+        var when = form.getAttribute("data-confirm-when");
+        return !when || form.querySelector(when) !== null;
     }
 
     // Deliberately stops BEFORE the form: a form's own data-confirm belongs to
@@ -288,7 +304,8 @@ if (typeof jQuery !== "undefined") {
         // prompt was already answered by the click handler above, which is
         // why that handler stops at the form and this one does not climb.
         var form = event.target;
-        if (form.hasAttribute && form.hasAttribute("data-confirm") && !confirmed(form)) {
+        if (form.hasAttribute && form.hasAttribute("data-confirm")
+                && formNeedsConfirming(form) && !confirmed(form)) {
             event.preventDefault();
             event.stopPropagation();
         }

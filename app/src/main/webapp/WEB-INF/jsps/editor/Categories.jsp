@@ -132,7 +132,7 @@
         <div class="modal-content">
 
             <div class="modal-header">
-                <h3 id="category-edit-title"></h3>
+                <p id="category-edit-title" class="modal-title"></p>
             </div>
 
             <div class="modal-body">
@@ -166,11 +166,11 @@
 
             <div class="modal-footer">
                 <p id="feedback-area-edit"></p>
-                <button id="category-save-button" type="button" onclick="submitEditedCategory()" class="btn btn-primary">
-                    <spring:message code="generic.save"/>
-                </button>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <spring:message code="generic.cancel"/>
+                </button>
+                <button id="category-save-button" type="button" onclick="submitEditedCategory()" class="btn btn-primary">
+                    <spring:message code="generic.save"/>
                 </button>
             </div>
 
@@ -319,10 +319,10 @@
         <div class="modal-content">
 
             <div class="modal-header">
-                <h3 id="delete-category-modal-title">
+                <p id="delete-category-modal-title" class="modal-title">
                     <spring:message code="categoryDeleteOK.removeCategory"/>:
                     <span id="category-name"></span>
-                </h3>
+                </p>
             </div>
 
             <form id="categoryRemoveForm" action="${pageContext.request.contextPath}/roller-ui/authoring/categoryRemove!remove.rol" method="post">
@@ -352,10 +352,10 @@
                 </div>
 
                 <div class="modal-footer">
-                    <button type="submit" class="btn btn-danger"><spring:message code="generic.yes"/></button>&nbsp;
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         <spring:message code="generic.no"/>
                     </button>
+                    <button type="submit" class="btn btn-danger"><spring:message code="generic.yes"/></button>
                 </div>
 
             <sec:csrfInput/>

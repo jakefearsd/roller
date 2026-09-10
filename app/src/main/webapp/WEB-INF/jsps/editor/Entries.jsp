@@ -365,10 +365,10 @@
                 </div>
 
                 <div class="modal-footer">
-                    <button type="submit" class="btn btn-danger"><spring:message code="generic.yes"/></button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         <spring:message code="generic.no"/>
                     </button>
+                    <button type="submit" class="btn btn-danger"><spring:message code="generic.yes"/></button>
                 </div>
 
             <sec:csrfInput/>
@@ -396,15 +396,15 @@
                 <p id="bulkDeleteCount" class="form-control-plaintext"></p>
             </div>
             <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <spring:message code="generic.no"/>
+                </button>
                 <%-- Submits the table's form, which is where the selection
                      lives; this button is outside it, hence the form= --%>
                 <button type="submit" class="btn btn-danger" id="bulkDeleteConfirm"
                         form="entriesBulkForm"
                         formaction="${pageContext.request.contextPath}/roller-ui/authoring/entries!bulkDelete.rol">
                     <spring:message code="generic.yes"/>
-                </button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <spring:message code="generic.no"/>
                 </button>
             </div>
         </div>

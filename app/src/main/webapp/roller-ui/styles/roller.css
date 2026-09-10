@@ -733,6 +733,19 @@ table.mm_table_actions td {
     color: var(--ink-soft);
 }
 
+/* Task B7: one modal shape. The title above is the caps-label; the body text
+   is ordinary reading copy at the same size/color as everywhere else in the
+   admin UI (Bootstrap's own default is 1rem/16px at full --ink, which is not
+   one of this file's five sizes and does not match the rest of a modal's own
+   surrounding page). Footer button ORDER (cancel/dismiss first, the
+   primary-or-destructive action last) is a markup convention enforced by
+   JspConsistencyTest, not something CSS can fix -- Bootstrap's
+   .modal-footer packs flex children left-to-right in DOM order. */
+.modal-body {
+    font-size: 14.5px;
+    color: var(--ink);
+}
+
 /* Task B6: the sidebar tiles on the rail's own grammar -- a caps-label per
    logical block instead of a Bootstrap card with h3/hr section markup. The
    wrapper is <aside id="adminSidebar"> now (see tiles-tabbedpage.jsp /

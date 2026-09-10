@@ -47,6 +47,8 @@
      BOTH states (table or empty-state invitation) the same way
      entries-list-marker does on Entries.jsp, so the route sweep has something
      to find whichever one rendered. --%>
+<spring:message code="trash.deleteForeverConfirm" var="trashDeleteForeverConfirm"/>
+<spring:message code="trash.emptyConfirm" arguments="${fn:length(trashedEntries)}" var="trashEmptyConfirm"/>
 <div id="trash-list-marker">
 <form id="trashForm" method="post"
       action="${pageContext.request.contextPath}/roller-ui/authoring/trash!restore.rol">
@@ -83,7 +85,7 @@
             <button type="submit" name="deleteId" value="${entry.id}"
                     class="btn btn-link p-0 align-baseline border-0 text-danger"
                     formaction="${pageContext.request.contextPath}/roller-ui/authoring/trash!delete.rol"
-                    onclick="return confirmDeleteForever();">
+                    data-confirm="${trashDeleteForeverConfirm}">
                 <spring:message code="trash.deleteForever"/>
             </button>
         </td>
@@ -97,7 +99,7 @@
     <div class="d-flex justify-content-end mb-3">
         <button type="submit" class="btn btn-danger"
                 formaction="${pageContext.request.contextPath}/roller-ui/authoring/trash!empty.rol"
-                onclick="return confirmEmptyTrash();">
+                data-confirm="${trashEmptyConfirm}">
             <spring:message code="trash.empty"/>
         </button>
     </div>
@@ -115,19 +117,3 @@
 
 </form>
 </div>
-
-<script>
-    // Delete forever and Empty trash are the only two irreversible actions on
-    // this screen, so both confirm before submitting; Restore is not
-    // destructive (the entry just goes back to the trash if that turns out to
-    // be wrong) and needs none. Following the confirm(spring:message) idiom
-    // used on MediaFileView.jsp/Members.jsp rather than a modal: neither
-    // confirmation needs to report anything a plain sentence cannot say.
-    function confirmDeleteForever() {
-        return confirm("<spring:message code="trash.deleteForeverConfirm"/>");
-    }
-
-    function confirmEmptyTrash() {
-        return confirm("<spring:message code="trash.emptyConfirm" arguments="${fn:length(trashedEntries)}"/>");
-    }
-</script>

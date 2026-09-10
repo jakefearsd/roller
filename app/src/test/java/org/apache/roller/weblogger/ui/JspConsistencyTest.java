@@ -23,8 +23,10 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -269,6 +271,112 @@ class JspConsistencyTest {
             assertFalse(leftColumn.contains("card-body"),
                     layout + ": the sidebar is still wrapped in .card-body");
         }
+    }
+
+    /**
+     * Task B7: one modal shape, one confirm idiom.
+     *
+     * <ul>
+     *   <li>no {@code confirm(} in any JSP outside {@code A_OWNED} -- every
+     *       destructive action is confirmed through {@code data-confirm}
+     *       (see roller.js), never a native {@code window.confirm()} called
+     *       from a JSP's own inline script;</li>
+     *   <li>no {@code onsubmit=} attribute anywhere outside {@code A_OWNED}
+     *       -- a form's behavior on submit is wired with
+     *       {@code addEventListener}, not an inline handler, for the same
+     *       reason confirm() moved out: an inline handler is a second place
+     *       author-controlled or translated text can reach raw JavaScript;</li>
+     *   <li>every {@code .modal-title} is a {@code <p>}, or -- if some other
+     *       element carries the class -- that element is not a heading
+     *       ({@code h1}-{@code h6}). A modal's title is one caps-label role,
+     *       not a document heading competing with the page's own outline;</li>
+     *   <li>every {@code .modal-footer} orders its buttons cancel/dismiss
+     *       FIRST, primary-or-destructive action LAST. Bootstrap packs
+     *       {@code .modal-footer} left-to-right in DOM order, so this is a
+     *       markup convention, not something CSS enforces.</li>
+     * </ul>
+     *
+     * <p>JSP comments are stripped before every scan below: a comment
+     * documenting the banned pattern (e.g. UserEdit.jsp's explanation of why
+     * its own button is NOT built with an inline {@code onsubmit}) is prose
+     * about the rule, not a violation of it.
+     */
+    @Test
+    void oneConfirmIdiomAndOneModalShape() throws IOException {
+        List<Path> nonAOwned = jsps()
+                .filter(p -> !A_OWNED.contains(p.getFileName().toString()))
+                .toList();
+        assertTrue(nonAOwned.size() > 20,
+                "Found too few JSPs -- the scan is not looking where it thinks it is.");
+
+        List<String> confirmViolations = new ArrayList<>();
+        List<String> onsubmitViolations = new ArrayList<>();
+        List<String> modalTitleViolations = new ArrayList<>();
+        List<String> modalFooterViolations = new ArrayList<>();
+
+        Pattern modalTitleOwner = Pattern.compile(
+                "<([A-Za-z][A-Za-z0-9]*)\\b[^>]*\\bclass=\"modal-title\"");
+        Pattern modalFooter = Pattern.compile(
+                "class=\"modal-footer\"[^>]*>(.*?)</div>", Pattern.DOTALL);
+        Set<String> headingTags = Set.of("h1", "h2", "h3", "h4", "h5", "h6");
+
+        for (Path jsp : nonAOwned) {
+            String name = jsp.getFileName().toString();
+            String src = withoutJspComments(Files.readString(jsp, StandardCharsets.UTF_8));
+
+            if (src.contains("confirm(")) {
+                confirmViolations.add(name);
+            }
+            if (src.contains("onsubmit=")) {
+                onsubmitViolations.add(name);
+            }
+
+            Matcher titleMatcher = modalTitleOwner.matcher(src);
+            while (titleMatcher.find()) {
+                String tag = titleMatcher.group(1).toLowerCase(Locale.ROOT);
+                if (!"p".equals(tag) && headingTags.contains(tag)) {
+                    modalTitleViolations.add(name + ": <" + tag + " class=\"modal-title\">");
+                }
+            }
+
+            Matcher footerMatcher = modalFooter.matcher(src);
+            while (footerMatcher.find()) {
+                String footer = footerMatcher.group(1);
+                int dismissIndex = footer.indexOf("data-bs-dismiss");
+                int dangerIndex = footer.indexOf("btn-danger");
+                int primaryIndex = footer.indexOf("btn-primary");
+                int actionIndex = dangerIndex >= 0 && (primaryIndex < 0 || dangerIndex < primaryIndex)
+                        ? dangerIndex : primaryIndex;
+                if (dismissIndex >= 0 && actionIndex >= 0 && actionIndex < dismissIndex) {
+                    modalFooterViolations.add(name + ": primary/destructive button comes "
+                            + "before the dismiss button");
+                }
+            }
+        }
+
+        assertTrue(confirmViolations.isEmpty(),
+                "confirm() called from a JSP's own script -- use data-confirm instead: "
+                        + confirmViolations);
+        assertTrue(onsubmitViolations.isEmpty(),
+                "inline onsubmit= attribute -- wire the form with addEventListener instead: "
+                        + onsubmitViolations);
+        assertTrue(modalTitleViolations.isEmpty(),
+                ".modal-title on a heading element -- use <p class=\"modal-title\"> instead: "
+                        + modalTitleViolations);
+        assertTrue(modalFooterViolations.isEmpty(),
+                ".modal-footer buttons out of order -- dismiss/cancel first, "
+                        + "primary/destructive last: " + modalFooterViolations);
+    }
+
+    /**
+     * JSP comments are not part of the rendered page, so a scan asserting
+     * that some pattern is ABSENT must not be defeated by prose that merely
+     * mentions it (or, worse, pass for the wrong reason on prose that
+     * mentions the FIXED pattern). See AdminJspHygieneTest, which established
+     * this helper first.
+     */
+    private static String withoutJspComments(String src) {
+        return src.replaceAll("(?s)<%--.*?--%>", "");
     }
 
     private static int countOccurrences(String haystack, String needle) {

@@ -33,12 +33,12 @@
 </p>
 
 <%-- One form around the whole table, following Entries.jsp's pattern: the
-     remove action is a hidden field this table's rows set via JS and submit,
+     remove action is a submit button carrying its own name/value per row,
      rather than a nested form per row (which is not valid HTML). --%>
+<spring:message code="weblogPagesForm.removeConfirm" var="pageDeleteConfirmBase"/>
 <form id="pageRemoveForm" method="post"
       action="${pageContext.request.contextPath}/roller-ui/authoring/pageRemove.rol">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
-    <input type="hidden" name="removeId" id="removeId" value=""/>
     <sec:csrfInput/>
 
     <c:choose>
@@ -90,16 +90,19 @@
                         </a>
                     </td>
                     <td>
-                        <%-- id/title ride in data-* attributes, not an
-                             interpolated onclick string -- fn:escapeXml
-                             renders an apostrophe as &#039;, which the HTML
-                             parser decodes back to ' BEFORE the onclick
-                             attribute compiles as JavaScript, so a page
-                             titled e.g. "Maiia's bio" made this control a
-                             permanent SyntaxError. Delegated handler below
-                             (same convention as MediaFileView.jsp:493). --%>
-                        <button type="button" class="btn btn-link p-0 align-baseline border-0 page-delete-btn"
-                                data-page-id="${p.id}" data-page-title="${fn:escapeXml(p.title)}"
+                        <%-- A real submit button carrying its own name/value, not
+                             a hidden field a delegated click handler had to
+                             populate first. data-confirm, not an inline
+                             onclick/window.confirm: fn:escapeXml renders an
+                             apostrophe as &#039;, which the HTML parser decodes
+                             back to ' BEFORE a JS-string position compiles, so a
+                             page titled e.g. "Maiia's bio" made the old
+                             onclick-string approach a permanent SyntaxError. An
+                             HTML attribute has no second parser, so data-confirm
+                             is safe with the same escape. --%>
+                        <button type="submit" class="btn btn-link p-0 align-baseline border-0 page-delete-btn"
+                                name="removeId" value="${p.id}"
+                                data-confirm="${pageDeleteConfirmBase}: '${fn:escapeXml(p.title)}'?"
                                 aria-label="<spring:message code='generic.delete'/>: ${fn:escapeXml(p.title)}">
                             <span class="bi bi-trash" aria-hidden="true" title="<spring:message code="generic.delete"/>"></span>
                         </button>
@@ -124,21 +127,3 @@
     </c:choose>
 
 </form>
-
-<script>
-    <%-- Delegated: a row's id/title ride in data-* attributes on the button
-         (see the comment above it), never in an inline onclick string. --%>
-    $(document).on('click', '.page-delete-btn', function () {
-        confirmPageDelete(this.dataset.pageId, this.dataset.pageTitle);
-    });
-
-    function confirmPageDelete(pageId, pageTitle) {
-        // A native confirm is acceptable here: unlike the bulk-delete flow on
-        // Entries.jsp, there is exactly one thing being removed and no count
-        // to report.
-        if (window.confirm('<spring:message code="weblogPagesForm.removeConfirm" javaScriptEscape="true"/>: \'' + pageTitle + '\'?')) {
-            document.getElementById('removeId').value = pageId;
-            document.getElementById('pageRemoveForm').submit();
-        }
-    }
-</script>

@@ -159,14 +159,14 @@
                 <p id="submissionsDeleteCount" class="form-control-plaintext"></p>
             </div>
             <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <spring:message code="generic.no"/>
+                </button>
                 <%-- Outside the form, so form= names the one carrying the
                      selection (same shape as Entries.jsp's confirm). --%>
                 <button type="submit" class="btn btn-danger" id="submissionsDeleteConfirm"
                         form="submissionsDeleteForm">
                     <spring:message code="generic.yes"/>
-                </button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <spring:message code="generic.no"/>
                 </button>
             </div>
         </div>

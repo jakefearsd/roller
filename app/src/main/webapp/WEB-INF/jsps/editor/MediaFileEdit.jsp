@@ -222,6 +222,7 @@
         <input type="hidden" name="cropWidth" id="cropWidth" value="0"/>
         <input type="hidden" name="cropHeight" id="cropHeight" value="0"/>
         <button type="submit" id="cropButton" class="btn btn-danger"
+                data-confirm="<spring:message code='mediaFileEdit.crop.confirm'/>"
                 data-busy-label="<spring:message code='mediaFileEdit.crop.applying'/>">
             <spring:message code="mediaFileEdit.crop.apply"/>
         </button>
@@ -311,13 +312,13 @@
                 };
             }
 
+            // Confirmation is handled upstream now, by data-confirm on
+            // #cropButton (see roller.js): a click that fails to confirm never
+            // reaches this submit handler at all. This still guards against
+            // submitting with no valid selection drawn.
             document.getElementById('cropForm').addEventListener('submit', function (event) {
                 var rect = cropRectInNaturalPixels();
                 if (rect === null || !(rect.width > 0) || !(rect.height > 0)) {
-                    event.preventDefault();
-                    return;
-                }
-                if (!confirm('<spring:message code="mediaFileEdit.crop.confirm" javaScriptEscape="true"/>')) {
                     event.preventDefault();
                     return;
                 }
