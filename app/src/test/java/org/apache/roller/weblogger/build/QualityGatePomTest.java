@@ -2,6 +2,7 @@ package org.apache.roller.weblogger.build;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -155,6 +156,30 @@ class QualityGatePomTest {
                 + "justification-comment scrutiny everyPmdExclusionIsPermittedAndCarriesAReason enforces "
                 + "-- that regex only matches <exclude name=...>, not <exclude-pattern>. Adding one is a "
                 + "spec change: update the design doc and this test.");
+    }
+
+    /**
+     * The operator-facing report must DERIVE the CPD threshold, never restate
+     * it.
+     *
+     * <p>{@code bin/quality-report.sh} printed "CPD @200" for eighteen days
+     * after the gate moved to 110 — the count underneath it was always right
+     * (the script runs {@code pmd:cpd} through Maven and inherits the pom's
+     * setting), so only the label was wrong, which is exactly the kind of
+     * thing nobody re-checks. A restated constant in a reporting tool is a
+     * second source of truth that nothing compares against the first.
+     */
+    @Test
+    void theQualityReportDerivesTheCpdThresholdRatherThanRestatingIt() throws IOException {
+        String script = read("bin/quality-report.sh");
+
+        assertTrue(script.contains("minimumTokens"),
+                "bin/quality-report.sh must read the CPD threshold out of pom.xml, so its label "
+                + "cannot drift away from the gate it is reporting on.");
+        assertFalse(script.matches("(?s).*CPD @\\d+.*"),
+                "bin/quality-report.sh must not hardcode a token count in its CPD heading; it "
+                + "printed \"CPD @200\" against a gate of 110 for eighteen days. Interpolate the "
+                + "value it read from the pom instead.");
     }
 
     /**

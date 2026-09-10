@@ -32,8 +32,9 @@ fi
 mvn -ntp -q -pl app compile pmd:pmd pmd:cpd spotbugs:spotbugs
 
 python3 - "$RULE" <<'PY'
-import sys, xml.etree.ElementTree as ET
+import re, sys, xml.etree.ElementTree as ET
 from collections import Counter, defaultdict
+from pathlib import Path
 rule = sys.argv[1] if len(sys.argv) > 1 else ""
 
 def strip(tag): return tag.split('}')[-1]
@@ -71,10 +72,28 @@ print(f"=== SpotBugs: {sum(len(v) for v in sb.values())} ===")
 for r, v in sorted(sb.items(), key=lambda kv: -len(kv[1])):
     print(f"  {len(v):4}  {r}")
 
+def cpd_threshold():
+    """The token threshold the gate ACTUALLY ran at, read from the pom.
+
+    Hardcoded as "200" until 2026-09-09, which was wrong from the day the
+    gate moved to 110 and told everyone who ran this script a number off by
+    nearly a factor of two. The run itself was always correct -- this script
+    invokes pmd:cpd through Maven, so it inherits whatever the pom says --
+    so only the label lied, which is the kind of thing nobody re-checks.
+    Derived rather than re-hardcoded so it cannot drift a second time.
+    """
+    try:
+        pom = Path('pom.xml').read_text()
+        m = re.search(r'<minimumTokens>\s*(\d+)\s*</minimumTokens>', pom)
+        return m.group(1) if m else '?'
+    except OSError:
+        return '?'
+
+
 try:
     root = ET.parse('app/target/cpd.xml').getroot()
     ds = [d for d in root.iter() if strip(d.tag) == 'duplication']
-    print(f"=== CPD @200: {len(ds)} ===")
+    print(f"=== CPD @{cpd_threshold()}: {len(ds)} ===")
     for d in ds:
         files = sorted({f.get('path').split('/java/')[-1] for f in d.iter() if strip(f.tag) == 'file'})
         print(f"  {d.get('lines')}L/{d.get('tokens')}t: " + " <-> ".join(files))
