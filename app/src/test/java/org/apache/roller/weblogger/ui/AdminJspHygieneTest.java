@@ -307,17 +307,6 @@ class AdminJspHygieneTest {
     }
 
     /**
-     * The sidebar's link headings were h4s under an h1 page title, skipping
-     * two levels.
-     */
-    @Test
-    void mainMenuSidebarDoesNotSkipHeadingLevels() {
-        String src = jsp("core/MainMenuSidebar.jsp");
-        assertTrue(!src.contains("<h4"),
-                "core/MainMenuSidebar.jsp still has <h4> headings under an <h1> page title");
-    }
-
-    /**
      * A header cell with no scope is ambiguous to a screen reader's table
      * mode. Scanned over the whole tree rather than the one screen this
      * started as: UserEdit was scoped while the seven authoring tables an

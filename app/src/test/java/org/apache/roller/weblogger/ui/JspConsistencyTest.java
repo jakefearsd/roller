@@ -58,13 +58,21 @@ class JspConsistencyTest {
 
     static final Path ROLLER_CSS = Path.of("src/main/webapp/roller-ui/styles/roller.css");
 
-    static Stream<Path> jsps() throws IOException {
-        return Files.walk(JSPS).filter(p -> p.toString().endsWith(".jsp"));
+    /**
+     * Every JSP in the tree, once. A {@code List} rather than the
+     * {@code Stream} this used to hand back: {@code Files.walk} holds an open
+     * directory handle until its stream is closed, and a returned stream is
+     * one no caller ever remembers to close.
+     */
+    static List<Path> jsps() throws IOException {
+        try (Stream<Path> walk = Files.walk(JSPS)) {
+            return walk.filter(p -> p.toString().endsWith(".jsp")).sorted().toList();
+        }
     }
 
     @Test
     void statusIsAlwaysAStatusPill() throws IOException {
-        List<Path> editorJsps = jsps()
+        List<Path> editorJsps = jsps().stream()
                 .filter(p -> p.toString().contains("/editor/"))
                 .toList();
         assertTrue(editorJsps.size() > 5,
@@ -96,7 +104,7 @@ class JspConsistencyTest {
      */
     @Test
     void buttonsUseThreeBucketsOnly() throws IOException {
-        List<Path> allJsps = jsps().toList();
+        List<Path> allJsps = jsps();
         assertTrue(allJsps.size() > 20,
                 "Found too few JSPs -- the scan is not looking where it thinks it is.");
 
@@ -138,7 +146,7 @@ class JspConsistencyTest {
         Pattern formIdPattern = Pattern.compile("<form\\b[^>]*\\bid=\"([^\"]+)\"");
 
         int barsFound = 0;
-        for (Path jsp : jsps().toList()) {
+        for (Path jsp : jsps()) {
             String src = Files.readString(jsp, StandardCharsets.UTF_8);
 
             Set<String> formIds = new HashSet<>();
@@ -182,7 +190,7 @@ class JspConsistencyTest {
      */
     @Test
     void noJqueryUiAnywhere() throws IOException {
-        List<Path> allJsps = jsps().toList();
+        List<Path> allJsps = jsps();
         assertTrue(allJsps.size() > 20,
                 "Found too few JSPs -- the scan is not looking where it thinks it is.");
 
@@ -217,7 +225,7 @@ class JspConsistencyTest {
      */
     @Test
     void noAdminTimestampIsFormattedWithFmtFormatDate() throws IOException {
-        List<Path> allJsps = jsps().toList();
+        List<Path> allJsps = jsps();
         assertTrue(allJsps.size() > 20,
                 "Found too few JSPs -- the scan is not looking where it thinks it is.");
 
@@ -267,7 +275,7 @@ class JspConsistencyTest {
      */
     @Test
     void sidebarsUseTheRailGrammar() throws IOException {
-        List<Path> sidebarJsps = jsps()
+        List<Path> sidebarJsps = jsps().stream()
                 .filter(p -> p.getFileName().toString().endsWith("Sidebar.jsp"))
                 .toList();
         assertEquals(5, sidebarJsps.size(),
@@ -324,7 +332,7 @@ class JspConsistencyTest {
      */
     @Test
     void oneConfirmIdiomAndOneModalShape() throws IOException {
-        List<Path> allJsps = jsps().toList();
+        List<Path> allJsps = jsps();
         assertTrue(allJsps.size() > 20,
                 "Found too few JSPs -- the scan is not looking where it thinks it is.");
 
@@ -790,6 +798,219 @@ class JspConsistencyTest {
         assertTrue(markup.contains("selectedThemeFound"),
                 "the checked condition must fall back to the first card whenever the weblog's "
                         + "current theme id is not found among the rendered cards");
+    }
+
+    // --- B11's bug sweep, folded in from the class it was routed to ---
+
+    /**
+     * Task B11: every {@code <div>} a JSP opens, it closes.
+     *
+     * <p>{@code TemplateEdit.jsp} opened {@code <div id="accordion">} to wrap
+     * the advanced-settings panel and never closed it, so the accordion's own
+     * closing {@code </div>} was mistaken for the outer one and everything
+     * after that panel -- the closing {@code </c:if>}, the CSRF input,
+     * {@code </form>} and the page's own script -- rendered one level deeper
+     * than the surrounding markup expects.
+     *
+     * <p>{@code <c:choose>}/{@code <c:when>}/{@code <c:otherwise>} branches
+     * need no special handling: each branch balances its own {@code <div>}s
+     * independently, so a plain count over the whole file, comments stripped,
+     * is the right measure.
+     */
+    @Test
+    void everyDivOpenedInAJspIsClosed() throws IOException {
+        List<Path> allJsps = jsps();
+        assertTrue(allJsps.size() > 20,
+                "Found too few JSPs -- the scan is not looking where it thinks it is.");
+
+        List<String> violations = new ArrayList<>();
+        for (Path jsp : allJsps) {
+            String src = withoutJspComments(Files.readString(jsp, StandardCharsets.UTF_8));
+            int opens = countMatches(src, Pattern.compile("<div\\b"));
+            int closes = countMatches(src, Pattern.compile("</div>"));
+            if (opens != closes) {
+                violations.add(jsp + ": " + opens + " <div> vs " + closes + " </div>");
+            }
+        }
+
+        assertTrue(violations.isEmpty(), String.join("\n", violations));
+    }
+
+    /**
+     * Task B11: no card or section heading skips a level.
+     *
+     * <p>Every one of them used {@code h4}, or in one place {@code h5},
+     * immediately inside a page whose own title is the tiles layout's
+     * {@code h2.roller-page-title}, with no {@code h3} anywhere between.
+     * {@code h3} is the single level every other admin card already used.
+     *
+     * <p>This subsumes what used to be a MainMenuSidebar-only assertion in
+     * {@code AdminJspHygieneTest}: a scan naming one file cannot say that the
+     * rule holds, only that one file obeys it.
+     */
+    @Test
+    void noHeadingLevelIsSkippedToH4OrH5() throws IOException {
+        List<Path> allJsps = jsps();
+        assertTrue(allJsps.size() > 20,
+                "Found too few JSPs -- the scan is not looking where it thinks it is.");
+
+        List<String> violations = new ArrayList<>();
+        for (Path jsp : allJsps) {
+            String src = withoutJspComments(Files.readString(jsp, StandardCharsets.UTF_8));
+            if (src.contains("<h4") || src.contains("<h5")) {
+                violations.add(jsp.toString());
+            }
+        }
+
+        assertTrue(violations.isEmpty(),
+                "no JSP may skip a heading level to h4/h5: " + violations);
+    }
+
+    /**
+     * Task B11: no {@code <str:...>} markup, because there is no {@code str}
+     * taglib to interpret it.
+     *
+     * <p>{@code MediaFileImageChooser.jsp} and {@code MediaFileView.jsp}
+     * wrapped a filename in {@code <str:truncateNicely>}, a Struts tag from
+     * before the migration to Spring MVC. With no taglib declared, the
+     * container treats the unrecognised prefix as literal markup: the opening
+     * and closing tags rendered verbatim around the filename, on every media
+     * tile, truncating nothing. This is the JSP-side sibling of the Velocity
+     * leniency trap in CLAUDE.md's Templates section.
+     */
+    @Test
+    void noStrTagRendersInAnyJsp() throws IOException {
+        List<Path> allJsps = jsps();
+        assertTrue(allJsps.size() > 20,
+                "Found too few JSPs -- the scan is not looking where it thinks it is.");
+
+        List<String> violations = new ArrayList<>();
+        for (Path jsp : allJsps) {
+            String src = withoutJspComments(Files.readString(jsp, StandardCharsets.UTF_8));
+            if (src.contains("<str:")) {
+                violations.add(jsp.toString());
+            }
+        }
+
+        assertTrue(violations.isEmpty(), "dead <str:...> markup (no str taglib exists): " + violations);
+    }
+
+    /**
+     * Confirms the premise {@link #noStrTagRendersInAnyJsp} depends on: no
+     * {@code str} taglib is declared anywhere under {@code webapp/}, so
+     * {@code <str:...>} could never have been a real custom tag -- it was
+     * always going to render as literal text.
+     */
+    @Test
+    void noStrTaglibIsDeclaredAnywhere() throws IOException {
+        try (Stream<Path> walk = Files.walk(Path.of("src/main/webapp"))) {
+            List<Path> withStrPrefix = walk
+                    .filter(p -> p.toString().endsWith(".jsp") || p.toString().endsWith(".tld"))
+                    .filter(p -> {
+                        try {
+                            return Files.readString(p, StandardCharsets.UTF_8).contains("prefix=\"str\"");
+                        } catch (IOException e) {
+                            throw new java.io.UncheckedIOException(e);
+                        }
+                    })
+                    .toList();
+            assertTrue(withStrPrefix.isEmpty(),
+                    "expected no str taglib declaration, found: " + withStrPrefix);
+        }
+    }
+
+    // --- B11 review follow-up: the href ratchet ---
+
+    /**
+     * Every {@code href="${...}"} in the tree is built somewhere that escapes,
+     * and this is a tree-wide rule rather than a list of repaired files
+     * because the obvious grep is what missed the real one.
+     *
+     * <p>{@code grep 'href="$&#123;' | grep -v escapeXml | grep -v 'c:url\|urls\.'}
+     * turns out to be almost all false positives -- nearly every one is fed by
+     * a {@code <c:url>}-built variable, which URL-encodes its parameters and
+     * entity-encodes the joining {@code &} -- and grepping by variable NAME
+     * cannot see the shape that actually broke: a {@code urls.*} helper call
+     * with a raw field appended straight after it
+     * ({@code href="$&#123;urls.weblogAbsolute(w)&#125;$&#123;p.slug&#125;"}).
+     * A page slug is author-controlled and restricted only against {@code /}
+     * and reserved names, never against quote or angle-bracket characters, so
+     * {@code x" onmouseover="alert(1)} broke out of the attribute.
+     *
+     * <p>So the rule is stated over the whole VALUE instead: strip every
+     * {@code fn:escapeXml(...)} expression, every bare {@code urls.*(...)}
+     * helper call (server-built from ids and handles, no author text in it),
+     * every inline {@code <c:url .../>} tag, and every {@code $&#123;var&#125;}
+     * whose {@code var} a {@code <c:url>} in the same file declares. Whatever
+     * expression is left is one nobody has accounted for.
+     *
+     * <p>The last two are the same form written two ways -- {@code <c:url
+     * var="x" value="..."/>} used later as {@code $&#123;x&#125;}, versus the
+     * tag written straight into the attribute -- and the inline spelling is
+     * invisible to the {@code href="$&#123;} grep above, which is how three
+     * of them (UserEdit's Cancel and both tab layouts' menu links) went
+     * unlisted until this scan ran.
+     */
+    @Test
+    void everyHrefExpressionIsEscapedOrServerBuilt() throws IOException {
+        // An attribute value routinely contains a whole nested tag, whose own
+        // attributes are single-quoted -- href="<c:url value='${x}'/>" -- so
+        // the value runs to the next DOUBLE quote, not the next quote.
+        Pattern hrefValue = Pattern.compile("href=\"([^\"]*\\$\\{[^\"]*)\"");
+        Pattern cUrlVar = Pattern.compile("<c:url\\b[^>]*\\bvar=\"([^\"]+)\"", Pattern.DOTALL);
+        Pattern escapeXmlCall = Pattern.compile("\\$\\{\\s*fn:escapeXml\\([^}]*\\)\\s*\\}");
+        Pattern urlsHelperCall = Pattern.compile("\\$\\{\\s*urls\\.[A-Za-z0-9_]+\\([^}]*\\)\\s*\\}");
+        Pattern inlineCUrlTag = Pattern.compile("<c:url\\b[^>]*/>");
+
+        List<String> violations = new ArrayList<>();
+        int hrefsChecked = 0;
+
+        for (Path jsp : jsps()) {
+            String src = withoutJspComments(Files.readString(jsp, StandardCharsets.UTF_8));
+
+            Set<String> declared = new HashSet<>();
+            Matcher varMatcher = cUrlVar.matcher(src);
+            while (varMatcher.find()) {
+                declared.add(varMatcher.group(1));
+            }
+
+            Matcher hrefMatcher = hrefValue.matcher(src);
+            while (hrefMatcher.find()) {
+                hrefsChecked++;
+                String remaining = hrefMatcher.group(1);
+                remaining = escapeXmlCall.matcher(remaining).replaceAll("");
+                remaining = urlsHelperCall.matcher(remaining).replaceAll("");
+                remaining = inlineCUrlTag.matcher(remaining).replaceAll("");
+                for (String var : declared) {
+                    remaining = remaining.replace("${" + var + "}", "");
+                }
+                if (remaining.contains("${")) {
+                    violations.add(jsp + ":" + lineOf(src, hrefMatcher.start())
+                            + " -> " + hrefMatcher.group());
+                }
+            }
+        }
+
+        assertTrue(hrefsChecked >= 25,
+                "Only " + hrefsChecked + " EL-valued hrefs found -- the scan is not "
+                        + "looking where it thinks it is.");
+        assertTrue(violations.isEmpty(),
+                "an href built from an expression that is neither fn:escapeXml'd, nor a "
+                        + "<c:url>-declared variable, nor a urls.* helper call:\n  "
+                        + String.join("\n  ", violations));
+    }
+
+    private static int lineOf(String src, int index) {
+        return (int) src.substring(0, index).chars().filter(c -> c == '\n').count() + 1;
+    }
+
+    private static int countMatches(String haystack, Pattern pattern) {
+        Matcher m = pattern.matcher(haystack);
+        int count = 0;
+        while (m.find()) {
+            count++;
+        }
+        return count;
     }
 
     /**
