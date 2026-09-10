@@ -60,14 +60,21 @@ public class EntriesBean {
     
     public Date getStartDate() {
         if(!StringUtils.isEmpty(getStartDateString())) {
-            return parseFilterDate(getStartDateString());
+            return parseFilterDate(getStartDateString(), false);
         }
         return null;
     }
 
+    /**
+     * The search criteria filters {@code pubTime <= endDate}, so a date-only
+     * end value must resolve to the LAST instant of that day -- otherwise an
+     * end date of "the 30th" excludes every entry published that day except
+     * one landing in the first millisecond, which is not what a reader who
+     * typed that date means.
+     */
     public Date getEndDate() {
         if(!StringUtils.isEmpty(getEndDateString())) {
-            return parseFilterDate(getEndDateString());
+            return parseFilterDate(getEndDateString(), true);
         }
         return null;
     }
@@ -78,25 +85,39 @@ public class EntriesBean {
      * UI's datepicker), which submit ISO-8601 {@code yyyy-MM-dd} -- tried
      * first -- but a bookmarked search URL from before that change still
      * carries the old {@code MM/dd/yy} format, so that is tried second
-     * rather than dropped.
+     * rather than dropped. Both formats are date-only, so {@code endOfDay}
+     * applies the same 23:59:59.999 adjustment to either one.
      */
-    private static Date parseFilterDate(String s) {
+    private static Date parseFilterDate(String s, boolean endOfDay) {
         try {
             LocalDate localDate = LocalDate.parse(s, DateTimeFormatter.ISO_LOCAL_DATE);
-            return Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
+            return toDate(localDate, endOfDay);
         } catch (DateTimeParseException ignored) {
             // Not an ISO yyyy-MM-dd value -- fall through to the legacy
             // format a bookmarked search URL may still carry.
         }
         try {
             DateFormat df = new SimpleDateFormat("MM/dd/yy");
-            return df.parse(s);
+            Date parsed = df.parse(s);
+            if (!endOfDay) {
+                return parsed;
+            }
+            LocalDate localDate = parsed.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+            return toDate(localDate, true);
         } catch (Exception ignored) {
             // A malformed hand-typed/bookmarked search-date is routine, not
             // an error -- the search simply proceeds without this date
             // bound.
         }
         return null;
+    }
+
+    private static Date toDate(LocalDate localDate, boolean endOfDay) {
+        if (endOfDay) {
+            return Date.from(localDate.atTime(23, 59, 59, 999_000_000)
+                    .atZone(ZoneId.systemDefault()).toInstant());
+        }
+        return Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
     }
     
     

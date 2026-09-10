@@ -18,6 +18,7 @@
 package org.apache.roller.weblogger.ui.controllers.editor;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.List;
 
@@ -51,6 +52,61 @@ class EntriesBeanTest {
 
         assertEquals(LocalDate.of(2026, 9, 1), toLocalDate(bean.getStartDate()));
         assertEquals(LocalDate.of(2026, 9, 30), toLocalDate(bean.getEndDate()));
+    }
+
+    /**
+     * {@code getEndDate()} used to return midnight at the START of the typed
+     * day, the same as {@code getStartDate()} -- but the search criteria
+     * filters {@code pubTime <= endDate}, so an end-date of "2026-09-30"
+     * excluded every entry published that day except one landing in the
+     * first millisecond, which is not what a reader who typed an end date of
+     * "the 30th" means. The bound must be the last instant of that day.
+     */
+    @Test
+    void isoEndDateIncludesTheWholeDayNotJustItsFirstMillisecond() {
+        EntriesBean bean = new EntriesBean();
+        bean.setEndDateString("2026-09-30");
+
+        java.time.LocalDateTime endOfDay = bean.getEndDate().toInstant()
+                .atZone(ZoneId.systemDefault()).toLocalDateTime();
+
+        assertEquals(LocalDate.of(2026, 9, 30), endOfDay.toLocalDate(),
+                "the end date's own day must not shift");
+        assertEquals(LocalTime.of(23, 59, 59, 999_000_000), endOfDay.toLocalTime(),
+                "an end-date filter must reach the last instant of the day, not its first");
+    }
+
+    /**
+     * Same fix, the legacy bookmarked-URL date format -- it is just as much a
+     * date-only value as the ISO one above.
+     */
+    @Test
+    void legacySlashEndDateIncludesTheWholeDayNotJustItsFirstMillisecond() {
+        EntriesBean bean = new EntriesBean();
+        bean.setEndDateString("09/30/26");
+
+        java.time.LocalDateTime endOfDay = bean.getEndDate().toInstant()
+                .atZone(ZoneId.systemDefault()).toLocalDateTime();
+
+        assertEquals(LocalDate.of(2026, 9, 30), endOfDay.toLocalDate());
+        assertEquals(LocalTime.of(23, 59, 59, 999_000_000), endOfDay.toLocalTime());
+    }
+
+    /**
+     * The start-date bound is unaffected by this fix -- it must stay at the
+     * start of the day, or a start date of "2026-09-01" would exclude entries
+     * published that morning.
+     */
+    @Test
+    void startDateIsStillMidnightAtTheStartOfTheDay() {
+        EntriesBean bean = new EntriesBean();
+        bean.setStartDateString("2026-09-01");
+
+        java.time.LocalDateTime startOfDay = bean.getStartDate().toInstant()
+                .atZone(ZoneId.systemDefault()).toLocalDateTime();
+
+        assertEquals(LocalDate.of(2026, 9, 1), startOfDay.toLocalDate());
+        assertEquals(LocalTime.MIDNIGHT, startOfDay.toLocalTime());
     }
 
     @Test
