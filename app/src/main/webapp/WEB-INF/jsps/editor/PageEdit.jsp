@@ -165,6 +165,11 @@
 
         <textarea name="bean.content" id="edit_content" rows="18" class="col-sm-12">${fn:escapeXml(bean.content)}</textarea>
 
+        <%-- A pasted/dropped image's upload refusal surfaces here -- same
+             marker and styling (roller-editor.css) as the entry editor's
+             #editorStatus, just without a toolbar of its own to sit under. --%>
+        <div class="editor-status" id="editorStatus"></div>
+
         <div class="dropdown d-inline-block" id="shortcodeInsertMenu">
             <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
                     id="shortcodeInsertButton" data-bs-toggle="dropdown" aria-expanded="false">
@@ -365,6 +370,7 @@
             onSave: rollerSavePage,
             onPublish: rollerSavePage,
             onHelp: function () { if (window.rollerOpenGuide) { window.rollerOpenGuide(); } },
+            onUpload: rollerUploadImages,
             onChange: function () {
                 rollerEditorChangeListeners.forEach(function (listener) {
                     try {
@@ -465,6 +471,55 @@
 
     function rollerGetEntryText() {
         return rollerEditor.getValue();
+    }
+
+    <%-- Paste/drop upload -- same seam and contract as EntryEditor.jsp's
+         rollerUploadImages: a placeholder line, one file at a time, replaced
+         with the shortcode on success and removed with a status-line error on
+         refusal. Kept here rather than shared because the two files do not
+         share a script include (see the file header comment); mirroring is
+         the minimum needed until Task A9 folds PageEdit onto the entry
+         editor's surface. --%>
+    function rollerUploadImages(files) {
+        var queue = Array.prototype.slice.call(files);
+        (function next() {
+            var file = queue.shift();
+            if (!file) { return; }
+            var placeholder = '[uploading ' + file.name.replace(/[\[\]]/g, '') + '…]';
+            rollerEditor.insert(placeholder + '\n');
+            var form = new FormData();
+            form.append('file', file, file.name);
+            form.append('weblog', $("input[name='weblog']").val());
+            form.append('${_csrf.parameterName}', '${_csrf.token}');
+            fetch('<c:url value="/roller-ui/authoring/mediaFileAdd!upload.rol"/>', { method: 'POST', body: form, credentials: 'same-origin' })
+                .then(function (r) { return r.json().then(function (body) { return { status: r.status, body: body }; }); })
+                .then(function (res) {
+                    var result = res.body && res.body.results && res.body.results[0];
+                    var text = rollerGetEntryText();
+                    if (result && result.id) {
+                        rollerSetEntryText(text.replace(placeholder, '[image id="' + result.id + '"]'));
+                    } else {
+                        rollerSetEntryText(text.replace(placeholder + '\n', '').replace(placeholder, ''));
+                        rollerStatusError((result && result.detail) || '<spring:message code="editor.uploadFailed" javaScriptEscape="true"/>');
+                    }
+                })
+                .catch(function () {
+                    rollerSetEntryText(rollerGetEntryText().replace(placeholder + '\n', '').replace(placeholder, ''));
+                    rollerStatusError('<spring:message code="editor.uploadFailed" javaScriptEscape="true"/>');
+                })
+                .then(next);
+        })();
+    }
+
+    <%-- The refusal detail is server text (RollerMessages), rendered via
+         textContent -- never innerHTML. --%>
+    function rollerStatusError(message) {
+        var status = document.getElementById('editorStatus');
+        var el = document.createElement('span');
+        el.className = 'is-error';
+        el.textContent = message;
+        status.appendChild(el);
+        window.setTimeout(function () { el.remove(); }, 8000);
     }
 
     <%-- Opens the media chooser. With no argument the chosen file is

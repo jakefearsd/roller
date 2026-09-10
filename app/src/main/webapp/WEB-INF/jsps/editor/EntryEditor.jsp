@@ -244,6 +244,7 @@
             onSave: rollerSaveDraft,
             onPublish: rollerPublish,
             onHelp: commands.help,
+            onUpload: rollerUploadImages,
             onChange: function () {
                 <%-- A listener that throws must not stop the ones after it:
                      losing the dirty flag because draft recovery failed would
@@ -521,6 +522,55 @@
 
     function rollerGetEntryText() {
         return rollerEditor.getValue();
+    }
+
+    <%-- Paste/drop upload. A placeholder line marks where the image will go;
+         it is replaced by the shortcode on success and removed on refusal, and
+         the refusal is shown on the status line. Files go one at a time so a
+         refusal is attributable to its file -- editor.js's fileHandler is the
+         caller, passing every pasted/dropped image file at once, and this is
+         the only seam that reaches the upload endpoint from inside the editor. --%>
+    function rollerUploadImages(files) {
+        var queue = Array.prototype.slice.call(files);
+        (function next() {
+            var file = queue.shift();
+            if (!file) { return; }
+            var placeholder = '[uploading ' + file.name.replace(/[\[\]]/g, '') + '…]';
+            rollerEditor.insert(placeholder + '\n');
+            var form = new FormData();
+            form.append('file', file, file.name);
+            form.append('weblog', $("input[name='weblog']").val());
+            form.append('${_csrf.parameterName}', '${_csrf.token}');
+            fetch('<c:url value="/roller-ui/authoring/mediaFileAdd!upload.rol"/>', { method: 'POST', body: form, credentials: 'same-origin' })
+                .then(function (r) { return r.json().then(function (body) { return { status: r.status, body: body }; }); })
+                .then(function (res) {
+                    var result = res.body && res.body.results && res.body.results[0];
+                    var text = rollerGetEntryText();
+                    if (result && result.id) {
+                        rollerSetEntryText(text.replace(placeholder, '[image id="' + result.id + '"]'));
+                    } else {
+                        rollerSetEntryText(text.replace(placeholder + '\n', '').replace(placeholder, ''));
+                        rollerStatusError((result && result.detail) || '<spring:message code="editor.uploadFailed" javaScriptEscape="true"/>');
+                    }
+                })
+                .catch(function () {
+                    rollerSetEntryText(rollerGetEntryText().replace(placeholder + '\n', '').replace(placeholder, ''));
+                    rollerStatusError('<spring:message code="editor.uploadFailed" javaScriptEscape="true"/>');
+                })
+                .then(next);
+        })();
+    }
+
+    <%-- The refusal detail is server text (RollerMessages), rendered via
+         textContent -- never innerHTML -- so it cannot carry markup even
+         though it did not come from a message key with a known-safe shape. --%>
+    function rollerStatusError(message) {
+        var status = document.getElementById('editorStatus');
+        var el = document.createElement('span');
+        el.className = 'is-error';
+        el.textContent = message;
+        status.appendChild(el);
+        window.setTimeout(function () { el.remove(); }, 8000);
     }
 
     <%-- Common functions --%>

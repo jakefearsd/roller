@@ -185,7 +185,7 @@ public final class MediaUploads {
         }
         MediaFileDirectory directory = weblogger.getMediaFileManager().getMediaFileDirectory(directoryId);
         if (directory == null || directory.getWeblog() == null
-                || !directory.getWeblog().getHandle().equals(weblog.getHandle())) {
+                || !directory.getWeblog().getId().equals(weblog.getId())) {
             return null;
         }
         return directory;
