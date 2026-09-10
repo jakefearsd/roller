@@ -63,8 +63,19 @@
                         <c:when test="${p.status.name() == 'PUBLISHED'}">
                             <%-- Only published pages are served; a draft's URL
                                  404s, so linking it would hand someone a
-                                 broken link from their own admin screen. --%>
-                            <a href="${urls.weblogAbsolute(actionWeblog)}page/${fn:escapeXml(p.slug)}"
+                                 broken link from their own admin screen.
+
+                                 A page is served at /<handle>/<slug> -- a bare
+                                 single segment. The "page/" this used to carry
+                                 is the CUSTOM-*template* route, so the link was
+                                 a 404 of exactly the kind the c:when above
+                                 exists to avoid. Same construction as
+                                 PageEdit.jsp's own address line, escape
+                                 included: a slug is author-controlled and is
+                                 restricted only against '/' and reserved names,
+                                 never against quote or angle-bracket
+                                 characters. --%>
+                            <a href="${urls.weblogAbsolute(actionWeblog)}${fn:escapeXml(p.slug)}"
                                target="_blank" rel="noopener">/<c:out value="${p.slug}"/></a>
                         </c:when>
                         <c:otherwise>/<c:out value="${p.slug}"/></c:otherwise>

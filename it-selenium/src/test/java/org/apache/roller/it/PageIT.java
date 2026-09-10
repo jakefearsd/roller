@@ -125,6 +125,18 @@ class PageIT extends RollerIT {
                 "the [cta] shortcode in the page body must render as a CTA card, got: "
                         + truncate(publicBody));
 
+        // --- the Pages list links where the page actually lives -------------
+        // The list used to emit "<root>/page/<slug>", the CUSTOM-template
+        // route, so an author clicking the URL on their own admin screen got
+        // a 404. Asserted by fetching it rather than by matching a string:
+        // what makes this a bug is that the link does not resolve.
+        openPath("/roller-ui/authoring/pages.rol?weblog=" + handle);
+        String listedHref = $("tr[data-page-slug='about'] td.data a").getAttribute("href");
+        assertTrue(listedHref != null && listedHref.endsWith("/" + handle + "/about"),
+                "the Pages list must link a published page at /<handle>/<slug>, got: " + listedHref);
+        assertEquals(200, statusOf(listedHref),
+                "the URL the Pages list hands an author must resolve, got a 404 from " + listedHref);
+
         // --- the page appears in the theme's nav, and clicking it arrives ----
         logout();
         openPath("/" + handle + "/");

@@ -182,9 +182,12 @@ class EditorJspMarkupHygieneTest {
                         "a page must show its own URL, rooted at the weblog"),
                 new Expected("PageEdit.jsp", "data-clipboard-text=",
                         "a published page's URL must be copyable"),
-                // Pages.jsp still carries the wrong "/page/<slug>" shape; the
-                // post-merge task M1 fixes the link and this needle together.
-                new Expected("Pages.jsp", "${urls.weblogAbsolute(actionWeblog)}page/${fn:escapeXml(p.slug)}",
+                // The bare single segment a WeblogPage is served at -- NOT
+                // "/page/<slug>", which is the CUSTOM-template route. This
+                // needle pinned the wrong shape until task M1; see
+                // PageEditJspTest.thePagesListLinksAPageWhereTheEditorSaysItLives
+                // for why the two screens are compared against each other.
+                new Expected("Pages.jsp", "${urls.weblogAbsolute(actionWeblog)}${fn:escapeXml(p.slug)}",
                         "a published page's slug must link to the live page, with the "
                                 + "author-controlled slug escaped in the href (a page slug is "
                                 + "restricted only against '/' and reserved names, not against "

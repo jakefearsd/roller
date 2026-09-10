@@ -184,7 +184,7 @@ class AdminJspBugSweepTest {
      * text), so grepping by variable name misses the one real gap: a
      * {@code urls.*} call with a raw field appended directly after it.
      * {@code PageEdit.jsp} (A-owned, unrelated to this fix) already gets this
-     * right -- {@code href="${urls.weblogAbsolute(actionWeblog)}page/${fn:
+     * right -- {@code href="${urls.weblogAbsolute(actionWeblog)}${fn:
      * escapeXml(bean.slug)}"} -- because a page slug is author-controlled and
      * restricted only against containing {@code '/'} or a reserved name
      * (see {@code JPAWeblogPageManagerImpl.savePage}), not against quote or
@@ -199,7 +199,7 @@ class AdminJspBugSweepTest {
         String src = Files.readString(JSPS.resolve("editor/Pages.jsp"), StandardCharsets.UTF_8);
 
         assertTrue(src.contains(
-                        "href=\"${urls.weblogAbsolute(actionWeblog)}page/${fn:escapeXml(p.slug)}\""),
+                        "href=\"${urls.weblogAbsolute(actionWeblog)}${fn:escapeXml(p.slug)}\""),
                 "Pages.jsp's permalink href must escape the author-controlled page slug, "
                         + "the same way PageEdit.jsp's own permalink already does:\n" + src);
     }

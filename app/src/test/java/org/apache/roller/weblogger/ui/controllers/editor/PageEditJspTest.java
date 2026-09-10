@@ -55,6 +55,8 @@ class PageEditJspTest {
             Paths.get("src/main/webapp/WEB-INF/jsps/editor/EditorSurface.jsp");
     private static final Path EDITOR_SCRIPT =
             Paths.get("src/main/webapp/WEB-INF/jsps/editor/EditorScript.jsp");
+    private static final Path PAGES =
+            Paths.get("src/main/webapp/WEB-INF/jsps/editor/Pages.jsp");
 
     private static String read(Path jsp) throws IOException {
         return Files.readString(jsp, StandardCharsets.UTF_8);
@@ -117,6 +119,39 @@ class PageEditJspTest {
                         + "VirtualHostIT all drive them by id");
         assertTrue(jsp.contains("class=\"delete-link\"") && jsp.contains("id=\"deletePageButton\""),
                 "delete is a quiet text link in the rail, not a red button");
+    }
+
+    /**
+     * The editor and the list screen must hand an author the SAME URL for a
+     * page, and it must be the one a {@code WeblogPage} is actually served at:
+     * {@code /<handle>/<slug>}, a bare single segment.
+     *
+     * <p>Task A9 fixed the editor's own permalink line, which had been showing
+     * {@code /<handle>/page/<slug>} -- the CUSTOM-<em>template</em> route, which
+     * for a page 404s -- and recorded the list screen as still wrong. Task B11
+     * then fixed a genuine but different bug on that same line (the
+     * author-controlled slug was unescaped in the href) without changing the
+     * URL's shape, so both defects were live at once and the fix for the second
+     * made the first look attended to.
+     *
+     * <p>Asserted as an equality between the two files rather than as two
+     * independent needles: what went wrong here is precisely that one screen
+     * was corrected and the other was not.
+     */
+    @Test
+    void thePagesListLinksAPageWhereTheEditorSaysItLives() throws IOException {
+        String pages = read(PAGES);
+        assertFalse(pages.contains("}page/"),
+                "a WeblogPage is served at /<handle>/<slug>; the 'page/' segment is the "
+                        + "CUSTOM-template route and hands an author a 404 from their own "
+                        + "admin screen");
+        assertTrue(pages.contains(
+                        "href=\"${urls.weblogAbsolute(actionWeblog)}${fn:escapeXml(p.slug)}\""),
+                "the list's permalink must be the weblog root plus the escaped slug -- the "
+                        + "same construction PageEdit.jsp's own address line uses");
+        assertTrue(read(PAGE_EDIT).contains("${urls.weblogAbsolute(actionWeblog)}${fn:escapeXml(bean.slug)}"),
+                "sanity: the editor's own address line must still be built the same way, "
+                        + "or this test is comparing one screen against nothing");
     }
 
     /**
