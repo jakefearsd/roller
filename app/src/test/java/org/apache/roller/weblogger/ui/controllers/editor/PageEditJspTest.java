@@ -120,6 +120,28 @@ class PageEditJspTest {
     }
 
     /**
+     * Task M1 (task B7's one modal shape, applied to the page editor). The
+     * delete confirmation titled itself with an {@code h3} carrying no
+     * {@code .modal-title} at all -- so it was neither the caps-label role
+     * every other admin modal wears nor a heading anything else on the page
+     * relates to -- and its footer put the destructive button first, which is
+     * the order Bootstrap renders and therefore the order a reader sees.
+     */
+    @Test
+    void theDeleteConfirmationTakesTheOneModalShape() throws IOException {
+        String jsp = read(PAGE_EDIT);
+        assertTrue(jsp.contains("<p id=\"delete-page-modal-title\" class=\"modal-title\">"),
+                "the delete modal's title must be a <p class=\"modal-title\">");
+        int footer = jsp.indexOf("class=\"modal-footer\"");
+        assertTrue(footer >= 0, "the delete modal must still have a footer");
+        int dismiss = jsp.indexOf("data-bs-dismiss", footer);
+        int action = jsp.indexOf("btn-danger", footer);
+        assertTrue(dismiss >= 0 && action > dismiss,
+                "cancel first, destructive last -- Bootstrap packs a .modal-footer "
+                        + "left-to-right in DOM order");
+    }
+
+    /**
      * Spring's field-marker convention, and the one name that works. See
      * {@code PageEditControllerTest}'s own binder tests and
      * {@code BaseController#initBeanBinder}: {@code _bean.showInNav} is

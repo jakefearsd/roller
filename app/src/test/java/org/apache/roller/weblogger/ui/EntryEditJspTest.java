@@ -191,6 +191,49 @@ class EntryEditJspTest {
                 "newsletter.sentAt's argument must be built with <rc:date>");
     }
 
+    /**
+     * Task M1 (task B7's one modal shape, applied to the editor). Three
+     * modals live on this screen -- send-as-newsletter, revision diff and
+     * delete-entry -- and each broke the shape a different way: the first two
+     * titled themselves with an {@code h4} (a document heading competing with
+     * the page's own outline, and a level skip under the layout's {@code h2}),
+     * and the delete modal wrapped an {@code h3} plus a sentence inside a
+     * {@code div.modal-title}, which is the class doing the work of a header
+     * AND a body at once.
+     *
+     * <p>The footer order is asserted per-modal rather than tree-wide because
+     * the tree-wide rule only bites once a button carries a bucket:
+     * {@code JspConsistencyTest} looks for a {@code btn-danger}/
+     * {@code btn-primary} appearing before the dismiss control, so a footer
+     * whose action button had no variant class at all passed it while reading
+     * back-to-front on screen.
+     */
+    @Test
+    void theEditorModalsTakeTheOneModalShape() throws IOException {
+        String jsp = read();
+        assertTrue(!jsp.contains("<h4") && !jsp.contains("<h5"),
+                "a modal title is a caps-label role, not a heading -- and h4/h5 under "
+                        + "the layout's own h2 page title is a level skip besides");
+        for (String id : new String[] {"newsletter-confirm-modal-title",
+                "revision-diff-modal-title", "delete-entry-modal-title"}) {
+            assertTrue(jsp.contains("<p id=\"" + id + "\" class=\"modal-title\">"),
+                    "modal title " + id + " must be a <p class=\"modal-title\">, "
+                            + "the shape every other admin modal uses");
+        }
+        for (String modal : new String[] {"newsletter-confirm-modal", "delete-entry-modal"}) {
+            int at = jsp.indexOf("id=\"" + modal + "\"");
+            assertTrue(at >= 0, modal + " must still exist -- browser tests open it by id");
+            int footer = jsp.indexOf("class=\"modal-footer\"", at);
+            assertTrue(footer >= 0, modal + " has no footer");
+            int dismiss = jsp.indexOf("data-bs-dismiss", footer);
+            int action = jsp.indexOf("type=\"submit\"", footer);
+            assertTrue(dismiss >= 0 && action > dismiss,
+                    modal + ": Bootstrap packs a .modal-footer left-to-right in DOM "
+                            + "order, so cancel goes first and the destructive/primary "
+                            + "action last");
+        }
+    }
+
     @Test
     void theNewsletterNoListMessageIsFollowedByItsOwnLinkText() throws IOException {
         String jsp = read();

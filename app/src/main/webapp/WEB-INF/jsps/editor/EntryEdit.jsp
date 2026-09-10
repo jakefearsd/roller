@@ -589,7 +589,7 @@
                     <input type="hidden" name="bean.id" value="${entry.id}"/>
 
                     <div class="modal-header">
-                        <h4 id="newsletter-confirm-modal-title" class="modal-title"><spring:message code="newsletter.confirmTitle"/></h4>
+                        <p id="newsletter-confirm-modal-title" class="modal-title"><spring:message code="newsletter.confirmTitle"/></p>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<spring:message code='generic.close'/>"></button>
                     </div>
 
@@ -597,13 +597,16 @@
                         <p><spring:message code="newsletter.confirmBody"/></p>
                     </div>
 
+                    <%-- Dismiss first, action last: Bootstrap packs a
+                         .modal-footer left-to-right in DOM order, so the
+                         reading order IS the markup order (task B7). --%>
                     <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <spring:message code="generic.no"/>
+                        </button>
                         <button type="submit" class="btn btn-primary" id="confirmSendNewsletterButton"
                                 data-busy-label="<spring:message code='newsletter.sending'/>">
                             <spring:message code="newsletter.send"/>
-                        </button>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            <spring:message code="generic.no"/>
                         </button>
                     </div>
 
@@ -630,7 +633,7 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h4 id="revision-diff-modal-title" class="modal-title"><spring:message code="weblogEdit.revisionCompare"/></h4>
+                    <p id="revision-diff-modal-title" class="modal-title"><spring:message code="weblogEdit.revisionCompare"/></p>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<spring:message code='generic.close'/>"></button>
                 </div>
                 <div class="modal-body" id="revisionDiffBody"></div>
@@ -690,14 +693,18 @@
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
                 <input type="hidden" name="removeId" value="${removeId}" id="removeId"/>
 
+                <%-- One title, one role. This header used to wrap an <h3>
+                     AND the "are you sure" sentence inside the .modal-title
+                     div, so one class did the work of a header and a body at
+                     once; the sentence belongs in the body with the details
+                     it introduces. --%>
                 <div class="modal-header">
-                    <div id="delete-entry-modal-title" class="modal-title">
-                        <h3><spring:message code="weblogEntryRemove.removeWeblogEntry"/></h3>
-                        <p><spring:message code="weblogEntryRemove.areYouSure"/></p>
-                    </div>
+                    <p id="delete-entry-modal-title" class="modal-title"><spring:message code="weblogEntryRemove.removeWeblogEntry"/></p>
                 </div>
 
                 <div class="modal-body">
+
+                    <p><spring:message code="weblogEntryRemove.areYouSure"/></p>
 
                     <div class="row mb-3">
                         <span class="col-sm-3 col-form-label">

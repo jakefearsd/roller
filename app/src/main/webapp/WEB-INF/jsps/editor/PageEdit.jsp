@@ -323,11 +323,14 @@
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
                 <input type="hidden" name="removeId" value="" id="page-delete-id"/>
                 <div class="modal-header">
-                    <h3 id="delete-page-modal-title"><spring:message code="generic.delete"/>: <span id="page-delete-title"></span></h3>
+                    <p id="delete-page-modal-title" class="modal-title"><spring:message code="generic.delete"/>: <span id="page-delete-title"></span></p>
                 </div>
+                <%-- Dismiss first, destructive last: Bootstrap packs a
+                     .modal-footer left-to-right in DOM order, so the reading
+                     order IS the markup order (task B7). --%>
                 <div class="modal-footer">
-                    <button type="submit" class="btn btn-danger"><spring:message code="generic.yes"/></button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><spring:message code="generic.no"/></button>
+                    <button type="submit" class="btn btn-danger"><spring:message code="generic.yes"/></button>
                 </div>
                 <sec:csrfInput/>
             </form>
