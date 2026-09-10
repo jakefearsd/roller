@@ -24,7 +24,12 @@
    audits roller.css. */
 
 .editor-surface { border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
-.editor-toolbar { display: flex; align-items: center; gap: 2px; padding: 6px 8px; border-bottom: 1px solid var(--line); flex-wrap: nowrap; overflow-x: auto; }
+/* Wraps rather than scrolls. `overflow-x: auto` computes overflow-y to
+   `auto` as well, which makes the toolbar a clipping container on BOTH
+   axes -- and the shortcode Insert dropdown is a child of it, so at a
+   narrow width the menu would be letterboxed to the toolbar's own ~22px
+   of content box. Wrapping to a second row is the better failure. */
+.editor-toolbar { display: flex; align-items: center; gap: 2px; padding: 6px 8px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .editor-tool { border: 0; background: transparent; color: var(--ink); border-radius: 4px; padding: 4px 7px; font: inherit; font-size: 14.5px; line-height: 1; cursor: pointer; }
 .editor-tool:hover, .editor-tool[aria-expanded="true"] { background: var(--accent-quiet); }
 .editor-tool:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }

@@ -61,6 +61,13 @@ class ShortcodeCardIT extends RollerIT {
                 "Image…", "Photo gallery", "Map with pins",
                 "Call to action", "Questions and answers", "Video", "Contact form",
                 "Subscribe form"));
+
+        // The menu now hangs off a button INSIDE the toolbar, so the toolbar's
+        // own overflow decides whether the menu is a menu or a 22px-tall
+        // letterbox. `exactTexts` above reads textContent and passes either
+        // way; only asking whether the LAST item is actually on screen tells
+        // you the dropdown escaped its container.
+        $$("#shortcodeInsertMenu .shortcode-card").last().shouldBe(visible);
     }
 
     @Test

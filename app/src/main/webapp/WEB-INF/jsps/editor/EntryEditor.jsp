@@ -173,11 +173,14 @@
     }
 
     $(document).ready(function () {
-        <%-- The ONE place the editor shortcuts live, now that the editor has
-             no key bindings of its own for them. Document level, so it covers
-             the title field, the rail and the SEO drawer as well as the
-             writing surface. CodeMirror 6's default keymap claims none of
-             Ctrl-S / Ctrl-Enter / Ctrl-slash. --%>
+        <%-- The shortcuts for focus OUTSIDE the editor: the title field, the
+             rail, the SEO drawer. Inside the editor they are bound on the
+             editor itself instead (onSave/onPublish/onHelp below), because
+             CodeMirror's own default keymap claims two of the three --
+             Mod-Enter inserts a blank line and Mod-slash toggles a comment --
+             and this handler cannot take a key back off it; see the bail
+             below. The two halves must stay in step: a shortcut added here
+             and not there works everywhere except the writing surface. --%>
         document.addEventListener('keydown', function (event) {
             <%-- A binding that DID handle the key calls preventDefault without
                  stopPropagation, so the event still reaches document -- and
@@ -196,12 +199,28 @@
             } else if (event.key === 'Enter') {
                 event.preventDefault();
                 rollerPublish();
-            } else if (event.key === '/') {
+            } else if (event.key === '/' && commands.help) {
                 event.preventDefault();
                 commands.help();
             }
         });
 
+        <%-- Assigned before the editor is created, because create() is
+             handed commands.help as its Ctrl+/ binding. The bodies run
+             later, so referring to rollerEditor here is fine. --%>
+        commands = {
+            bold: function () { rollerEditor.wrapSelection('**', '**', '<spring:message code="editor.boldPlaceholder" javaScriptEscape="true"/>'); },
+            italic: function () { rollerEditor.wrapSelection('*', '*', '<spring:message code="editor.italicPlaceholder" javaScriptEscape="true"/>'); },
+            heading: function () { rollerEditor.toggleLinePrefix('## '); },
+            quote: function () { rollerEditor.toggleLinePrefix('> '); },
+            ul: function () { rollerEditor.toggleLinePrefix('- '); },
+            ol: function () { rollerEditor.toggleLinePrefix('1. '); },
+            link: function () { rollerEditor.wrapSelection('[', '](https://)', '<spring:message code="editor.linkPlaceholder" javaScriptEscape="true"/>'); },
+            code: function () { rollerEditor.wrapSelection('`', '`', 'code'); },
+            table: function () { rollerEditor.insert('\n| <spring:message code="editor.tableHeader" javaScriptEscape="true"/> | <spring:message code="editor.tableHeader" javaScriptEscape="true"/> |\n| --- | --- |\n|  |  |\n'); },
+            image: function () { onClickMediaFileInsert(); },
+            help: function () { if (window.rollerOpenGuide) { window.rollerOpenGuide(); } }
+        };
         <%-- The insert menu is the registry's own list, read back off the
              DOM: the editor's completion source and the menu therefore
              cannot disagree about what a shortcode is called. --%>
@@ -213,6 +232,12 @@
             textarea: document.getElementById('edit_content'),
             placeholder: '<spring:message code="editor.placeholder" javaScriptEscape="true"/>',
             shortcodes: shortcodes,
+            <%-- Bound on the editor, not just on document: CodeMirror's
+                 default keymap owns Mod-Enter and Mod-slash, so the
+                 document-level handler never sees them unhandled. --%>
+            onSave: rollerSaveDraft,
+            onPublish: rollerPublish,
+            onHelp: commands.help,
             onChange: function () {
                 <%-- A listener that throws must not stop the ones after it:
                      losing the dirty flag because draft recovery failed would
@@ -227,19 +252,6 @@
             }
         });
 
-        commands = {
-            bold: function () { rollerEditor.wrapSelection('**', '**', '<spring:message code="editor.boldPlaceholder" javaScriptEscape="true"/>'); },
-            italic: function () { rollerEditor.wrapSelection('*', '*', '<spring:message code="editor.italicPlaceholder" javaScriptEscape="true"/>'); },
-            heading: function () { rollerEditor.toggleLinePrefix('## '); },
-            quote: function () { rollerEditor.toggleLinePrefix('> '); },
-            ul: function () { rollerEditor.toggleLinePrefix('- '); },
-            ol: function () { rollerEditor.toggleLinePrefix('1. '); },
-            link: function () { rollerEditor.wrapSelection('[', '](https://)', '<spring:message code="editor.linkPlaceholder" javaScriptEscape="true"/>'); },
-            code: function () { rollerEditor.wrapSelection('`', '`', 'code'); },
-            table: function () { rollerEditor.insert('\n| <spring:message code="editor.tableHeader" javaScriptEscape="true"/> | <spring:message code="editor.tableHeader" javaScriptEscape="true"/> |\n| --- | --- |\n|  |  |\n'); },
-            image: function () { onClickMediaFileInsert(); },
-            help: function () { if (window.rollerOpenGuide) { window.rollerOpenGuide(); } }
-        };
         document.getElementById('editorToolbar').addEventListener('click', function (event) {
             var button = event.target.closest('button[data-cmd]');
             if (button && commands[button.dataset.cmd]) {
@@ -359,7 +371,10 @@
         }
     }
 
-    <%-- The preview is rendered by the SERVER, not by a Markdown library in
+    <%-- Split mode renders once, when the mode is entered -- it is a snapshot,
+         not a live pane; Task A5 wires it to the editor's change stream.
+
+         The preview is rendered by the SERVER, not by a Markdown library in
          the browser. Only the server can expand [gallery], [map] and the rest,
          and a preview that disagreed with the published page about those would
          be worse than no preview at all. --%>

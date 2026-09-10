@@ -356,6 +356,15 @@
             textarea: document.getElementById('edit_content'),
             placeholder: '<spring:message code="editor.placeholder" javaScriptEscape="true"/>',
             shortcodes: shortcodes,
+            <%-- Bound on the editor as well as on document, because
+                 CodeMirror's default keymap owns Mod-Enter (insert blank
+                 line) and Mod-slash (toggle comment) and the document-level
+                 handler below bails on an already-handled event. This page
+                 has one Save button, so save and publish are the same
+                 action -- the same collapse the keydown handler makes. --%>
+            onSave: rollerSavePage,
+            onPublish: rollerSavePage,
+            onHelp: function () { if (window.rollerOpenGuide) { window.rollerOpenGuide(); } },
             onChange: function () {
                 rollerEditorChangeListeners.forEach(function (listener) {
                     try {
@@ -368,7 +377,8 @@
         });
 
         document.addEventListener('keydown', function (event) {
-            <%-- The one place this page's shortcuts live. A binding that DID
+            <%-- The shortcuts for focus OUTSIDE the editor; inside it they
+                 are bound on the editor (above). A binding that DID
                  handle the key calls preventDefault without stopPropagation,
                  so the event still reaches document -- and this handler would
                  fire a second click, i.e. two saves per Ctrl-S. Bailing on an
