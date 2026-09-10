@@ -119,9 +119,15 @@ class JspConsistencyTest {
             assertFalse(src.contains("<input id=\"toggleButton\""), jsp + ": media action bar still inputs");
         }
 
+        // The disjunct this used to carry -- pages.contains("not empty pages") --
+        // is trivially true the moment ANY <c:if test="${not empty pages}">
+        // appears anywhere in the file, which makes the assertion pass whether
+        // or not the top primary is actually inside one. Assert the real
+        // structural claim instead: the addUrl anchor carrying btn-primary
+        // sits inside a "${not empty pages}" guard, matching Pages.jsp's
+        // actual shape byte-for-byte.
         String pages = Files.readString(JSPS.resolve("editor/Pages.jsp"), StandardCharsets.UTF_8);
-        assertTrue(pages.contains("<c:if test=\"${not empty pages}\">\n    <a href=\"${addUrl}\" class=\"btn btn-primary btn-sm\">")
-                        || pages.contains("not empty pages"),
+        assertTrue(pages.contains("<c:if test=\"${not empty pages}\">\n    <a href=\"${addUrl}\" class=\"btn btn-primary btn-sm\">"),
                 "Pages hides the top primary when empty");
 
         String members = Files.readString(JSPS.resolve("editor/Members.jsp"), StandardCharsets.UTF_8);
