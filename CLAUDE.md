@@ -1250,6 +1250,15 @@ like something other than a race.**
   **If you add a sixth class that calls `setGlobalFlag`, it must take this
   lock** — nothing enforces that automatically, and the symptom of forgetting is
   a wrong-looking assertion, not an obvious concurrency error.
+  **The same applies to a class that only READS whatever those five permute**,
+  and `RouteSweepIT` is the one that had to learn it: it visits every admin
+  route, so it is sensitive to every site-wide flag, and it held no lock at
+  all. Symptom, on a `/roller`-prefix run only: `createWeblog.rol` returned a
+  healthy 200 with full site chrome and no form — the exact
+  `categoryEdit.rol` failure mode the sweep exists to catch — because
+  `GlobalConfigMatrixIT` had `groupblogging.enabled` off at that moment and
+  `CreateWeblogController` answers `.GenericError` to an admin who already
+  owns a weblog. It holds `GLOBAL_CONFIG` in READ mode now.
 - **`RollerIT.SHARED_MEDIA`** — held **write** by the four classes that upload,
   crop or delete media on the shared `WEBLOG_HANDLE` (`GalleryIT`,
   `MediaCropIT`, `MediaBulkUploadIT`, `EditorSeoIT`), and **read** by
