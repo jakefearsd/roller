@@ -230,6 +230,14 @@ always pays the cold cost and always needs network access to `nodejs.org`
 and `registry.npmjs.org` — see docker_deployment.md's "Test a release
 locally before deploying it".
 
+**Bundle size: measured and accepted, not a target to chase.**
+`roller-editor.js` is ~575 KB minified, ~192 KB gzipped over the wire —
+CodeMirror 6 plus its Markdown/language-highlighting extensions. Controller
+ruling: accepted as-is. It is served to exactly two admin screens (the entry
+and page editors), both behind login, and the alternative — dropping
+fenced-code syntax highlighting, the bulk of the weight — costs a feature for
+a size nobody outside the two authoring screens ever pays for.
+
 ### Testing Commands
 ```bash
 # Run all tests
