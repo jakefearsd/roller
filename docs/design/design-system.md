@@ -59,6 +59,10 @@ why. Two are on the record:
   body text is 14.5px**, and *quiet is expressed by color and weight, never by
   going smaller* (that is signature move 4 read in the other direction). Shrinking
   below 12px to make something recede is the mistake this line exists to block.
+- **The one documented exception to the scale: Plex Mono inside the editor
+  and guide sits at 13.5px** so it reads at the same optical size as 14.5px
+  Plex Sans beside it; this is an optical-size correction, not a support
+  tier — nothing else may use it.
 - Card/section headers (`.card-header`, `.section-head` — accordion panel titles, settings-form "display group" headers) use the caps-label role, not an h3/h4's own default size — a heading label, not a second page title.
 - Preview cards may load Plex from Google Fonts <link> ONLY IF the design pane allows external fetches — safer: use font-family:"IBM Plex Sans", system-ui and accept fallback rendering in cards; note in the tokens card that the implementation self-hosts Plex as a webjar.
 
