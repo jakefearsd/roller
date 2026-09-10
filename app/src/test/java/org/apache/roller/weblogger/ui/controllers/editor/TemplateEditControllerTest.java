@@ -203,6 +203,47 @@ class TemplateEditControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
+    void theDuplicateNameAndLinkErrorsEscapeTheValueTheyName() throws Exception {
+        // Both are user-typed and land in messages.jsp's deliberately-raw
+        // sink, so an unescaped name is stored HTML in the error banner.
+        registerMessage("pagesForm.error.alreadyExists", "duplicate:{0}");
+        givenRendition("");
+        WeblogTemplate other = new WeblogTemplate();
+        other.setId("tmpl-2");
+        other.setName("<b>Footer</b>");
+        when(weblogger.getWeblogManager().getTemplateByName(weblog, "<b>Footer</b>"))
+                .thenReturn(other);
+
+        bean.setId("tmpl-1");
+        bean.setName("<b>Footer</b>");
+
+        controller.save(request, model, bean);
+
+        assertTrue(errors(model).contains("duplicate:&lt;b&gt;Footer&lt;/b&gt;"),
+                "Expected the template name HTML-escaped, got: " + errors(model));
+    }
+
+    @Test
+    void theDuplicateLinkErrorEscapesTheLinkItNames() throws Exception {
+        registerMessage("pagesForm.error.alreadyExists", "duplicate:{0}");
+        givenRendition("");
+        WeblogTemplate other = new WeblogTemplate();
+        other.setId("tmpl-2");
+        other.setLink("<b>footer</b>");
+        when(weblogger.getWeblogManager().getTemplateByLink(weblog, "<b>footer</b>"))
+                .thenReturn(other);
+
+        bean.setId("tmpl-1");
+        bean.setName("Sidebar");
+        bean.setLink("<b>footer</b>");
+
+        controller.save(request, model, bean);
+
+        assertTrue(errors(model).contains("duplicate:&lt;b&gt;footer&lt;/b&gt;"),
+                "Expected the template link HTML-escaped, got: " + errors(model));
+    }
+
+    @Test
     void savingATemplateUnderItsOwnNameIsNotADuplicate() throws Exception {
         // The uniqueness check is skipped entirely when the name has not
         // changed; otherwise no template could ever be saved twice.

@@ -47,6 +47,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.apache.roller.weblogger.ui.controllers.WeblogPermissionView;
+import org.apache.commons.text.StringEscapeUtils;
 
 
 /**
@@ -141,7 +142,8 @@ public class UserEditController extends BaseController {
                 if (emailSetPasswordLink) {
                     issueAndMailPasswordSetLink(user, model, request, "userAdmin.userCreatedLinkSent");
                 } else {
-                    addMessage(model, "createUser.add.success", bean.getUserName(), request);
+                    addMessage(model, "createUser.add.success",
+                            StringEscapeUtils.escapeHtml4(bean.getUserName()), request);
                 }
                 model.addAttribute("bean", new CreateUserBean());
                 return ".UserAdmin";
@@ -191,7 +193,8 @@ public class UserEditController extends BaseController {
     @GetMapping("/modifyUser!firstSave.rol")
     public String modifyUserFirstSave(HttpServletRequest request, Model model,
                                       @ModelAttribute("bean") CreateUserBean bean) {
-        addMessage(model, "createUser.add.success", bean.getUserName(), request);
+        addMessage(model, "createUser.add.success",
+                            StringEscapeUtils.escapeHtml4(bean.getUserName()), request);
         return modifyUserExecute(request, model, bean);
     }
 

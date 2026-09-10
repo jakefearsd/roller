@@ -35,6 +35,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+import org.apache.commons.text.StringEscapeUtils;
 
 /**
  * Edits metadata for a media file.
@@ -81,10 +82,12 @@ public class MediaFileEditController extends MediaFileBase {
             bean.copyFrom(mediaFile, weblogger.getUrlStrategy());
             model.addAttribute("mediaFileId", mediaFileId);
         } catch (FileIOException ex) {
-            addError(model, "uploadFiles.error.upload", bean.getName(), request);
+            addError(model, "uploadFiles.error.upload",
+                    StringEscapeUtils.escapeHtml4(bean.getName()), request);
         } catch (Exception e) {
             log.error("Error loading media file {}", mediaFileId, e);
-            addError(model, "uploadFiles.error.upload", bean.getName(), request);
+            addError(model, "uploadFiles.error.upload",
+                    StringEscapeUtils.escapeHtml4(bean.getName()), request);
         }
 
         return ".MediaFileEdit";
@@ -119,7 +122,8 @@ public class MediaFileEditController extends MediaFileBase {
         if (directory != null) {
             MediaFile fileWithSameName = directory.getMediaFile(bean.getName());
             if (fileWithSameName != null && !fileWithSameName.getId().equals(mediaFileId)) {
-                addError(model, "MediaFile.error.duplicateName", bean.getName(), request);
+                addError(model, "MediaFile.error.duplicateName",
+                        StringEscapeUtils.escapeHtml4(bean.getName()), request);
             }
         }
 
@@ -153,10 +157,12 @@ public class MediaFileEditController extends MediaFileBase {
                 return ".MediaFileEditSuccess";
 
             } catch (FileIOException ex) {
-                addError(model, "uploadFiles.error.upload", bean.getName(), request);
+                addError(model, "uploadFiles.error.upload",
+                    StringEscapeUtils.escapeHtml4(bean.getName()), request);
             } catch (Exception e) {
                 log.error("Error uploading file {}", bean.getName(), e);
-                addError(model, "uploadFiles.error.upload", bean.getName(), request);
+                addError(model, "uploadFiles.error.upload",
+                    StringEscapeUtils.escapeHtml4(bean.getName()), request);
             }
         }
 

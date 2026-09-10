@@ -35,6 +35,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.apache.commons.text.StringEscapeUtils;
 
 /**
  * List view of static pages in a weblog, plus their removal.
@@ -99,7 +100,8 @@ public class PagesController extends BaseController {
             try {
                 weblogger.getWeblogPageManager().removePage(page);
                 weblogger.flush();
-                addMessage(model, "pageEdit.removed", page.getSlug(), request);
+                addMessage(model, "pageEdit.removed",
+                        StringEscapeUtils.escapeHtml4(page.getSlug()), request);
             } catch (Exception ex) {
                 log.error("Error removing page {}", removeId, ex);
                 addError(model, "generic.error.check.logs", request);

@@ -69,6 +69,27 @@ class WeblogRemoveControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
+    void theRemovalNoticeEscapesTheWeblogTitleItNames() throws Exception {
+        // Weblog.getName() stores raw author input -- WeblogWrapper escapes it
+        // on the way to a theme, which is exactly why this call site looks safe
+        // and is not. messages.jsp renders a flash message unescaped.
+        //
+        // The fixture value is an UNTERMINATED tag on purpose.
+        // Weblog.setName runs Utilities.removeHTML, which drops text between
+        // '<' and '>' -- but its no-closing-bracket branch appends the rest of
+        // the string verbatim, '<' included. So the stripper is not the
+        // boundary it looks like, and this is the shape that gets past it.
+        registerMessage("websiteRemove.success", "removed:{0}");
+        weblog.setName("<img src=x onerror=alert(1)");
+
+        controller.remove(request, model, redirectAttributes);
+
+        assertEquals(java.util.List.of("removed:&lt;img src=x onerror=alert(1)"),
+                flashMessages(redirectAttributes),
+                "Expected the weblog title HTML-escaped");
+    }
+
+    @Test
     void aFailedRemovalStaysOnTheConfirmationPageWithAnError() throws Exception {
         doThrow(new WebloggerException("in use"))
                 .when(weblogger.getWeblogManager()).removeWeblog(any());

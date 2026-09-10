@@ -503,7 +503,8 @@ public class EntryEditController extends BaseController {
             client.sendCampaign(listUuid, entry.getTitle(), html);
         } catch (IOException ex) {
             log.error("Error sending newsletter campaign for entry {}", entry.getId(), ex);
-            addError(model, "newsletter.sendFailed", ex.getMessage(), request);
+            addError(model, "newsletter.sendFailed",
+                    StringEscapeUtils.escapeHtml4(ex.getMessage()), request);
             return;
         }
 
@@ -517,7 +518,8 @@ public class EntryEditController extends BaseController {
         } catch (WebloggerException ex) {
             log.error("Newsletter campaign for entry {} was sent, but recording newsletterSentAt failed",
                     entry.getId(), ex);
-            addError(model, "newsletter.sentButNotRecorded", ex.getMessage(), request);
+            addError(model, "newsletter.sentButNotRecorded",
+                    StringEscapeUtils.escapeHtml4(ex.getMessage()), request);
         }
     }
 

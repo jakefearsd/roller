@@ -52,6 +52,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
+import org.apache.commons.text.StringEscapeUtils;
 
 /**
  * Adds a new media file.
@@ -164,7 +165,8 @@ public class MediaFileAddController extends MediaFileBase {
 
                 } catch (Exception e) {
                     log.error("Error uploading media file", e);
-                    addError(model, "mediaFileAdd.errorUploading", uploadedFile.getOriginalFilename(), request);
+                    addError(model, "mediaFileAdd.errorUploading",
+                            StringEscapeUtils.escapeHtml4(uploadedFile.getOriginalFilename()), request);
                 }
             }
 

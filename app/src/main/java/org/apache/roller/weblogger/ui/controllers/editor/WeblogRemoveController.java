@@ -30,6 +30,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.apache.commons.text.StringEscapeUtils;
 
 /**
  * Action for removing a weblog.
@@ -70,12 +71,14 @@ public class WeblogRemoveController extends BaseController {
             weblogger.getWeblogManager().removeWeblog(getActionWeblog(request));
             weblogger.flush();
             CacheManager.invalidate(getActionWeblog(request));
-            addFlashMessage(redirectAttributes, "websiteRemove.success", getActionWeblog(request).getName(), request);
+            addFlashMessage(redirectAttributes, "websiteRemove.success",
+                    StringEscapeUtils.escapeHtml4(getActionWeblog(request).getName()), request);
 
             return "redirect:/roller-ui/menu.rol";
         } catch (Exception ex) {
             log.error("Error removing weblog - {}", getActionWeblog(request).getHandle(), ex);
-            addError(model, "websiteRemove.error", getActionWeblog(request).getName(), request);
+            addError(model, "websiteRemove.error",
+                    StringEscapeUtils.escapeHtml4(getActionWeblog(request).getName()), request);
         }
 
         return ".WeblogRemoveConfirm";

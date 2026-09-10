@@ -39,6 +39,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.apache.commons.text.StringEscapeUtils;
 
 /**
  * Action which handles editing for a single WeblogTemplate.
@@ -131,7 +132,8 @@ public class TemplateEditController extends BaseController {
                 weblogger.flush();
                 CacheManager.invalidate(template);
 
-                addMessage(model, "pageForm.save.success", template.getName(), request);
+                addMessage(model, "pageForm.save.success",
+                        StringEscapeUtils.escapeHtml4(template.getName()), request);
 
             } catch (Exception ex) {
                 log.error("Error updating page - {}", bean.getId(), ex);
@@ -148,7 +150,8 @@ public class TemplateEditController extends BaseController {
             try {
                 if (weblogger.getWeblogManager()
                         .getTemplateByName(getActionWeblog(request), bean.getName()) != null) {
-                    addError(model, "pagesForm.error.alreadyExists", bean.getName(), request);
+                    addError(model, "pagesForm.error.alreadyExists",
+                            StringEscapeUtils.escapeHtml4(bean.getName()), request);
                 }
             } catch (WebloggerException ex) {
                 // Fail closed. A uniqueness check that could not run is not a
@@ -163,7 +166,8 @@ public class TemplateEditController extends BaseController {
             try {
                 if (weblogger.getWeblogManager()
                         .getTemplateByLink(getActionWeblog(request), bean.getLink()) != null) {
-                    addError(model, "pagesForm.error.alreadyExists", bean.getLink(), request);
+                    addError(model, "pagesForm.error.alreadyExists",
+                            StringEscapeUtils.escapeHtml4(bean.getLink()), request);
                 }
             } catch (WebloggerException ex) {
                 // Fail closed, as above -- the link is what the page is served

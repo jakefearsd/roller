@@ -394,7 +394,27 @@ class UserEditControllerTest {
         assertEquals(List.of("createUser.add.success[newbie]"), ControllerTestFixture.messages(model));
     }
 
-    // --- modify: saving ---
+    @Test
+    void firstSaveEscapesTheUserNameItEchoesBack() throws Exception {
+        // modifyUser!firstSave.rol is a GET, and it echoes bean.userName --
+        // straight off the query string, through NO validation of its own --
+        // into a message that messages.jsp renders unescaped. Unlike the
+        // createUser path, where myValidate has already restricted the name to
+        // username.allowedChars, nothing stands between the request and the
+        // page here.
+        when(weblogger.userManager().getUserByUserName("newbie", null))
+                .thenReturn(user("newbie", "newbie@example.com"));
+        CreateUserBean bean = new CreateUserBean();
+        bean.setUserName("<img src=x onerror=alert(1)>");
+
+        controller.modifyUserFirstSave(ControllerTestFixture.requestFor(null), model, bean);
+
+        assertEquals(List.of("createUser.add.success[&lt;img src=x onerror=alert(1)&gt;]"),
+                ControllerTestFixture.messages(model),
+                "a reflected user name must be HTML-escaped before it reaches the banner");
+    }
+
+    // --- modify: saving ---    // --- modify: saving ---
 
     @Test
     void modifySaveWritesTheProfileAndAnnouncesIt() throws Exception {

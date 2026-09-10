@@ -307,6 +307,22 @@ class MediaFileAddControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
+    void theFailureReportEscapesTheFilenameItNames() throws Exception {
+        // The filename is whatever the browser sent in the multipart part --
+        // client-supplied text, reflected straight into messages.jsp's
+        // deliberately-raw error sink.
+        registerMessage("mediaFileAdd.errorUploading", "Error uploading file {0}");
+        org.mockito.Mockito.doThrow(new WebloggerException("disk full"))
+                .when(weblogger.getMediaFileManager()).createMediaFile(any(), any(), any());
+
+        controller.save(request, model, bean,
+                new MultipartFile[]{upload("<b>photo.jpg", "image/jpeg", "x")});
+
+        assertTrue(errors(model).contains("Error uploading file &lt;b&gt;photo.jpg"),
+                "Expected the filename HTML-escaped, got: " + errors(model));
+    }
+
+    @Test
     void theFailureReportNamesTheFileThatFailedNotTheRemovedBeanName() throws Exception {
         // bean.getName() is always null now that the form's Name field is
         // gone; the error must name the upload that actually failed.

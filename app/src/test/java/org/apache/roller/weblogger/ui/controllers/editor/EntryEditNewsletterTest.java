@@ -216,7 +216,28 @@ class EntryEditNewsletterTest extends EditorControllerTestSupport {
         verify(weblogger.getWeblogEntryManager(), never()).saveWeblogEntry(any());
     }
 
+    @Test
+    void theSendFailureMessageEscapesTheExceptionTextItQuotes() throws Exception {
+        // The quoted text is a remote service's response, not this
+        // application's own prose, and messages.jsp renders an error
+        // unescaped -- so whatever Listmonk answers with is markup in the
+        // admin's banner.
+        registerMessage("newsletter.sendFailed", "failed:{0}");
+        publishedEntry();
+        when(listmonk.isCampaignConfigured()).thenReturn(true);
+        doThrow(new IOException("<img src=x onerror=alert(1)>"))
+                .when(listmonk).sendCampaign(any(), any(), any());
+
+        controller.entryEditSendNewsletter("entry-1", request, model);
+
+        assertTrue(errors(model).stream().anyMatch(m -> m.contains("&lt;img src=x onerror=alert(1)&gt;")),
+                "expected the exception text HTML-escaped, got: " + errors(model));
+        assertTrue(errors(model).stream().noneMatch(m -> m.contains("<img")),
+                "the raw tag must not survive into the banner: " + errors(model));
+    }
+
     /**
+     * A successful Listmonk send followed by a save failure is NOT an    /**
      * A successful Listmonk send followed by a save failure is NOT an
      * ordinary, retry-inviting failure: the campaign already went out to
      * every subscriber, so the generic "something went wrong, try again"

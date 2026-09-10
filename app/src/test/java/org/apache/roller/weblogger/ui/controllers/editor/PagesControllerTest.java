@@ -90,6 +90,20 @@ class PagesControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
+    void theRemovalNoticeEscapesTheSlugItNames() throws Exception {
+        // A slug is author-typed on the page editor and lands in
+        // messages.jsp's deliberately-raw sink.
+        registerMessage("pageEdit.removed", "removed:{0}");
+        WeblogPage mine = pageOn(weblogA, "<b>about</b>");
+        when(weblogger.getWeblogPageManager().getPages(weblogA)).thenReturn(List.of());
+
+        controller.remove(requestFor(weblogA), model, mine.getId());
+
+        assertTrue(messages(model).contains("removed:&lt;b&gt;about&lt;/b&gt;"),
+                "Expected the slug HTML-escaped, got: " + messages(model));
+    }
+
+    @Test
     void removingAPageBelongingToAnotherWeblogIsRefused() throws Exception {
         WeblogPage foreign = pageOn(weblogB, "their-about");
         when(weblogger.getWeblogPageManager().getPages(weblogA)).thenReturn(List.of());

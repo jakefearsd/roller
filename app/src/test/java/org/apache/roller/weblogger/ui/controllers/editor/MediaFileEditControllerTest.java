@@ -239,6 +239,28 @@ class MediaFileEditControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
+    void theDuplicateNameErrorEscapesTheNameItNames() throws Exception {
+        // A media file's name is typed on this very form and lands in
+        // messages.jsp's deliberately-raw sink.
+        registerMessage("MediaFile.error.duplicateName", "duplicate:{0}");
+        MediaFile existing = new MediaFile();
+        existing.setId("file-2");
+        existing.setName("<b>taken.jpg</b>");
+        existing.setWeblog(weblog);
+        existing.setDirectory(directory);
+        directory.getMediaFiles().add(existing);
+
+        bean.setId("file-1");
+        bean.setName("<b>taken.jpg</b>");
+        bean.setDirectoryId("dir-1");
+
+        controller.save(request, model, bean, "file-1", null);
+
+        assertTrue(errors(model).contains("duplicate:&lt;b&gt;taken.jpg&lt;/b&gt;"),
+                "Expected the file name HTML-escaped, got: " + errors(model));
+    }
+
+    @Test
     void aFailedUpdateIsReportedRatherThanConfirmed() throws Exception {
         org.mockito.Mockito.doThrow(new WebloggerException("disk full"))
                 .when(weblogger.getMediaFileManager()).updateMediaFile(any(), any());
