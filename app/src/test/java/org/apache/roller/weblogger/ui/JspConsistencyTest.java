@@ -486,6 +486,59 @@ class JspConsistencyTest {
                 "roller.js must set both the visual class and the accessible state");
     }
 
+    // --- B9a: Global Config gets the settings rail ---
+
+    /**
+     * Task B9a: Global Config is the site's other long settings form, and it
+     * now wears the same shape Weblog Settings does -- a
+     * {@code .settings-grid} form with a {@code .settings-rail} holding a
+     * section index and the Save button, so Save is reachable without
+     * scrolling past nine display groups to find it.
+     *
+     * <p>Two things this pins beyond the markers. The section index is built
+     * from {@code globalConfigDef.displayGroups}, so every group heading must
+     * carry the {@code id} the index links to -- a hand-maintained list would
+     * silently stop matching the moment {@code runtimeConfigDefs.xml} grew a
+     * group. And the page's validation is attached with
+     * {@code addEventListener}, not with an inline {@code onchange}/
+     * {@code onkeyup} on every numeric field: the same reason
+     * {@link #oneConfirmIdiomAndOneModalShape} bans inline {@code onsubmit}.
+     *
+     * <p>{@code id="saveButton"} is load-bearing beyond this page:
+     * {@code RollerIT.setGlobalFlags} -- which every browser test that
+     * permutes a runtime property goes through -- clicks it by that id.
+     */
+    @Test
+    void globalConfigHasTheSettingsRail() throws IOException {
+        String src = Files.readString(JSPS.resolve("admin/GlobalConfig.jsp"), StandardCharsets.UTF_8);
+        String markup = withoutJspComments(src);
+
+        assertTrue(markup.contains("class=\"settings-grid form-stacked\""),
+                "GlobalConfig.jsp's <form> must be the .settings-grid container, "
+                        + "the same shape WeblogConfig.jsp uses");
+        assertEquals(1, countOccurrences(markup, "<aside class=\"settings-rail\">"),
+                "GlobalConfig.jsp must have exactly one .settings-rail");
+        assertTrue(markup.contains("class=\"section-index\""),
+                "the rail must carry a .section-index built from the display groups");
+        assertTrue(markup.contains("href=\"#cfg-${"),
+                "the section index must link to the group headings by id");
+        assertTrue(markup.contains("id=\"cfg-${"),
+                "every display-group heading must carry the id its index entry links to");
+        assertTrue(markup.contains("id=\"saveButton\"") && markup.contains("btn btn-primary w-100"),
+                "Save must be the rail's full-width primary and keep id=saveButton, "
+                        + "which RollerIT.setGlobalFlags clicks");
+
+        assertFalse(markup.contains("onchange="),
+                "GlobalConfig.jsp still has an inline onchange= -- attach the validation "
+                        + "with one delegated addEventListener instead");
+        assertFalse(markup.contains("onkeyup="),
+                "GlobalConfig.jsp still has an inline onkeyup= -- attach the validation "
+                        + "with one delegated addEventListener instead");
+
+        assertTrue(markup.contains("class=\"form-check\""),
+                "boolean properties render as a .form-check with the label beside the box");
+    }
+
     /**
      * JSP comments are not part of the rendered page, so a scan asserting
      * that some pattern is ABSENT must not be defeated by prose that merely

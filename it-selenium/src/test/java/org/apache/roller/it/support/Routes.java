@@ -188,8 +188,12 @@ public final class Routes {
             new Route("/roller-ui/createWeblog.rol", Role.EDITOR, "",
                     "form[action$='/roller-ui/createWeblog!save.rol']"),
 
+            // The settings rail (task B9a): the <form> IS the .settings-grid,
+            // so the rail is the marker that proves the page rendered its own
+            // content rather than the form action, which the old
+            // no-rail layout also had.
             new Route("/roller-ui/admin/globalConfig.rol", Role.ADMIN, "",
-                    "form[action$='/roller-ui/admin/globalConfig!save.rol']"),
+                    ".settings-rail"),
 
             new Route("/roller-ui/admin/userAdmin.rol", Role.ADMIN, "",
                     "form[action$='/roller-ui/admin/userAdmin!edit.rol']"),
