@@ -18,6 +18,7 @@
 package org.apache.roller.it;
 
 import com.codeborne.selenide.Condition;
+import org.apache.roller.it.support.Editor;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,7 +37,6 @@ import java.nio.file.Path;
 import static com.codeborne.selenide.Condition.exist;
 import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
-import static com.codeborne.selenide.Selenide.executeJavaScript;
 import static com.codeborne.selenide.Selenide.switchTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -73,14 +73,6 @@ class EditorSeoIT extends RollerIT {
     private static final String MEDIA_ADD = "/roller-ui/authoring/mediaFileAdd.rol?weblog=" + WEBLOG_HANDLE;
     private static final String GLOBAL_CONFIG = "/roller-ui/admin/globalConfig.rol";
 
-    /**
-     * The editor's editable surface. Tests wait for this and then put text in
-     * through {@code rollerSetEntryText}, the page's own seam -- never through
-     * the editor's API directly, so replacing the editor is one change here
-     * rather than one in every journey.
-     */
-    private static final String EDITOR_BODY = ".CodeMirror";
-
     /** Rendered on the edit page only once the entry is actually published. */
     private static final String PERMALINK = "#entry_bean_permalink";
 
@@ -104,10 +96,7 @@ class EditorSeoIT extends RollerIT {
         openPath(ENTRY_ADD);
         $("#entry").should(exist);
         $("input[name='bean.title']").setValue(title);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript(
-                "rollerSetEntryText(arguments[0]);",
-                "Body of the SEO journey entry " + suffix + ".");
+        Editor.setText("Body of the SEO journey entry " + suffix + ".");
 
         // The SEO card starts collapsed; open it the way an author would.
         $("a[data-bs-target='#collapseSeo']").click();
@@ -170,10 +159,7 @@ class EditorSeoIT extends RollerIT {
         openPath(ENTRY_ADD);
         $("#entry").should(exist);
         $("input[name='bean.title']").setValue(title);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript(
-                "rollerSetEntryText(arguments[0]);",
-                "Body of the structured-data entry " + suffix + ".");
+        Editor.setText("Body of the structured-data entry " + suffix + ".");
 
         $("a[data-bs-target='#collapseSeo']").click();
         $("#seo_metaDescription").should(visible).setValue(metaDescription);
@@ -225,17 +211,17 @@ class EditorSeoIT extends RollerIT {
         openPath(ENTRY_ADD);
         $("#entry").should(exist);
         $("input[name='bean.title']").setValue(title);
-        $(EDITOR_BODY).should(visible);
+        Editor.root();
 
-        // insert via the chooser link above the editor, as an author would
-        $("button[onclick^='onClickMediaFileInsert']").click();
+        // insert via the toolbar's image control, as an author would
+        $(Editor.MEDIA_INSERT).click();
         $("#mediafile_edit_lightbox").shouldBe(visible);
         switchTo().frame("mediaFileEditor");
         chooserTile(imageName).should(exist).click();
         switchTo().defaultContent();
 
         // the editor now holds the shortcode, not raw img markup
-        $(EDITOR_BODY).shouldHave(Condition.text("[image id="));
+        Editor.root().shouldHave(Condition.text("[image id="));
 
         $("button[formaction$='entryAdd!publish.rol']").click();
         $(PERMALINK).should(exist);

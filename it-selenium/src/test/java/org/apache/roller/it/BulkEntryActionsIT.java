@@ -17,6 +17,7 @@
  */
 package org.apache.roller.it;
 
+import org.apache.roller.it.support.Editor;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,7 +26,6 @@ import static com.codeborne.selenide.Condition.disappear;
 import static com.codeborne.selenide.Condition.exist;
 import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
-import static com.codeborne.selenide.Selenide.executeJavaScript;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
@@ -42,7 +42,6 @@ class BulkEntryActionsIT extends RollerIT {
     private static final String ENTRY_ADD = "/roller-ui/authoring/entryAdd.rol?weblog=" + WEBLOG_HANDLE;
     private static final String ENTRIES = "/roller-ui/authoring/entries.rol?weblog=" + WEBLOG_HANDLE;
 
-    private static final String EDITOR_BODY = ".CodeMirror";
     private static final String PERMALINK = "#entry_bean_permalink";
 
     @BeforeEach
@@ -89,8 +88,7 @@ class BulkEntryActionsIT extends RollerIT {
         openPath(ENTRY_ADD);
         $("#entry").should(exist);
         $("input[name='bean.title']").setValue(title);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript("rollerSetEntryText(arguments[0]);", body);
+        Editor.setText(body);
         $("button[formaction$='entryAdd!saveDraft.rol']").click();
 
         // Wait on the save landing rather than on the page moving: the id

@@ -18,6 +18,7 @@
 package org.apache.roller.it;
 
 import org.apache.roller.it.support.BrowserHealth;
+import org.apache.roller.it.support.Editor;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.Test;
 
@@ -54,7 +55,6 @@ class CategoryIT extends RollerIT {
 
     private static final String EDIT_MODAL = "#category-edit-modal";
     private static final String DELETE_MODAL = "#delete-category-modal";
-    private static final String EDITOR_BODY = ".CodeMirror";
 
     @Test
     void aCategoryCanBeAddedRenamedAndDeleted() {
@@ -294,8 +294,7 @@ class CategoryIT extends RollerIT {
         openPath(ENTRY_ADD);
         $("#entry").should(exist);
         $("input[name='bean.title']").setValue(title);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript("rollerSetEntryText(arguments[0]);", body);
+        Editor.setText(body);
         $("select[name='bean.categoryId']").selectOptionContainingText(categoryName);
         $("button[formaction$='entryAdd!publish.rol']").click();
         $("#entry_bean_permalink").should(exist);

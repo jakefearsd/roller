@@ -18,6 +18,7 @@
 package org.apache.roller.it;
 
 import org.apache.roller.it.support.BrowserHealth;
+import org.apache.roller.it.support.Editor;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceAccessMode;
@@ -29,7 +30,6 @@ import static com.codeborne.selenide.Condition.value;
 import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
 import static com.codeborne.selenide.Selenide.$$;
-import static com.codeborne.selenide.Selenide.executeJavaScript;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -52,9 +52,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @ResourceLock(value = RollerIT.GLOBAL_CONFIG, mode = ResourceAccessMode.READ)
 class WeblogConfigMatrixIT extends RollerIT {
-
-    /** The editor's editable surface; text goes in through the page's own seam. */
-    private static final String EDITOR_BODY = ".CodeMirror";
 
     /** Rendered on the edit page only once the entry is actually published. */
     private static final String PERMALINK = "#entry_bean_permalink";
@@ -253,8 +250,7 @@ class WeblogConfigMatrixIT extends RollerIT {
         openPath("/roller-ui/authoring/entryAdd.rol?weblog=" + handle);
         $("#entry").should(exist);
         $("input[name='bean.title']").setValue(title);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript("rollerSetEntryText(arguments[0]);", "Body of " + title);
+        Editor.setText("Body of " + title);
         $("button[formaction$='entryAdd!publish.rol']").click();
 
         $(PERMALINK).should(exist);

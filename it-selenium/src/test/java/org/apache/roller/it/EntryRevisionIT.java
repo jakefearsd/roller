@@ -17,6 +17,7 @@
  */
 package org.apache.roller.it;
 
+import org.apache.roller.it.support.Editor;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,7 +28,6 @@ import static com.codeborne.selenide.Condition.text;
 import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
 import static com.codeborne.selenide.Selenide.$$;
-import static com.codeborne.selenide.Selenide.executeJavaScript;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -42,8 +42,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class EntryRevisionIT extends RollerIT {
 
     private static final String ENTRY_ADD = "/roller-ui/authoring/entryAdd.rol?weblog=" + WEBLOG_HANDLE;
-
-    private static final String EDITOR_BODY = ".CodeMirror";
 
     @BeforeEach
     void logIn() {
@@ -81,9 +79,7 @@ class EntryRevisionIT extends RollerIT {
         openEditorFor(entryId);
         $(".revision-restore-button").click();
         $("#entry").should(exist);
-        $(EDITOR_BODY).should(visible);
-
-        String restored = executeJavaScript("return rollerGetEntryText();");
+        String restored = Editor.getText();
         assertTrue(restored != null && restored.contains(firstBody),
                 "restore did not bring the original text back; the editor holds: " + restored);
     }
@@ -93,8 +89,7 @@ class EntryRevisionIT extends RollerIT {
         openPath(ENTRY_ADD);
         $("#entry").should(exist);
         $("input[name='bean.title']").setValue(title);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript("rollerSetEntryText(arguments[0]);", body);
+        Editor.setText(body);
         $("button[formaction$='entryAdd!saveDraft.rol']").click();
 
         $("input[name='bean.id']").should(exist);
@@ -112,8 +107,7 @@ class EntryRevisionIT extends RollerIT {
 
     /** Rewrites the body of the entry currently open in the editor and saves. */
     private void editBodyTo(String body) {
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript("rollerSetEntryText(arguments[0]);", body);
+    Editor.setText(body);
         $("button[formaction$='entryEdit!saveDraft.rol']").click();
         $("#entry").should(exist);
     }

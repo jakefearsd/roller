@@ -201,6 +201,29 @@ java -jar app/target/roller.war --server.port=8083 \
 ./roller reset       # DESTROY the dev database volume and rebuild it
 ```
 
+### Frontend build
+
+The editor's CodeMirror bundle is built by Maven, not by a developer running
+`npm` by hand. `frontend-maven-plugin` downloads a pinned Node
+(`v22.23.2`) into `app/frontend/node/` on first use — not the machine's own
+Node, so the build is reproducible regardless of what is (or isn't)
+installed — then runs `npm ci` and an esbuild bundle, all at
+`generate-resources`, i.e. before every compile and every test run. Output
+lands at `app/src/main/webapp/roller-ui/scripts/roller-editor.js`: under
+`src/main/webapp` (not `target/classes/static`) because this app's
+`DispatcherServlet` is mapped to `*.rol` only, so neither Spring MVC's
+classpath static-resource handling nor the Boot executable WAR's
+`WEB-INF/classes` nesting can serve an asset there — `src/main/webapp` is the
+one location both `maven-war-plugin` and `spring-boot:run`'s document root
+agree on. It is git-ignored and rebuilt on every `generate-resources`, so a
+checkout never carries a stale copy. `-DskipTests` also skips the bundle's
+own `npm test` (bound to the `test` phase, same `skipTests` property) — it
+does not skip the build itself, since generation happens earlier in the
+lifecycle. Timings (`mvn -pl app -DskipTests clean generate-resources`):
+cold (first-ever run, downloading Node + the plugin jar + `npm ci`) ~8s;
+warm (Node and `node_modules` already present) ~1.6s — negligible against
+the existing `verify` budget.
+
 ### Testing Commands
 ```bash
 # Run all tests
@@ -510,16 +533,6 @@ published. Testing an untagged tree locally is a `docker build` against the
 "Test a release locally before deploying it"), not a `deploy.sh` flag —
 `deploy.sh` only ever pulls, since `docker-compose.prod.yml` carries no
 `build:` stanza.
-
-**Known flake: `ReferenceError: EasyMDE is not defined`** on
-`entryEdit!firstSave.rol`, surfacing through `BrowserHealth`'s
-uncaught-exception check (seen in `MediaCropIT`). `head.jsp` loads
-`easymde.min.js` synchronously and unconditionally — line 45, *outside* the
-`<c:if>` that gates Font Awesome — so this is the page's inline initialiser
-racing a script that had not finished executing, not a missing include. Green
-on rerun. Before assuming flake, confirm the `<script>` is still unconditional:
-if someone widens that `<c:if>` to cover EasyMDE, the identical error becomes a
-real breakage on every screen the condition excludes.
 
 **Known flake, MECHANISM NOT ESTABLISHED: a 403 on `POST
 /roller-ui/admin/createUser!save.rol`** in
@@ -1377,6 +1390,19 @@ excused whatever its type.
   `app/src/main/webapp/WEB-INF/velocity` for it before calling the change
   done. This is not comment-specific — it applies to every future deletion
   that touches a pojo, wrapper, or model class a `.vm` file can reach.
+- **A zero-argument macro NAME written bare inside a comment is INVOKED, not
+  printed.** `#name` with no parentheses is a valid velocimacro call when
+  `name` takes no arguments, and Velocity does not care whether the
+  surrounding text is a `//` JavaScript comment or a `/* */` CSS one — it has
+  already interpolated the whole file by the time a browser sees it. This bit
+  `weblog.vm`'s own live-preview script (a `#showPreviewShellScript` mention
+  in a `//` comment spliced the shell's script into the ordinary page) and
+  three themes' `*-custom.css` (`#showAudienceAssets`/
+  `#showWeblogCategoryLinksList` mentions inside `/* */` blocks did the same).
+  Both were caught only because a rendering test happened to assert the
+  unrelated page stayed free of the leaked content. Write "the showX macro"
+  in a comment, never `#showX` — `ThemeStylesheetTest` scans every theme
+  stylesheet for the bare form and fails the build if one reappears.
 
 ## Admin UI
 - **Maintenance is a Global Admin screen, not a per-weblog one.**
@@ -1559,11 +1585,12 @@ in a local index file worth clearing, not a search-correctness bug.
   Organize box (category/tags — locale is carried as a hidden input, not a
   visible Organize control), an SEO drawer (the SEO & Social
   Sharing card, unchanged, just collapsed by default), and the
-  newsletter/revisions cards as quiet boxes below. Delete is a quiet text
-  link, not a red button. The `#entry` form is `display:contents` specifically
-  so the newsletter/revisions cards — which carry their own `<form>`s (own
-  CSRF token, own POST target) — can sit in the rail's grid column without
-  nesting a `<form>` inside a `<form>`.
+  newsletter/revisions boxes below (`.editor-box`/`.rail-group-label`, the
+  same shape as Publish/Organize — no Bootstrap `.card` in the rail). Delete
+  is a quiet text link, last in the rail's column. The `#entry` form is
+  `display:contents` specifically so the newsletter/revisions boxes — which
+  carry their own `<form>`s (own CSRF token, own POST target) — can sit in
+  the rail's grid column without nesting a `<form>` inside a `<form>`.
 - **`bean.pubTimeLocal` is the entry's only pubtime field, and it means the
   WEBLOG's clock, not the browser's or the server's.** One `<input
   type="datetime-local">` replaced the old three-`<select>` hour/minute/second
@@ -1607,15 +1634,40 @@ in a local index file worth clearing, not a search-correctness bug.
   anywhere — the same policy shortcodes already followed. In production the
   registry is presently empty, so this is a no-op today; it is the seam a
   future plugin would register into.
-- **Editor**: EasyMDE (Markdown + server-rendered preview). The page exposes
-  three functions that are the ONLY seam into the editor —
-  `insertMediaFile`, `rollerSetEntryText`, `rollerGetEntryText` — so replacing
-  the editor (e.g. with a WYSIWYG surface that edits Markdown) is one file.
-  Browser ITs drive `.CodeMirror` and go through those functions, never the
-  editor's own API. Byte-untouched by the rail rebuild. Autosave (below) is
-  the seam's fourth consumer and reaches the editor only through
-  `rollerGetEntryText`/`rollerSetEntryText`, so an editor swap carries draft
-  recovery with it for free.
+- **Editor**: CodeMirror 6, not EasyMDE. The bundle is built by Maven from
+  `app/frontend/` (see "Frontend build" below) and exposes one global,
+  `RollerEditor.create(options)`, called from `EditorScript.jsp` — the
+  script half of the two files (`EditorSurface.jsp` markup,
+  `EditorScript.jsp` script) shared verbatim by both the entry and the page
+  editor, so a page author gets the same toolbar, mode control, live
+  preview, paste/drop upload, guide and status line the entry editor has
+  rather than a second, drifting implementation. `options` carries
+  `onSave`/`onPublish`/`onHelp` callbacks bound to `Mod-s`/`Mod-Enter`/
+  `Mod-/` ahead of CM6's own keymap (a callback a mount does not supply
+  leaves that key to CM6's default rather than binding a dead no-op). The
+  page still exposes exactly three seam functions — `insertMediaFile`,
+  `rollerSetEntryText`, `rollerGetEntryText` — so replacing the editor again
+  is one file; Browser ITs go through those functions and the `Editor` test
+  helper, never CM6's own API. `rollerEditorChangeListeners` is the fourth
+  seam: an array every change-driven feature (draft autosave, the live
+  preview, the status line's word count) pushes a listener onto, rather than
+  each one hanging its own handler off the editor directly.
+  **Live preview is theme-true**, not a markdown-to-HTML approximation: an
+  iframe onto `PreviewServlet?shell=true`, which resolves a theme's own
+  `_preview` template (falling back to a shared shell if the theme ships
+  none) so the pane carries the weblog's real stylesheet and asset macros.
+  The editor posts rendered fragments into the frame over `postMessage`
+  after each debounced render; `#showPreviewShellScript` (`weblog.vm`) is
+  the shell-side listener that swaps `#previewArticle`'s content and calls
+  `window.rollerPreviewInit` so a swapped-in fragment's galleries/maps/embeds
+  actually initialise, the same way a full page load would. Pasting or
+  dropping an image posts to `mediaFileAdd!upload.rol`, backed by the same
+  `MediaUploads` helper the REST API's media endpoints use, and inserts an
+  `[image]` shortcode rather than hand-built markup. The writing guide (an
+  offcanvas, `Ctrl+/` or the toolbar's help control) and the status line
+  (word count/reading time, and Unsaved/Draft-saved-locally/Saved) are both
+  in `EditorSurface.jsp`/`EditorScript.jsp` too, so both editors carry them
+  for free.
 - **Autosave is LOCAL ONLY and there is no server endpoint** —
   `theme/scripts/roller-draft.js` writing to `localStorage`, installed from
   `EntryEditor.jsp` and `PageEdit.jsp`. Not a design accident: a server-side

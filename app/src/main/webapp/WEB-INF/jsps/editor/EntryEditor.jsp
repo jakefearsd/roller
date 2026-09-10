@@ -22,103 +22,46 @@
 <%-- ********************************************************************* --%>
 
 <%-- content --%>
-<textarea name="bean.text" id="edit_content" rows="18" class="col-sm-12">${fn:escapeXml(bean.text)}</textarea>
 
-<%-- The insert menu is generated from the shortcode registry (model attribute
-     shortcodeCards), so adding a sixth shortcode means writing its handler and
-     nothing here. Snippets ride in a data attribute rather than inline
-     JavaScript: JSTL escapes them for the attribute, and the browser hands
-     back the exact text through dataset. --%>
-<div class="dropdown d-inline-block" id="shortcodeInsertMenu">
-    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
-            id="shortcodeInsertButton" data-bs-toggle="dropdown" aria-expanded="false">
-        <spring:message code="weblogEdit.insertShortcode"/>
-    </button>
-    <ul class="dropdown-menu" aria-labelledby="shortcodeInsertButton">
-        <c:forEach items="${shortcodeCards}" var="card">
-            <li>
-                <button type="button" class="dropdown-item shortcode-card"
-                        data-shortcode="<c:out value='${card.name}'/>"
-                        data-snippet="<c:out value='${card.snippet}'/>"
-                        data-chooser="${card.usesMediaChooser}"><spring:message code="${card.labelKey}"/></button>
-            </li>
-        </c:forEach>
-    </ul>
-</div>
+<%-- The writing surface and its script are shared with the page editor; this
+     file is the entry-shaped half around them. Request scope, not page scope:
+     a jsp:include cannot see page-scoped variables set here.
 
-<%-- mb-4 rather than a spacer.png with an inline min-height: the gap before
-     the Summary card is margin, and margin is what should express it. --%>
-<div class="mb-4">
-    <button type="button" class="btn btn-link p-0 align-baseline border-0"
-            onclick="onClickMediaFileInsert();"><spring:message code="weblogEdit.insertMediaFile"/></button>
-</div>
+     editorFieldValue is escaped HERE rather than inside the include -- see
+     EditorSurface.jsp's header for why that placement is load-bearing. --%>
+<c:set var="editorFieldName" scope="request" value="bean.text"/>
+<c:set var="editorFieldValue" scope="request" value="${fn:escapeXml(bean.text)}"/>
+<c:set var="editorIdField" scope="request" value="bean.id"/>
+<c:url var="editorPreviewUrl" scope="request" value="/roller-ui/authoring/entryEdit!preview.rol"/>
 
-<%-- summary --%>
+<jsp:include page="/WEB-INF/jsps/editor/EditorSurface.jsp"/>
 
-<div class="card" id="panel-summary">
-    <div class="card-header">
+<%-- summary: a quiet drawer under the editor, same convention as the SEO
+     drawer in the rail (.editor-drawer/.editor-drawer-body) but with no
+     enclosing .editor-box -- this one sits in the main column, not the
+     rail. --%>
 
-        <h4 class="card-title">
-            <a href="#" class="collapsed"
-               data-bs-toggle="collapse" data-bs-target="#collapseSummaryEditor">
-                <spring:message code="weblogEdit.summary"/>
-            </a>
-        </h4>
-
-    </div>
-    <div id="collapseSummaryEditor" class="collapse">
-        <div class="card-body">
-
-            <textarea name="bean.summary" id="edit_summary" rows="10" class="col-sm-12">${fn:escapeXml(bean.summary)}</textarea>
-
-        </div>
+<a class="editor-drawer collapsed" data-bs-toggle="collapse" data-bs-target="#collapseSummaryEditor" href="#">
+    <spring:message code="weblogEdit.summary"/>
+</a>
+<div id="collapseSummaryEditor" class="collapse">
+    <div class="editor-drawer-body">
+        <textarea name="bean.summary" id="edit_summary" rows="10" class="col-sm-12">${fn:escapeXml(bean.summary)}</textarea>
     </div>
 </div>
 
 <%-- ********************************************************************* --%>
 
-
-<%-- Media File Insert for plain textarea editor --%>
-
-<div id="mediafile_edit_lightbox" class="modal" role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="mediafile-edit-lightbox-title">
-
-    <div class="modal-dialog modal-lg">
-
-        <div class="modal-content">
-
-            <div class="modal-header">
-                <h4 id="mediafile-edit-lightbox-title" class="modal-title"><spring:message code="weblogEdit.insertMediaFile"/></h4>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<spring:message code='generic.close'/>"></button>
-            </div>
-
-            <div class="modal-body">
-                <iframe id="mediaFileEditor"
-                        style="visibility:inherit"
-                        height="600" <%-- pixels, sigh, this is suboptimal--%>
-                        width="100%"
-                        frameborder="no"
-                        scrolling="auto">
-                </iframe>
-            </div>
-
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><spring:message code="generic.close"/></button>
-            </div>
-
-        </div>
-    </div>
-
-</div>
+<jsp:include page="/WEB-INF/jsps/editor/EditorScript.jsp"/>
 
 <script>
 
-    <%-- The editor. Entries are stored as Markdown -- always, with no
-         alternative format to switch to -- so this is a Markdown editor with a
-         preview, not a rich-text editor. A WYSIWYG surface may replace it one
-         day, but it would edit Markdown rather than produce HTML. --%>
-    var rollerEditor = null;
+    <%-- What the editor's Ctrl+S and Ctrl+Enter do here, read by name when
+         EditorScript.jsp mounts the editor. Declared at script top level, not
+         inside ready(): the mount happens on ready, and a definition made
+         there would not exist yet.
 
-    <%-- Click the real buttons rather than submitting the form: the buttons
+         Click the real buttons rather than submitting the form: the buttons
          carry the formaction that decides draft-vs-publish, and a bare
          form.submit() would post to the form's own action and silently pick
          the wrong one. --%>
@@ -137,52 +80,6 @@
     }
 
     $(document).ready(function () {
-        <%-- CodeMirror's extraKeys only fire with focus inside the editor.
-             This covers the title field, the rail and the SEO drawer. --%>
-        document.addEventListener('keydown', function (event) {
-            <%-- CodeMirror's extraKeys calls preventDefault on a key it
-                 handled but does NOT stopPropagation, so the event still
-                 reaches document and this handler fired a SECOND click --
-                 two saves, or a save and a publish, per Ctrl-S. Bailing on
-                 an already-handled event is what keeps the two bindings
-                 from overlapping. --%>
-            if (event.defaultPrevented) {
-                return;
-            }
-            if (!(event.ctrlKey || event.metaKey)) {
-                return;
-            }
-            if (event.key === 's' || event.key === 'S') {
-                event.preventDefault();
-                rollerSaveDraft();
-            } else if (event.key === 'Enter') {
-                event.preventDefault();
-                rollerPublish();
-            }
-        });
-
-        rollerEditor = new EasyMDE({
-            element: document.getElementById('edit_content'),
-            autoDownloadFontAwesome: false,
-            spellChecker: false,
-            status: false,
-            minHeight: '400px',
-            toolbar: ['bold', 'italic', 'heading', '|',
-                      'quote', 'unordered-list', 'ordered-list', '|',
-                      'link', 'table', '|', 'preview', 'side-by-side', 'guide'],
-            previewRender: rollerRenderPreview,
-            <%-- Ctrl/Cmd-S saves the draft, Ctrl-Enter publishes. Both
-                 preventDefault: without it Ctrl-S opens the browser's Save
-                 dialog over the editor, which is what happens today. These
-                 only fire while focus is INSIDE CodeMirror; the document-level
-                 pair below covers the title field and the rail. --%>
-            extraKeys: {
-                'Cmd-S': rollerSaveDraft,
-                'Ctrl-S': rollerSaveDraft,
-                'Ctrl-Enter': rollerPublish,
-                'Cmd-Enter': rollerPublish
-            }
-        });
 
         <%-- Warn before leaving with unsaved edits, and stand down on submit.
              Bound ONCE, tracking a dirty flag. The previous version registered
@@ -194,7 +91,7 @@
              local snapshot is a recovery mechanism, not a reason to stop
              telling someone they are walking away from unsaved work. --%>
         var rollerEntryDirty = false;
-        rollerEditor.codemirror.on('change', function () {
+        rollerEditorChangeListeners.push(function () {
             rollerEntryDirty = true;
         });
         $("#entry").on('input change', function () {
@@ -241,127 +138,28 @@
                 getText: rollerGetEntryText,
                 setText: rollerSetEntryText,
                 onEditorChange: function (callback) {
-                    rollerEditor.codemirror.on('change', callback);
+                    rollerEditorChangeListeners.push(callback);
                 }
             });
         }
 
-        <%-- Every card goes through insertMediaFile, the editor's one insert
-             seam, so the WYSIWYG-for-Markdown surface that may replace EasyMDE
-             inherits the whole menu by reimplementing a single function. --%>
-        $(".shortcode-card").on('click', function (event) {
-            event.preventDefault();
-            if (this.dataset.chooser === 'true') {
-                onClickMediaFileInsert();
-            } else {
-                insertMediaFile(this.dataset.snippet);
-                rollerEditor.codemirror.focus();
-            }
-        });
-    });
-
-    <%-- The preview is rendered by the SERVER, not by a Markdown library in
-         the browser. Only the server can expand [gallery], [map] and the rest,
-         and a preview that disagreed with the published page about those would
-         be worse than no preview at all. --%>
-    function rollerRenderPreview(plainText, preview) {
-        $.ajax({
-            type: 'POST',
-            url: '<c:url value="/roller-ui/authoring/entryEdit!preview.rol"/>',
-            data: {
-                id: $("input[name='bean.id']").val(),
-                text: plainText,
-                weblog: $("input[name='weblog']").val(),
-                '${_csrf.parameterName}': '${_csrf.token}'
-            },
-            success: function (html) { preview.innerHTML = html; },
-            error: function () {
-                preview.textContent = '<spring:message code="weblogEdit.previewFailed"/>';
-            }
-        });
-        return '<spring:message code="weblogEdit.previewLoading"/>';
-    }
-
-    <%-- The one seam for putting text into the editor, used by the media
-         chooser (which inserts an [image id=..] shortcode) and by the browser
-         tests. Everything else talks to the editor through here, so swapping
-         the editor again does not mean hunting down its callers. --%>
-    function insertMediaFile(toInsert) {
-        rollerEditor.codemirror.replaceSelection(toInsert);
-    }
-
-    function rollerSetEntryText(text) {
-        rollerEditor.value(text);
-    }
-
-    function rollerGetEntryText() {
-        return rollerEditor.value();
-    }
-
-    <%-- Common functions --%>
-
-    <%-- Opens the media chooser. With no argument the chosen file is inserted
-         into the editor at the cursor; with a picker
-         target ('featuredImage' / 'ogImage') the choice is routed to
-         onImagePicked in EntryEdit.jsp instead. --%>
-    function onClickMediaFileInsert(pickerTarget) {
-        window.mediaPickerTarget = pickerTarget || null;
-        window.mediaLightboxCloseRequested = false;
-        <c:url var="mediaFileImageChooser" value="/roller-ui/authoring/overlay/mediaFileImageChooser.rol">
-        <c:param name="weblog" value="${actionWeblog.handle}"/>
-        </c:url>
-        $("#mediaFileEditor").attr('src', '${mediaFileImageChooser}');
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('mediafile_edit_lightbox')).show();
-    }
-
-    function onClose() {
-        $("#mediaFileEditor").attr('src', 'about:blank');
-    }
-
-    <%-- Bootstrap silently ignores hide() while the fade-in transition is
-         still running, so selecting a file quickly after opening the chooser
-         would leave the modal stuck open. Ask for the close, and if the modal
-         is still transitioning, the shown.bs.modal listener below re-issues
-         it once the fade-in has finished. --%>
-    function closeMediaFileLightbox() {
-        window.mediaLightboxCloseRequested = true;
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('mediafile_edit_lightbox')).hide();
-    }
-
-    document.getElementById('mediafile_edit_lightbox').addEventListener('shown.bs.modal', function () {
-        if (window.mediaLightboxCloseRequested) {
-            bootstrap.Modal.getOrCreateInstance(this).hide();
+        <%-- roller-draft.js dispatches this on the bar element right after it
+             writes a snapshot to localStorage. "Only if still dirty" matters
+             at submit time: the entry's own submit handler above sets
+             rollerEntryDirty = false BEFORE roller-draft.js's own submit
+             handler runs save() and dispatches this event (both are bound on
+             #entry; jQuery and native handlers on the same element still run
+             in registration order, and this page's dirty-flag handler is
+             registered first) -- so a real save does not flash "Draft saved
+             locally" a moment before the page reloads to "Saved". --%>
+        var draftBarForStatus = document.getElementById('draftRecoveryBar');
+        if (draftBarForStatus) {
+            draftBarForStatus.addEventListener('roller-draft:saved', function () {
+                if (rollerEntryDirty) {
+                    rollerSetSaveState('savedLocally');
+                }
+            });
         }
     });
-
-    <%-- Callback from MediaFileImageChooser.jsp inside the iframe. The id is a
-         later addition; callers that only pass (name, url, isImage) still work. --%>
-    function onSelectMediaFile(name, url, isImage, id) {
-        closeMediaFileLightbox();
-        $("#mediaFileEditor").attr('src', 'about:blank');
-        if (window.mediaPickerTarget) {
-            var target = window.mediaPickerTarget;
-            window.mediaPickerTarget = null;
-            if (typeof onImagePicked === 'function') {
-                onImagePicked(target, name, url, isImage, id);
-            }
-            return;
-        }
-        if (isImage === "true") {
-            if (id) {
-                <%-- The [image] shortcode expands at render time into a
-                     responsive <figure><picture> with the full srcset ladder,
-                     so authors get the rendition pipeline automatically.
-                     Existing entries with the old raw <img> markup are left
-                     exactly as they are. --%>
-                insertMediaFile('[image id="' + id + '"]');
-            } else {
-                <%-- Historic fallback for callers that never pass the id. --%>
-                insertMediaFile('<a href="' + url + '"><img src="' + url + '?t=true" alt="' + name + '" /></a>');
-            }
-        } else {
-            insertMediaFile('<a href="' + url + '">' + name + '</a>');
-        }
-    }
 
 </script>

@@ -26,6 +26,7 @@ import java.util.Base64;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.roller.it.support.Editor;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,7 +38,6 @@ import static com.codeborne.selenide.Condition.text;
 import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
 import static com.codeborne.selenide.Selenide.$$;
-import static com.codeborne.selenide.Selenide.executeJavaScript;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -90,9 +90,7 @@ class RedirectIT extends RollerIT {
         $("#page_bean_slug").setValue("old-name");
         $("#page_bean_title").setValue("Moving Target");
         $("#page_bean_status").selectOptionByValue("PUBLISHED");
-        $(".CodeMirror").should(visible);
-        executeJavaScript("rollerSetEntryText(arguments[0]);",
-                "This page is about to move.");
+        Editor.setText("This page is about to move.");
         saveOpenPage();
         assertEquals(200, send(raw, oldUrl).statusCode(),
                 "the page must be live at its original slug before the rename");

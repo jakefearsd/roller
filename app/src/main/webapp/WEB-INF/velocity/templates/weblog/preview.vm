@@ -1,0 +1,51 @@
+#**
+The default rendering for the editor's live-preview shell, used when the
+weblog's theme does not supply a template named _preview.
+
+Deliberately not a page: no header, no nav, no pager, no entry chrome. The
+shell exists so an author sees their prose in the weblog's own stylesheet
+while they type, and the editor fills #previewArticle over postMessage (see
+#showPreviewShellScript). A theme that ships its own _preview names the
+classes its reading column is actually styled through; this one cannot know
+them, so it uses neutral roller-preview-* names and gets the stylesheet, the
+measure-free defaults and the shortcode assets right instead.
+*#
+<!DOCTYPE html>
+## lang must be a BCP-47 tag; $model.weblog.locale is Java's stored form
+## ("en_US"), which no user agent recognises. WeblogWrapper#getLanguageTag
+## does the conversion -- same as templates/weblog/page.vm.
+<html lang="$model.weblog.getLanguageTag()">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    ## The bundled themes' standard policy with one directive changed:
+    ## frame-ancestors 'self' rather than 'none', because this document is
+    ## MEANT to be framed -- by the editor, on the same origin. Everything
+    ## else stays byte-identical (font-src included, since a theme may
+    ## self-host a webfont) so a preview never renders under a policy the
+    ## published page does not have.
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src * data:; frame-src https://www.youtube-nocookie.com https://player.vimeo.com; font-src 'self'; base-uri 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'self'">
+    <title>Preview</title>
+    <link rel="stylesheet" href="$model.weblog.stylesheet">
+    <style>
+    .roller-preview { margin: 0; }
+    .roller-preview-main { max-width: 46rem; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+    </style>
+    ## The same four the themes call, in the same order and for the same
+    ## reason: #showEmbedAssets binds on DOMContentLoaded, and the gallery and
+    ## map stylesheets arriving at the end of <body> would be a flash of
+    ## unstyled gallery/map. #showAudienceAssets is deliberately absent -- a
+    ## [contact] or [subscribe] form in a preview would be a live, posting
+    ## form on unsaved text.
+    #showGalleryGridStyles()
+    #showGalleryAssets()
+    #showMapAssets()
+    #showEmbedAssets()
+    #showPreviewShellScript()
+</head>
+<body class="roller-preview">
+<main class="roller-preview-main">
+    <article id="previewArticle" class="roller-preview-prose"></article>
+</main>
+</body>
+</html>

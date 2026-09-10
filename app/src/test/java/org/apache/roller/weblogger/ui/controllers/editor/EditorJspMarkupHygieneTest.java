@@ -172,8 +172,16 @@ class EditorJspMarkupHygieneTest {
                         "the just-uploaded URL must be copyable"),
                 new Expected("MediaFileEdit.jsp", "clip_shortcode",
                         "the canonical [image] embed string must be shown and copyable"),
-                new Expected("PageEdit.jsp", "id=\"page_permalink\"",
-                        "a saved page must show its own URL"),
+                // The address moved onto the writing surface when the page
+                // editor took the entry editor's layout: the weblog's own
+                // root as a prefix span, the slug as the field beside it, and
+                // the copy control on a published page. Same affordance, two
+                // halves; the old single anchor (#page_permalink) also showed
+                // a "/page/<slug>" URL that a WeblogPage is not served at.
+                new Expected("PageEdit.jsp", "class=\"editor-slug-prefix\"",
+                        "a page must show its own URL, rooted at the weblog"),
+                new Expected("PageEdit.jsp", "data-clipboard-text=",
+                        "a published page's URL must be copyable"),
                 new Expected("Pages.jsp", "${urls.weblogAbsolute(actionWeblog)}page/${p.slug}",
                         "a published page's slug must link to the live page"),
                 new Expected("ThemeEdit.jsp", "themeEditor.viewYourBlog",

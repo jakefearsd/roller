@@ -17,6 +17,10 @@
  */
 package org.apache.roller.it;
 
+import java.time.Duration;
+
+import com.codeborne.selenide.SelenideElement;
+import org.apache.roller.it.support.Editor;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,7 +29,7 @@ import static com.codeborne.selenide.Condition.exist;
 import static com.codeborne.selenide.Condition.text;
 import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
-import static com.codeborne.selenide.Selenide.executeJavaScript;
+import static com.codeborne.selenide.Selenide.switchTo;
 
 /**
  * The editor's preview pane, driven the way an author drives it.
@@ -40,38 +44,93 @@ import static com.codeborne.selenide.Selenide.executeJavaScript;
  * <p>It also pins the thing that makes a server-rendered preview worth having:
  * shortcodes expand here exactly as they will on the published page, which no
  * in-browser Markdown library could do.
+ *
+ * <p>Both tests read the rendered fragment <em>inside the iframe</em>. The
+ * preview is not a bare HTML dump into a div any more: it is the weblog's own
+ * theme shell, framed, fed over {@code postMessage}. Reading it from the
+ * parent document would find nothing at all, which is the point -- the iframe
+ * is the feature.
  */
 class MarkdownPreviewIT extends RollerIT {
 
     private static final String ENTRY_ADD = "/roller-ui/authoring/entryAdd.rol?weblog=" + WEBLOG_HANDLE;
 
-    private static final String EDITOR_BODY = ".CodeMirror";
+    /** The mode control's Preview radio, and the frame it reveals. */
+    private static final String PREVIEW_BUTTON = Editor.MODE_PREVIEW;
+    private static final String PREVIEW_FRAME = Editor.PREVIEW_FRAME;
 
-    /** EasyMDE's own preview toggle, and the pane it reveals. */
-    private static final String PREVIEW_BUTTON = "button.preview";
-    private static final String PREVIEW_PANE = ".editor-preview";
+    /**
+     * The shell renders through the theme, so the article carries the theme's
+     * own prose class -- the fixture weblog is on journal.
+     */
+    private static final String PREVIEW_ARTICLE = "#previewArticle.qj-prose";
+
+    /** The push is debounced by 400ms and then round-trips to the server. */
+    private static final Duration RENDER = Duration.ofSeconds(5);
 
     @BeforeEach
     void logIn() {
         loginAsAdmin();
     }
 
+    /**
+     * Opens the add-entry screen with the editor mounted and the write pane
+     * showing.
+     *
+     * <p>The mode control persists in {@code localStorage} and the browser
+     * lives for the whole class, so the previous test's Preview click is
+     * still in force when the next one opens the page -- and in preview mode
+     * {@code .editor-write} is {@code display:none}, where
+     * {@code Editor.setText} would wait forever for a pane that is never
+     * shown. Waiting for the editor to exist first is what makes the reset
+     * click land on a page whose handlers are bound.
+     */
+    private void openEditorInWriteMode() {
+        openPath(ENTRY_ADD);
+        $("#entry").should(exist);
+        $(Editor.ROOT).should(exist);
+        $(Editor.MODE_WRITE).click();
+        $(Editor.ROOT).shouldBe(visible);
+    }
+
     @Test
     void thePreviewRendersMarkdownThroughTheServer() {
         String suffix = Long.toString(System.nanoTime(), 36);
 
-        openPath(ENTRY_ADD);
-        $("#entry").should(exist);
+        openEditorInWriteMode();
         $("input[name='bean.title']").setValue("IT Preview " + suffix);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript("rollerSetEntryText(arguments[0]);",
-                "## Heading " + suffix + "\n\nA **bold** word.\n");
+        Editor.setText("## Heading " + suffix + "\n\nA **bold** word.\n");
 
         $(PREVIEW_BUTTON).should(visible).click();
 
+        switchTo().frame($(PREVIEW_FRAME).shouldBe(visible));
         // Markdown became HTML, which only the server does.
-        $(PREVIEW_PANE).shouldBe(visible).shouldHave(text("Heading " + suffix));
-        $(PREVIEW_PANE + " h2").should(exist);
-        $(PREVIEW_PANE + " strong").shouldHave(text("bold"));
+        $(PREVIEW_ARTICLE).shouldHave(text("Heading " + suffix), RENDER);
+        $(PREVIEW_ARTICLE + " h2").should(exist);
+        $(PREVIEW_ARTICLE + " strong").shouldHave(text("bold"));
+        switchTo().defaultContent();
+    }
+
+    /**
+     * Split mode is the theme, live: the frame carries the weblog's own
+     * stylesheet, and typing in the left pane reaches the right one without
+     * anybody clicking anything.
+     */
+    @Test
+    void theSplitPaneIsTheThemeAndFollowsTyping() {
+        openEditorInWriteMode();
+        Editor.setText("## Field notes\n\nSome *emphasis*.");
+
+        $(Editor.MODE_SPLIT).should(visible).click();
+        SelenideElement frame = $(PREVIEW_FRAME).shouldBe(visible);
+        switchTo().frame(frame);
+        $("link[rel='stylesheet'][href*='journal']").should(exist);
+        $(PREVIEW_ARTICLE + " h2").shouldHave(text("Field notes"), RENDER);
+        switchTo().defaultContent();
+
+        Editor.type("\n\nA new paragraph.");
+        switchTo().frame($(PREVIEW_FRAME));
+        $(PREVIEW_ARTICLE + " p").shouldHave(text("A new paragraph."), RENDER);
+        switchTo().defaultContent();
     }
 }

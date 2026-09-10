@@ -20,6 +20,7 @@ package org.apache.roller.it;
 import com.codeborne.selenide.Selenide;
 import com.codeborne.selenide.SelenideElement;
 import org.apache.roller.it.support.BrowserHealth;
+import org.apache.roller.it.support.Editor;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -82,14 +83,6 @@ class GalleryIT extends RollerIT {
     private static final String MEDIA_VIEW = "/roller-ui/authoring/mediaFileView.rol?weblog=" + WEBLOG_HANDLE;
     private static final String GLOBAL_CONFIG = "/roller-ui/admin/globalConfig.rol";
 
-    /**
-     * The editor's editable surface. Tests wait for this and then put text in
-     * through {@code rollerSetEntryText}, the page's own seam -- never through
-     * the editor's API directly, so replacing the editor is one change here
-     * rather than one in every journey.
-     */
-    private static final String EDITOR_BODY = ".CodeMirror";
-
     /** Rendered on the edit page only once the entry is actually published. */
     private static final String PERMALINK = "#entry_bean_permalink";
 
@@ -115,10 +108,7 @@ class GalleryIT extends RollerIT {
         openPath(ENTRY_ADD);
         $("#entry").should(exist);
         $("input[name='bean.title']").setValue("IT Gallery " + suffix);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript(
-                "rollerSetEntryText(arguments[0]);",
-                "<p>Shot log " + suffix + "</p><p>[gallery dir=\"default\"]</p>");
+        Editor.setText("<p>Shot log " + suffix + "</p><p>[gallery dir=\"default\"]</p>");
         $("button[formaction$='entryAdd!publish.rol']").click();
         $(PERMALINK).should(exist);
         String permalink = $(PERMALINK).getAttribute("href");

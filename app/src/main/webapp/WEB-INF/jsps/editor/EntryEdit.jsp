@@ -462,19 +462,6 @@
             </div>
         </div>
 
-        <c:if test="${actionName == 'entryEdit'}">
-            <%-- delete: a quiet text link, not a red button. id/title ride in
-                 data-* attributes rather than an interpolated onclick string --
-                 fn:escapeXml renders an apostrophe as &#039;, which the HTML
-                 parser decodes back to ' BEFORE the onclick attribute compiles
-                 as JavaScript, so an entry titled e.g. "Maiia's trip" made this
-                 button a permanent SyntaxError. See the delegated handler
-                 below (same convention as MediaFileView.jsp:493). --%>
-            <button type="button" id="deleteEntryButton" class="delete-link"
-                    data-entry-id="${entry.id}" data-entry-title="${fn:escapeXml(entry.title)}"
-                    aria-label="<spring:message code='weblogEdit.deleteEntry'/>: ${fn:escapeXml(entry.title)}"><spring:message code="weblogEdit.deleteEntry"/></button>
-        </c:if>
-
     </div>
 
 <sec:csrfInput/>
@@ -485,78 +472,90 @@
      Shown for published entries only -- an unpublished draft has no rendered
      content to mail out. Outside the main entry form (its modal is its own
      POST with its own CSRF input), but placed in the rail's grid column so it
-     reads as one more quiet box below the rail. --%>
+     reads as one more quiet box below the rail -- same shape as Publish/
+     Organize/the SEO drawer (.editor-box/.rail-group-label), not a Bootstrap
+     card: the rail is one continuous column, not boxes-then-cards. --%>
 
 <c:if test="${actionName == 'entryEdit' && entry.published}">
-    <div id="newsletterCard" class="card editor-rail-extra">
-        <div class="card-header"><spring:message code="newsletter.cardTitle"/></div>
-        <div class="card-body">
-            <c:choose>
-                <c:when test="${not empty entry.newsletterSentAt}">
-                    <p class="pagetip" id="newsletterSentAt">
-                        <spring:message code="newsletter.sentAt" arguments="${entry.newsletterSentAt}"/>
-                    </p>
-                </c:when>
-                <c:when test="${empty actionWeblog.newsletterListUuid}">
-                    <p class="pagetip" id="newsletterNoList">
-                        <spring:message code="newsletter.noList"/>
-                        <c:url value="/roller-ui/authoring/weblogConfig.rol" var="newsletterWeblogConfigUrl">
-                            <c:param name="weblog" value="${actionWeblog.handle}"/>
-                        </c:url>
-                        <a href="${newsletterWeblogConfigUrl}"><spring:message code="tabbedmenu.website.settings"/></a>
-                    </p>
-                </c:when>
-                <c:otherwise>
-                    <button type="button" class="btn btn-primary" id="sendNewsletterButton"
-                            onclick="showNewsletterModal()">
-                        <spring:message code="newsletter.send"/>
-                    </button>
-                </c:otherwise>
-            </c:choose>
-        </div>
+    <div id="newsletterCard" class="editor-box editor-rail-extra">
+        <p class="rail-group-label"><spring:message code="newsletter.cardTitle"/></p>
+        <c:choose>
+            <c:when test="${not empty entry.newsletterSentAt}">
+                <p class="pagetip" id="newsletterSentAt">
+                    <spring:message code="newsletter.sentAt" arguments="${entry.newsletterSentAt}"/>
+                </p>
+            </c:when>
+            <c:when test="${empty actionWeblog.newsletterListUuid}">
+                <p class="pagetip" id="newsletterNoList">
+                    <spring:message code="newsletter.noList"/>
+                    <c:url value="/roller-ui/authoring/weblogConfig.rol" var="newsletterWeblogConfigUrl">
+                        <c:param name="weblog" value="${actionWeblog.handle}"/>
+                    </c:url>
+                    <a href="${newsletterWeblogConfigUrl}"><spring:message code="newsletter.noList.link"/></a>
+                </p>
+            </c:when>
+            <c:otherwise>
+                <button type="button" class="btn btn-primary" id="sendNewsletterButton"
+                        onclick="showNewsletterModal()">
+                    <spring:message code="newsletter.send"/>
+                </button>
+            </c:otherwise>
+        </c:choose>
     </div>
 </c:if>
 
 <%-- entry revisions: every content-changing save leaves one. Outside the main
-     entry form for the same reason the newsletter card is: restore is its own
+     entry form for the same reason the newsletter box is: restore is its own
      POST with its own CSRF token, and forms must not nest. --%>
 
 <c:if test="${actionName == 'entryEdit' && not empty entryRevisions}">
-    <div id="entryRevisionsCard" class="card editor-rail-extra">
-        <div class="card-header"><spring:message code="weblogEdit.revisions"/></div>
-        <div class="card-body">
-            <p class="pagetip"><spring:message code="weblogEdit.revisionsTip"/></p>
-            <table class="table table-sm" id="entryRevisionsTable">
-                <c:forEach items="${entryRevisions}" var="revision">
-                    <tr>
-                        <td>
-                            <spring:message code="weblogEntryQuery.date.toStringFormat"
-                                            arguments="${revision.created}"/>
-                        </td>
-                        <td><c:out value="${revision.creator}"/></td>
-                        <td>
-                            <button type="button" class="btn btn-link btn-sm revision-diff-button"
-                                    data-revision-id="${revision.id}">
-                                <spring:message code="weblogEdit.revisionCompare"/>
+    <div id="entryRevisionsCard" class="editor-box editor-rail-extra">
+        <p class="rail-group-label"><spring:message code="weblogEdit.revisions"/></p>
+        <p class="pagetip"><spring:message code="weblogEdit.revisionsTip"/></p>
+        <table class="table table-sm" id="entryRevisionsTable">
+            <c:forEach items="${entryRevisions}" var="revision">
+                <tr>
+                    <td>
+                        <spring:message code="weblogEntryQuery.date.toStringFormat"
+                                        arguments="${revision.created}"/>
+                    </td>
+                    <td><c:out value="${revision.creator}"/></td>
+                    <td>
+                        <button type="button" class="btn btn-link btn-sm revision-diff-button"
+                                data-revision-id="${revision.id}">
+                            <spring:message code="weblogEdit.revisionCompare"/>
+                        </button>
+                    </td>
+                    <td>
+                        <form method="post" style="display:inline"
+                              action="${pageContext.request.contextPath}/roller-ui/authoring/entryEdit!restoreRevision.rol">
+                            <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
+                            <input type="hidden" name="bean.id" value="${entry.id}"/>
+                            <input type="hidden" name="revisionId" value="${revision.id}"/>
+                            <sec:csrfInput/>
+                            <button type="submit" class="btn btn-outline-secondary btn-sm revision-restore-button">
+                                <spring:message code="weblogEdit.revisionRestore"/>
                             </button>
-                        </td>
-                        <td>
-                            <form method="post" style="display:inline"
-                                  action="${pageContext.request.contextPath}/roller-ui/authoring/entryEdit!restoreRevision.rol">
-                                <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
-                                <input type="hidden" name="bean.id" value="${entry.id}"/>
-                                <input type="hidden" name="revisionId" value="${revision.id}"/>
-                                <sec:csrfInput/>
-                                <button type="submit" class="btn btn-outline-secondary btn-sm revision-restore-button">
-                                    <spring:message code="weblogEdit.revisionRestore"/>
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                </c:forEach>
-            </table>
-        </div>
+                        </form>
+                    </td>
+                </tr>
+            </c:forEach>
+        </table>
     </div>
+</c:if>
+
+<c:if test="${actionName == 'entryEdit'}">
+    <%-- delete: a quiet text link, not a red button. Last thing in the rail's
+         column, after the newsletter and revisions boxes. id/title ride in
+         data-* attributes rather than an interpolated onclick string --
+         fn:escapeXml renders an apostrophe as &#039;, which the HTML parser
+         decodes back to ' BEFORE the onclick attribute compiles as
+         JavaScript, so an entry titled e.g. "Maiia's trip" made this button a
+         permanent SyntaxError. See the delegated handler below (same
+         convention as MediaFileView.jsp:493). --%>
+    <button type="button" id="deleteEntryButton" class="delete-link editor-rail-extra"
+            data-entry-id="${entry.id}" data-entry-title="${fn:escapeXml(entry.title)}"
+            aria-label="<spring:message code='weblogEdit.deleteEntry'/>: ${fn:escapeXml(entry.title)}"><spring:message code="weblogEdit.deleteEntry"/></button>
 </c:if>
 
 </div><%-- /editor-grid --%>
@@ -812,29 +811,9 @@
         $('#seo_jsonldType').on('change', updateSeoJsonLdRows);
     });
 
-    <%-- Featured/social image pickers: same media chooser as the editor's
-         "insert media file" link, routed to a hidden id input + thumbnail
-         preview instead of inserting into the editor. Shared by both targets:
-         'featuredImage' and 'ogImage'. --%>
-
-    function openImagePicker(target) {
-        onClickMediaFileInsert(target);
-    }
-
-    <%-- Called by onSelectMediaFile (EntryEditor.jsp) when a picker target is active. --%>
-    function onImagePicked(target, name, url, isImage, id) {
-        if (isImage !== "true" || !id) {
-            return;
-        }
-        $('#seo_' + target + 'Id').val(id);
-        $('#seo_' + target + '_preview').attr('src', url + '?t=true').show();
-        $('#seo_' + target + '_clear').show();
-    }
-
-    function clearPickedImage(target) {
-        $('#seo_' + target + 'Id').val('');
-        $('#seo_' + target + '_preview').removeAttr('src').hide();
-        $('#seo_' + target + '_clear').hide();
-    }
+    <%-- The featured/social image pickers themselves (openImagePicker /
+         onImagePicked / clearPickedImage) live in EditorScript.jsp: they are
+         generic over the seo_<target>* id convention, and the page editor's
+         own SEO drawer uses the same three. --%>
 
 </script>

@@ -528,7 +528,20 @@ app/pom.xml -- update both together.
 }
 </style>
 <script type="module">
-if (document.querySelector('.jgrid')) {
+// Named and re-runnable, because the editor's live preview replaces the
+// article's innerHTML on every push and the nodes this binds to are gone by
+// then. On a public page it still runs exactly once, from the call at the
+// bottom of this module.
+async function rollerInitGalleries(root) {
+  // Tear the old lightbox down BEFORE the .jgrid guard, not after: the live
+  // preview can swap in a fragment whose last gallery was just deleted, and
+  // if the early return below ran first the old lightbox would be left
+  // bound to nodes this swap already removed from the document.
+  if (window.rollerGalleryLightbox) {
+    window.rollerGalleryLightbox.destroy();
+    window.rollerGalleryLightbox = null;
+  }
+  if (!(root || document).querySelector('.jgrid')) { return; }
   const { default: PhotoSwipeLightbox } =
       await import('$url.site/webjars/photoswipe/5.4.3/dist/photoswipe-lightbox.esm.min.js');
   const lightbox = new PhotoSwipeLightbox({
@@ -582,7 +595,16 @@ if (document.querySelector('.jgrid')) {
     });
   });
   lightbox.init();
+  window.rollerGalleryLightbox = lightbox;
 }
+rollerInitGalleries(document);
+// The seam the preview shell's own script calls after each swap (see
+// showPreviewShellScript below). Chained rather than assigned: the map and
+// embed macros register on the same hook, and whichever runs last must not
+// silently drop the others.
+window.rollerPreviewInit = (function (prev) {
+  return function (root) { if (prev) { prev(root); } rollerInitGalleries(root); };
+})(window.rollerPreviewInit);
 </script>
 #end
 
@@ -654,9 +676,31 @@ app/pom.xml -- update both together.
 .travel-map .leaflet-popup-content { word-break: break-word; }
 </style>
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-  var containers = document.querySelectorAll('.travel-map');
+// Leaflet is loaded once per document and then reused; 'idle' until the
+// first map is found, 'loading' while the script element is in flight,
+// 'ready' once L exists and the marker icons are pinned.
+var rollerLeafletState = 'idle';
+// Containers found while the script was still loading, built when it lands.
+var rollerLeafletQueue = [];
+// Every map this page has built, so the ones whose container the editor's
+// preview has since replaced can be torn down. Leaflet binds a window
+// 'resize' listener per map, which would otherwise retain every map (and
+// its detached DOM) for the life of a long editing session.
+var rollerLiveMaps = [];
+
+// Re-runnable, because the editor's live preview swaps the article's
+// innerHTML and the containers below arrive after DOMContentLoaded has long
+// fired. The :not([data-roller-map]) filter is what makes a second call over
+// a document that partly overlaps the first one safe -- L.map() on an
+// already-initialised container throws.
+function rollerInitMaps(root) {
+  rollerReleaseDetachedMaps();
+  var containers = (root || document).querySelectorAll('.travel-map:not([data-roller-map])');
   if (!containers.length) { return; }
+  if (rollerLeafletState === 'ready') { rollerBuildMaps(containers); return; }
+  Array.prototype.push.apply(rollerLeafletQueue, containers);
+  if (rollerLeafletState === 'loading') { return; }
+  rollerLeafletState = 'loading';
   var script = document.createElement('script');
   script.src = '$url.site/webjars/leaflet/1.9.4/dist/leaflet.js';
   script.onload = function () {
@@ -668,74 +712,116 @@ document.addEventListener('DOMContentLoaded', function () {
       shadowUrl: '$url.site/webjars/leaflet/1.9.4/dist/images/marker-shadow.png'
     });
     L.Icon.Default.imagePath = '';
-    Array.prototype.forEach.call(containers, initMap);
+    rollerLeafletState = 'ready';
+    var queued = rollerLeafletQueue;
+    rollerLeafletQueue = [];
+    rollerBuildMaps(queued);
+  };
+  // A network hiccup or a blocked CDN request must not strand the state at
+  // 'loading' forever -- without this, every later map on the page (or a
+  // retry from the live preview) would queue behind a script that is never
+  // coming and never build anything. Reset to 'idle' and drop the queue so
+  // the next rollerInitMaps call starts a fresh load attempt.
+  script.onerror = function () {
+    rollerLeafletState = 'idle';
+    rollerLeafletQueue = [];
   };
   document.head.appendChild(script);
+}
 
-  function readPins(el) {
-    // the browser has already decoded the attribute entities for us
-    if (!el.dataset.pins) { return []; }
-    try {
-      var parsed = JSON.parse(el.dataset.pins);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (e) {
-      return [];
+function rollerBuildMaps(containers) {
+  Array.prototype.forEach.call(containers, function (el) {
+    // The queue can hold the same container twice (two calls before the
+    // script landed); the mark is set by the first pass and skips the rest.
+    if (el.dataset.rollerMap) { return; }
+    rollerCreateMap(el);
+    el.dataset.rollerMap = '1';
+  });
+}
+
+function rollerReleaseDetachedMaps() {
+  for (var i = rollerLiveMaps.length - 1; i >= 0; i--) {
+    if (!document.contains(rollerLiveMaps[i].getContainer())) {
+      rollerLiveMaps[i].remove();
+      rollerLiveMaps.splice(i, 1);
     }
   }
+}
 
-  function readCenter(el) {
-    if (!el.dataset.center) { return null; }
-    var parts = el.dataset.center.split(',');
-    var lat = parseFloat(parts[0]);
-    var lng = parseFloat(parts[1]);
-    return isFinite(lat) && isFinite(lng) ? [lat, lng] : null;
-  }
-
-  function initMap(el) {
-    var pins = readPins(el);
-    var center = readCenter(el);
-    var zoom = parseInt(el.dataset.zoom, 10);
-    var authorZoom = zoom > 0 && zoom <= 19;
-    var points = [];
-    var i;
-    for (i = 0; i < pins.length; i++) {
-      var lat = Number(pins[i].lat);
-      var lng = Number(pins[i].lng);
-      if (isFinite(lat) && isFinite(lng)) {
-        points.push([lat, lng, pins[i].label]);
-      }
-    }
-    if (!points.length && !center) { return; }
-
-    // A view has to exist before layers are added; fitBounds refines it below.
-    var start = center || [points[0][0], points[0][1]];
-    var map = L.map(el).setView(start, authorZoom ? zoom : 13);
-    L.tileLayer('$mapTileUrl', {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(map);
-
-    var latlngs = [];
-    for (i = 0; i < points.length; i++) {
-      latlngs.push([points[i][0], points[i][1]]);
-      var marker = L.marker([points[i][0], points[i][1]]).addTo(map);
-      if (points[i][2]) {
-        // author text, never markup: a label is whatever they typed
-        var label = document.createElement('span');
-        label.textContent = points[i][2];
-        marker.bindPopup(label);
-      }
-    }
-    if (el.dataset.route === 'true' && latlngs.length > 1) {
-      L.polyline(latlngs).addTo(map);
-    }
-    // An explicit zoom= is the author overriding the fit; otherwise frame the
-    // pins, capped so a single pin does not slam to street level.
-    if (latlngs.length && !authorZoom) {
-      map.fitBounds(latlngs, { padding: [24, 24], maxZoom: 15 });
-    }
-  }
+document.addEventListener('DOMContentLoaded', function () {
+  rollerInitMaps(document);
 });
+// The seam the preview shell's own script calls after each swap (see
+// showPreviewShellScript below); chained so the gallery and embed macros'
+// own registrations survive.
+window.rollerPreviewInit = (function (prev) {
+  return function (root) { if (prev) { prev(root); } rollerInitMaps(root); };
+})(window.rollerPreviewInit);
+
+function rollerReadPins(el) {
+  // the browser has already decoded the attribute entities for us
+  if (!el.dataset.pins) { return []; }
+  try {
+    var parsed = JSON.parse(el.dataset.pins);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function rollerReadCenter(el) {
+  if (!el.dataset.center) { return null; }
+  var parts = el.dataset.center.split(',');
+  var lat = parseFloat(parts[0]);
+  var lng = parseFloat(parts[1]);
+  return isFinite(lat) && isFinite(lng) ? [lat, lng] : null;
+}
+
+function rollerCreateMap(el) {
+  var pins = rollerReadPins(el);
+  var center = rollerReadCenter(el);
+  var zoom = parseInt(el.dataset.zoom, 10);
+  var authorZoom = zoom > 0 && zoom <= 19;
+  var points = [];
+  var i;
+  for (i = 0; i < pins.length; i++) {
+    var lat = Number(pins[i].lat);
+    var lng = Number(pins[i].lng);
+    if (isFinite(lat) && isFinite(lng)) {
+      points.push([lat, lng, pins[i].label]);
+    }
+  }
+  if (!points.length && !center) { return; }
+
+  // A view has to exist before layers are added; fitBounds refines it below.
+  var start = center || [points[0][0], points[0][1]];
+  var map = L.map(el).setView(start, authorZoom ? zoom : 13);
+  L.tileLayer('$mapTileUrl', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map);
+
+  var latlngs = [];
+  for (i = 0; i < points.length; i++) {
+    latlngs.push([points[i][0], points[i][1]]);
+    var marker = L.marker([points[i][0], points[i][1]]).addTo(map);
+    if (points[i][2]) {
+      // author text, never markup: a label is whatever they typed
+      var label = document.createElement('span');
+      label.textContent = points[i][2];
+      marker.bindPopup(label);
+    }
+  }
+  if (el.dataset.route === 'true' && latlngs.length > 1) {
+    L.polyline(latlngs).addTo(map);
+  }
+  // An explicit zoom= is the author overriding the fit; otherwise frame the
+  // pins, capped so a single pin does not slam to street level.
+  if (latlngs.length && !authorZoom) {
+    map.fitBounds(latlngs, { padding: [24, 24], maxZoom: 15 });
+  }
+  rollerLiveMaps.push(map);
+}
 </script>
 #end
 
@@ -761,10 +847,15 @@ frame-src but not connect-src for these hosts.
 .video-embed.is-playing::after { display: none; }
 </style>
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-  var embeds = document.querySelectorAll('.video-embed');
+// Re-runnable for the editor's live preview, which replaces the article's
+// innerHTML long after DOMContentLoaded. The data-roller-embed mark is what
+// keeps a second pass over overlapping nodes from binding a second click
+// handler to the same placeholder.
+function rollerInitEmbeds(root) {
+  var embeds = (root || document).querySelectorAll('.video-embed:not([data-roller-embed])');
   if (!embeds.length) { return; }
   Array.prototype.forEach.call(embeds, function (embed) {
+    embed.dataset.rollerEmbed = '1';
     embed.addEventListener('click', function () {
       if (embed.classList.contains('is-playing')) { return; }
       var provider = embed.getAttribute('data-provider');
@@ -783,7 +874,16 @@ document.addEventListener('DOMContentLoaded', function () {
       embed.classList.add('is-playing');
     });
   });
+}
+document.addEventListener('DOMContentLoaded', function () {
+  rollerInitEmbeds(document);
 });
+// The seam the preview shell's own script calls after each swap (see
+// showPreviewShellScript below); chained so the gallery and map macros'
+// own registrations survive.
+window.rollerPreviewInit = (function (prev) {
+  return function (root) { if (prev) { prev(root); } rollerInitEmbeds(root); };
+})(window.rollerPreviewInit);
 </script>
 #end
 
@@ -910,6 +1010,66 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     slot.appendChild(form);
   });
+});
+</script>
+#end
+
+
+#**
+The receiving half of the editor's live preview.
+
+The shell templates (a theme's own _preview, or the shared
+WEB-INF/velocity/templates/weblog/preview.vm) render the theme's stylesheet
+and asset macros around one empty #previewArticle; the editor, in the parent
+document, posts the server-rendered fragment in and this swaps it.
+
+Three things here are load-bearing. The origin check is what stops any other
+frame or window scripting the preview surface -- the editor and the shell are
+same-origin by construction, so an event from anywhere else is not ours.
+window.rollerPreviewInit is the seam A5 defines: swapping innerHTML leaves
+the new nodes uninitialised, so the galleries, maps and embeds in the
+fragment need the asset scripts run over them again, and only the editor
+bundle knows how. And the ready message is what lets the editor stop
+guessing when the frame is live rather than posting into a document that has
+not parsed yet.
+*#
+#macro(showPreviewShellScript)
+<script>
+// Proportional, because there is no honest line-to-pixel mapping between
+// Markdown and its rendering: two lines of [gallery] become a screenful.
+function rollerPreviewScrollTo(fraction) {
+  var max = document.documentElement.scrollHeight - window.innerHeight;
+  window.scrollTo(0, Math.max(0, max) * fraction);
+}
+window.addEventListener('message', function (event) {
+  if (event.origin !== window.location.origin) { return; }
+  // The origin check alone cannot tell the editor tab that framed this
+  // document from any other same-origin tab that happens to be open; only
+  // our own parent may drive this shell.
+  if (event.source !== window.parent) { return; }
+  var data = event.data || {};
+  // A scroll carries no html: the editor sends one of these per animation
+  // frame while the author scrolls, and re-rendering on each would be absurd.
+  if (data.type === 'roller-preview-scroll') {
+    if (typeof data.scroll === 'number') { rollerPreviewScrollTo(data.scroll); }
+    return;
+  }
+  if (data.type !== 'roller-preview') { return; }
+  var article = document.getElementById('previewArticle');
+  if (!article) { return; }
+  article.innerHTML = data.html;
+  if (window.rollerPreviewInit) { window.rollerPreviewInit(article); }
+  if (typeof data.scroll === 'number') { rollerPreviewScrollTo(data.scroll); }
+});
+// Announced on DOMContentLoaded rather than from this inline script, which
+// runs during head parse. The gallery asset macro registers its half of
+// rollerPreviewInit from a module, and a module is deferred -- so announcing
+// readiness here would open a window in which the editor could push a
+// fragment whose galleries have nobody to initialise them. Deferred modules
+// are guaranteed to have run by DOMContentLoaded; the map and embed macros
+// are classic scripts and have run already either way.
+document.addEventListener('DOMContentLoaded', function () {
+  window.parent.postMessage({ type: 'roller-preview-ready' }, window.location.origin);
 });
 </script>
 #end

@@ -80,9 +80,10 @@ public class DesignCardsTest {
     void thereAreCardsToCheckAtAll() throws IOException {
         // Without this, every other assertion here passes vacuously if the
         // directory is ever moved or emptied.
-        // 18 since the comments-moderation card was withdrawn: it was drawn
-        // against Comments.jsp, and the comment subsystem was removed in W1.
-        assertEquals(18, cards().size(),
+        // 18 since the comments-moderation card was withdrawn (it was drawn
+        // against Comments.jsp, and the comment subsystem was removed in
+        // W1), +1 for editor-markdown-surface.html (Task A10).
+        assertEquals(19, cards().size(),
                 "expected the full committed card set; found: " + cards());
     }
 

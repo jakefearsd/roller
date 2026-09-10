@@ -24,11 +24,13 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 
 import org.apache.roller.it.support.BrowserHealth;
+import org.apache.roller.it.support.Editor;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceAccessMode;
 import org.junit.jupiter.api.parallel.ResourceLock;
+import org.openqa.selenium.Keys;
 
 import static com.codeborne.selenide.Condition.checked;
 import static com.codeborne.selenide.Condition.exist;
@@ -36,7 +38,7 @@ import static com.codeborne.selenide.Condition.text;
 import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
 import static com.codeborne.selenide.Selenide.$$;
-import static com.codeborne.selenide.Selenide.executeJavaScript;
+import static com.codeborne.selenide.Selenide.switchTo;
 import static com.codeborne.selenide.Selenide.webdriver;
 import static com.codeborne.selenide.WebDriverConditions.urlContaining;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -64,6 +66,21 @@ class PageIT extends RollerIT {
 
     private static final String CREATE_WEBLOG = "/roller-ui/createWeblog.rol";
 
+    /**
+     * The seeded weblog, on {@code journal} -- used by the two editor tests
+     * below, which need a theme whose preview shell is known and do not need a
+     * weblog of their own. The nav-link test above still owns a
+     * {@code portfolio} weblog, for the reason the class comment gives.
+     */
+    private static final String PAGE_EDIT_ON_SHARED =
+            "/roller-ui/authoring/pageEdit.rol?weblog=" + WEBLOG_HANDLE;
+
+    /** The shell renders through the theme; journal's prose class is qj-prose. */
+    private static final String PREVIEW_ARTICLE = "#previewArticle.qj-prose";
+
+    /** The push is debounced by 400ms and then round-trips to the server. */
+    private static final Duration RENDER = Duration.ofSeconds(5);
+
     private HttpClient http;
 
     @BeforeEach
@@ -85,10 +102,7 @@ class PageIT extends RollerIT {
         $("#pageEditForm").should(exist);
         $("#page_bean_slug").setValue("about");
         $("#page_bean_title").setValue("About Us");
-        $(".CodeMirror").should(visible);
-        executeJavaScript(
-                "rollerSetEntryText(arguments[0]);",
-                "This page has **bold** text.\n\n"
+        Editor.setText("This page has **bold** text.\n\n"
                         + "[cta href=\"https://example.com/book\" label=\"Book now\" "
                         + "note=\"Free cancellation\"]");
         saveOpenPage();
@@ -137,7 +151,84 @@ class PageIT extends RollerIT {
                 "the page URL must keep resolving for a reader even once it is hidden from navigation");
     }
 
+    /**
+     * The page editor previews the way the entry editor does: an iframe onto
+     * the weblog's own theme, fed over postMessage as the author types.
+     *
+     * <p>Mirrors {@code MarkdownPreviewIT.theSplitPaneIsTheThemeAndFollowsTyping}
+     * on purpose. A page renders through the same shortcode/Markdown/sanitize
+     * pipeline an entry does, so an author writing a page has exactly the same
+     * reason to see it set the way it will publish -- and the preview posts to
+     * its own endpoint ({@code pageEdit!preview.rol}), which nothing else
+     * exercises.
+     */
+    @Test
+    void theSplitPreviewIsTheThemeAndFollowsTyping() {
+        openPageEditorInWriteMode();
+        Editor.setText("## Field notes\n\nSome *emphasis*.");
+
+        $(Editor.MODE_SPLIT).should(visible).click();
+        switchTo().frame($(Editor.PREVIEW_FRAME).shouldBe(visible));
+        $("link[rel='stylesheet'][href*='journal']").should(exist);
+        $(PREVIEW_ARTICLE + " h2").shouldHave(text("Field notes"), RENDER);
+        switchTo().defaultContent();
+
+        Editor.type("\n\nA new paragraph.");
+        switchTo().frame($(Editor.PREVIEW_FRAME));
+        $(PREVIEW_ARTICLE + " p").shouldHave(text("A new paragraph."), RENDER);
+        switchTo().defaultContent();
+
+        // The mode is remembered in localStorage for the whole install, so a
+        // test that left preview mode on would hide .editor-write from every
+        // later test in this browser.
+        $(Editor.MODE_WRITE).click();
+    }
+
+    /**
+     * Ctrl/Cmd+S saves the open page from inside the editor.
+     *
+     * <p>The page editor has one Save button, so save and publish collapse to
+     * the same action -- but the binding still has to be the editor-level one:
+     * CodeMirror's own default keymap owns Mod-Enter, and the document-level
+     * handler bails on an already-handled event. Only a real keypress through
+     * a real editor can tell you which keymap won.
+     */
+    @Test
+    void ctrlSInsideTheEditorSavesTheOpenPage() {
+        String slug = "shortcut" + nonce();
+
+        openPageEditorInWriteMode();
+        $("#page_bean_slug").setValue(slug);
+        $("#page_bean_title").setValue("Saved by keyboard");
+        Editor.type("Saved from the keyboard.");
+
+        $(Editor.CONTENT).sendKeys(Keys.chord(Keys.CONTROL, "s"));
+
+        // One save landed: the add form became the edit form, carrying an id.
+        $("#messages").should(exist);
+        assertTrue(!$("input[name='bean.id']").getValue().isEmpty(),
+                "Ctrl+S must have saved the page, leaving it with an id");
+    }
+
     // ---------------------------------------------------------------- helpers
+
+    /**
+     * Opens the shared weblog's page editor with the write pane showing.
+     *
+     * <p>The mode control persists in {@code localStorage} and the browser
+     * outlives a single test, so a previous Preview click is still in force
+     * when the next test opens the page -- and in preview mode
+     * {@code .editor-write} is {@code display:none}, where
+     * {@code Editor.setText} would wait forever for a pane never shown. Same
+     * guard {@code MarkdownPreviewIT} uses, for the same reason.
+     */
+    private void openPageEditorInWriteMode() {
+        openPath(PAGE_EDIT_ON_SHARED);
+        $("#pageEditForm").should(exist);
+        $(Editor.ROOT).should(exist);
+        $(Editor.MODE_WRITE).click();
+        $(Editor.ROOT).shouldBe(visible);
+    }
 
     /**
      * Creates a weblog owned by the seeded admin on the {@code portfolio}
@@ -167,7 +258,7 @@ class PageIT extends RollerIT {
 
     /** Submits the page edit form and waits for the save to land. */
     private void saveOpenPage() {
-        $("#pageEditForm button[type='submit']").click();
+        $("#pageSaveButton").click();
         $("#messages").should(exist);
         BrowserHealth.current().settle();
     }

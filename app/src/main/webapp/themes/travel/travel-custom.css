@@ -226,7 +226,7 @@ body.tg .shortcode-image img { border-radius: var(--tg-radius); }
 body.tg .jgrid { margin: 1.75rem 0; }
 
 /* ---- contact form & newsletter subscribe ----
- * #showAudienceAssets/#showSubscribeForm inject these forms unscoped
+ * the showAudienceAssets/showSubscribeForm macros inject these forms unscoped
  * (form.className = 'contact-form' / 'newsletter-subscribe'); the body.tg
  * prefix here outranks that head-level style block by specificity so the
  * theme's own card treatment wins without touching the shared macro. */
@@ -302,7 +302,7 @@ body.tg .newsletter-subscribe button:hover {
 body.tg .audience-message { margin-top: .75rem; color: var(--tg-muted); }
 
 /* ---- search results page ----
- * Same reason as journal-custom.css's block: #showWeblogSearchAgainForm's
+ * Same reason as journal-custom.css's block: the showWeblogSearchAgainForm macro's
  * unclassed controls otherwise render as raw OS widgets. */
 #searchAgain input.text {
     background: #fff;
@@ -344,5 +344,5 @@ body.tg .newsletter-subscribe-block { margin-top: 1.5rem; }
 body.tg .video-figure { margin: 1.75rem 0; }
 body.tg .video-embed { border-radius: var(--tg-radius); overflow: hidden; }
 
-/* #showNextPrevSearchControl's hit count (was an <h3>, now a status line). */
+/* the showNextPrevSearchControl macro's hit count (was an <h3>, now a status line). */
 body.tg .search-summary { margin: 0 0 .75rem; font-size: .75rem; color: var(--tg-muted); }

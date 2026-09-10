@@ -19,6 +19,7 @@ package org.apache.roller.it;
 
 import java.time.Duration;
 
+import org.apache.roller.it.support.Editor;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,7 +55,6 @@ class SearchIT extends RollerIT {
 
     private static final String ENTRY_ADD = "/roller-ui/authoring/entryAdd.rol?weblog=" + WEBLOG_HANDLE;
 
-    private static final String EDITOR_BODY = ".CodeMirror";
     private static final String PERMALINK = "#entry_bean_permalink";
 
     /** Generous: a background index operation competes with the whole suite. */
@@ -190,8 +190,7 @@ class SearchIT extends RollerIT {
     private void writeEntry(String title, String body) {
         $("#entry").should(exist);
         $("input[name='bean.title']").setValue(title);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript("rollerSetEntryText(arguments[0]);", body);
+        Editor.setText(body);
     }
 
     private String entryId() {

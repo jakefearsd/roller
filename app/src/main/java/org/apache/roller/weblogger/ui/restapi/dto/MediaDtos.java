@@ -1,15 +1,13 @@
 package org.apache.roller.weblogger.ui.restapi.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Locale;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
+import org.apache.roller.weblogger.ui.controllers.MediaUploads;
 import org.apache.roller.weblogger.ui.restapi.ApiException;
 import org.apache.roller.weblogger.ui.restapi.ColumnLimits;
-import org.apache.roller.weblogger.util.I18nMessages;
 import org.apache.roller.weblogger.util.RollerMessages;
 
 /**
@@ -95,40 +93,16 @@ public final class MediaDtos {
      * maps to {@code "forbidden_extension"}; anything else (chiefly
      * {@code error.upload.disabled}, and defensively any key this method
      * has never seen) is {@code "error"}.
+     *
+     * <p>Delegates to {@link MediaUploads#refusal} -- the mapping is shared
+     * with the editor's session upload endpoint (Task A6) and lives in
+     * {@code ui.controllers} rather than here so both callers see exactly
+     * one implementation. See {@code MediaUploads}'s class javadoc for why
+     * the dependency points this direction and not the other.
      */
     public static UploadResult refusal(String fileName, RollerMessages messages) {
-        RollerMessages.RollerMessage last = null;
-        Iterator<RollerMessages.RollerMessage> it = messages.getErrors();
-        while (it.hasNext()) {
-            last = it.next();
-        }
-        if (last == null) {
-            // No message at all: the only detail here that is not derived from a
-            // key, so it comes from the bundle rather than being spelled out in
-            // Java. The default locale is the right one -- an API response has no
-            // request locale to honour, unlike the JSP surface.
-            return new UploadResult(fileName, "error",
-                    I18nMessages.getMessages(Locale.getDefault()).getString("error.upload.failed"), null);
-        }
-        String status = switch (last.getKey()) {
-            case "error.upload.dirmax", "error.upload.filemax" -> "quota_exceeded";
-            case "error.upload.forbiddenFile" -> "forbidden_extension";
-            default -> "error";
-        };
-        return new UploadResult(fileName, status, detailFor(last), null);
-    }
-
-    private static String detailFor(RollerMessages.RollerMessage msg) {
-        String[] args = msg.getArgs();
-        return switch (msg.getKey()) {
-            case "error.upload.dirmax" -> "Adding this file would exceed this weblog's "
-                    + (args != null && args.length > 0 ? args[0] : "configured") + " MB storage limit.";
-            case "error.upload.filemax" -> "This file is larger than the "
-                    + (args != null && args.length > 1 ? args[1] : "configured") + " MB per-file limit.";
-            case "error.upload.forbiddenFile" -> "Files of this type may not be uploaded.";
-            case "error.upload.disabled" -> "File upload is disabled for this site.";
-            default -> "Upload failed: " + msg.getKey();
-        };
+        MediaUploads.Result r = MediaUploads.refusal(fileName, messages);
+        return new UploadResult(r.fileName(), r.status(), r.detail(), null);
     }
 
     public static MediaView toView(MediaFile file, String url) {

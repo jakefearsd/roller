@@ -17,9 +17,12 @@
  */
 package org.apache.roller.it;
 
+import com.codeborne.selenide.WebDriverRunner;
+import org.apache.roller.it.support.Editor;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.openqa.selenium.Keys;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -28,6 +31,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 
 import static com.codeborne.selenide.Condition.exist;
+import static com.codeborne.selenide.Condition.text;
 import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
 import static com.codeborne.selenide.Selenide.$$;
@@ -60,16 +64,11 @@ class AuthoringJourneyIT extends RollerIT {
 
     private static final String ENTRY_ADD = "/roller-ui/authoring/entryAdd.rol?weblog=" + WEBLOG_HANDLE;
 
-    /**
-     * The editor's editable surface. Tests wait for this and then put text in
-     * through {@code rollerSetEntryText}, the page's own seam -- never through
-     * the editor's API directly, so replacing the editor is one change here
-     * rather than one in every journey.
-     */
-    private static final String EDITOR_BODY = ".CodeMirror";
-
     /** Rendered on the edit page only once the entry is actually published — see EntryEdit.jsp. */
     private static final String PERMALINK = "#entry_bean_permalink";
+
+    /** The publish rail's status pill: Draft / Published / Pending / Scheduled. */
+    private static final String STATUS_BADGE = ".editor-statusrow .badge";
 
     private HttpClient http;
 
@@ -157,6 +156,76 @@ class AuthoringJourneyIT extends RollerIT {
                 "an unpublished draft must not be listed on the public weblog home page");
     }
 
+    /**
+     * Ctrl/Cmd+Enter publishes even with the caret inside the editor.
+     *
+     * <p>This is the one arrangement the page's document-level keydown handler
+     * cannot rescue. CodeMirror 6's {@code defaultKeymap} binds {@code
+     * Mod-Enter} to {@code insertBlankLine}, and a binding that runs
+     * {@code preventDefault} without {@code stopPropagation} still reaches
+     * document -- where the handler deliberately bails on an already-handled
+     * event, because that bail is what stops Ctrl+S firing twice. So the
+     * shortcut has to be bound INSIDE the editor at higher precedence than the
+     * default keymap, and only a real keypress through a real editor can tell
+     * you whether it was.
+     *
+     * <p>Typed through the editor's own surface rather than {@code
+     * rollerSetEntryText}, for the same reason: the seam function would prove
+     * nothing about which keymap wins.
+     */
+    @Test
+    void ctrlEnterInsideTheEditorPublishes() {
+        String suffix = uniqueSuffix();
+        String title = "IT CtrlEnter " + suffix;
+
+        openPath(ENTRY_ADD);
+        $("#entry").should(exist);
+        $("input[name='bean.title']").setValue(title);
+        Editor.type("Published from the keyboard " + suffix + ".");
+
+        $(Editor.CONTENT).sendKeys(Keys.chord(Keys.CONTROL, Keys.ENTER));
+
+        $(PERMALINK).should(exist);
+        $(STATUS_BADGE).shouldHave(text("Published"));
+    }
+
+    /**
+     * Ctrl/Cmd+S inside the editor saves a draft, once.
+     *
+     * <p>Passes against the pre-fix code as well, and says so deliberately: it
+     * is here to pin the OTHER half of the arrangement above. Binding
+     * {@code Mod-s} inside the editor is only safe because the editor's
+     * {@code preventDefault} makes the document-level handler stand down; get
+     * that wrong and both fire, which historically meant "two saves, or a save
+     * and a publish" per keystroke. A save that published is exactly what the
+     * status assertion below refuses.
+     */
+    @Test
+    void ctrlSInsideTheEditorSavesADraftWithoutPublishingIt() {
+        String suffix = uniqueSuffix();
+        String title = "IT CtrlS " + suffix;
+
+        openPath(ENTRY_ADD);
+        $("#entry").should(exist);
+        $("input[name='bean.title']").setValue(title);
+        Editor.type("Saved from the keyboard " + suffix + ".");
+
+        $(Editor.CONTENT).sendKeys(Keys.chord(Keys.CONTROL, "s"));
+
+        // One save landed: the add form became the edit form, carrying an id.
+        $("input[name='bean.id']").should(exist);
+        String entryId = $("input[name='bean.id']").getValue();
+        assertTrue(entryId != null && !entryId.isBlank(),
+                "Ctrl+S must save the draft and return its id");
+        assertTrue(WebDriverRunner.url().contains("entryEdit"),
+                "one save must land on the edit action; got " + WebDriverRunner.url());
+
+        // And it is still a DRAFT. A second handler firing the publish button
+        // would show Published here, with a permalink beside it.
+        $(STATUS_BADGE).shouldHave(text("Draft"));
+        $(PERMALINK).shouldNot(exist);
+    }
+
     // ------------------------------------------------------------------ helpers
 
     /**
@@ -174,10 +243,7 @@ class AuthoringJourneyIT extends RollerIT {
         $("#entry").should(exist);
         $("input[name='bean.title']").setValue(title);
 
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript(
-                "rollerSetEntryText(arguments[0]);",
-                body);
+        Editor.setText(body);
     }
 
     /** Submits via the publish button, whose formaction differs between add and edit. */

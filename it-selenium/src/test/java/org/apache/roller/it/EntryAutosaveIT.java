@@ -21,6 +21,7 @@ import java.net.URI;
 import java.time.Duration;
 
 import org.apache.roller.it.support.BrowserHealth;
+import org.apache.roller.it.support.Editor;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,7 @@ import org.junit.jupiter.api.Test;
 import com.codeborne.selenide.Selenide;
 
 import static com.codeborne.selenide.Condition.exist;
+import static com.codeborne.selenide.Condition.text;
 import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
 import static com.codeborne.selenide.Selenide.executeJavaScript;
@@ -48,7 +50,6 @@ class EntryAutosaveIT extends RollerIT {
     private static final String ENTRY_ADD = "/roller-ui/authoring/entryAdd.rol?weblog=" + WEBLOG_HANDLE;
     private static final String PAGE_ADD = "/roller-ui/authoring/pageEdit.rol?weblog=" + WEBLOG_HANDLE;
 
-    private static final String EDITOR_BODY = ".CodeMirror";
     private static final String DRAFT_BAR = "#draftRecoveryBar";
     private static final String DRAFT_RESTORE = ".draft-bar-restore";
     private static final String DRAFT_DISCARD = ".draft-bar-discard";
@@ -97,8 +98,7 @@ class EntryAutosaveIT extends RollerIT {
         openPath(ENTRY_ADD);
         $("#entry").should(exist);
         $("input[name='bean.title']").setValue("IT Autosave " + suffix);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript("rollerSetEntryText(arguments[0]);", body);
+        Editor.setText(body);
 
         waitForDraftSnapshot(entryDraftKey("entryAdd", "new"));
         reloadWithoutLeaveWarning();
@@ -107,7 +107,7 @@ class EntryAutosaveIT extends RollerIT {
         $(DRAFT_BAR).shouldBe(visible);
         $(DRAFT_RESTORE).click();
 
-        String recovered = executeJavaScript("return rollerGetEntryText();");
+        String recovered = Editor.getText();
         assertTrue(recovered != null && recovered.contains(body),
                 "restore did not bring the unsaved text back; the editor holds: " + recovered);
     }
@@ -120,8 +120,7 @@ class EntryAutosaveIT extends RollerIT {
         openPath(ENTRY_ADD);
         $("#entry").should(exist);
         $("input[name='bean.title']").setValue("IT Autosave Saved " + suffix);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript("rollerSetEntryText(arguments[0]);", body);
+        Editor.setText(body);
 
         String newDraftKey = entryDraftKey("entryAdd", "new");
         waitForDraftSnapshot(newDraftKey);
@@ -169,8 +168,7 @@ class EntryAutosaveIT extends RollerIT {
         openPath("/roller-ui/authoring/entryEdit.rol?weblog=" + WEBLOG_HANDLE
                 + "&bean.id=" + entryId);
         $("#entry").should(exist);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript("rollerSetEntryText(arguments[0]);", body + " (revised)");
+        Editor.setText(body + " (revised)");
 
         String editKey = entryDraftKey("entryEdit", entryId);
         waitForDraftSnapshot(editKey);
@@ -202,8 +200,7 @@ class EntryAutosaveIT extends RollerIT {
         openPath(ENTRY_ADD);
         $("#entry").should(exist);
         $("input[name='bean.title']").setValue("IT Autosave Discard " + suffix);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript("rollerSetEntryText(arguments[0]);", body);
+        Editor.setText(body);
 
         waitForDraftSnapshot(entryDraftKey("entryAdd", "new"));
         reloadWithoutLeaveWarning();
@@ -218,6 +215,32 @@ class EntryAutosaveIT extends RollerIT {
         $(DRAFT_BAR).shouldNotBe(visible);
     }
 
+    /**
+     * The status line (Task A8), end to end: word count follows typing, the
+     * save-state span reads "Unsaved changes" as soon as something has
+     * changed, and reads "Draft saved locally" once {@code roller-draft.js}
+     * actually writes a snapshot -- the {@code roller-draft:saved} event this
+     * wave added to that module, consumed here rather than in a unit test
+     * because the event only exists once a real debounce has elapsed.
+     */
+    @Test
+    void typingUpdatesTheWordCountAndSaveStatus() {
+        String suffix = nonce();
+
+        openPath(ENTRY_ADD);
+        $("#entry").should(exist);
+        $("#editorStatusSave").shouldHave(text("Saved"));
+
+        $("input[name='bean.title']").setValue("Status Line " + suffix);
+        Editor.setText("one two three four five");
+
+        $("#editorStatusWords").shouldHave(text("5 words"));
+        $("#editorStatusSave").shouldHave(text("Unsaved changes"));
+
+        waitForDraftSnapshot(entryDraftKey("entryAdd", "new"));
+        $("#editorStatusSave").shouldHave(text("Draft saved locally"));
+    }
+
     @Test
     void thePageEditorRecoversTheSameWay() {
         String suffix = nonce();
@@ -225,8 +248,7 @@ class EntryAutosaveIT extends RollerIT {
 
         openPath(PAGE_ADD);
         $("#pageEditForm").should(exist);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript("rollerSetEntryText(arguments[0]);", body);
+        Editor.setText(body);
 
         waitForDraftSnapshot(pageDraftKey("new"));
         reloadWithoutLeaveWarning();
@@ -235,7 +257,7 @@ class EntryAutosaveIT extends RollerIT {
         $(DRAFT_BAR).shouldBe(visible);
         $(DRAFT_RESTORE).click();
 
-        String recovered = executeJavaScript("return rollerGetEntryText();");
+        String recovered = Editor.getText();
         assertTrue(recovered != null && recovered.contains(body),
                 "restore did not bring the unsaved page text back; the editor holds: " + recovered);
     }
@@ -247,8 +269,7 @@ class EntryAutosaveIT extends RollerIT {
         openPath(ENTRY_ADD);
         $("#entry").should(exist);
         $("input[name='bean.title']").setValue(title);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript("rollerSetEntryText(arguments[0]);", body);
+        Editor.setText(body);
         $("button[formaction$='entryAdd!saveDraft.rol']").click();
         $("input[name='bean.id']").should(exist);
         return $("input[name='bean.id']").getValue();

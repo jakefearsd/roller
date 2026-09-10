@@ -1,0 +1,59 @@
+/*
+* Licensed to the Apache Software Foundation (ASF) under one or more
+*  contributor license agreements.  The ASF licenses this file to You
+* under the Apache License, Version 2.0 (the "License"); you may not
+* use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.  For additional information regarding
+* copyright in this work, please see the NOTICE file in the top level
+* directory of this distribution.
+*/
+
+/* Editor surface: toolbar, panes, status. Layout only -- CodeMirror's own
+   look comes from EditorView.theme in app/frontend/src/markdown-theme.js.
+   Loaded only on the two screens that mount an editor (head.jsp), which is
+   also why it is a separate file rather than a section of roller.css.
+   Tokens only, no hex: DesignTokenTest audits this file the same way it
+   audits roller.css. */
+
+.editor-surface { border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+/* Wraps rather than scrolls. `overflow-x: auto` computes overflow-y to
+   `auto` as well, which makes the toolbar a clipping container on BOTH
+   axes -- and the shortcode Insert dropdown is a child of it, so at a
+   narrow width the menu would be letterboxed to the toolbar's own ~22px
+   of content box. Wrapping to a second row is the better failure. */
+.editor-toolbar { display: flex; align-items: center; gap: 2px; padding: 6px 8px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.editor-tool { border: 0; background: transparent; color: var(--ink); border-radius: 4px; padding: 4px 7px; font: inherit; font-size: 14.5px; line-height: 1; cursor: pointer; }
+.editor-tool:hover, .editor-tool[aria-expanded="true"] { background: var(--accent-quiet); }
+.editor-tool:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.editor-tool-sep { width: 1px; height: 18px; background: var(--line); margin: 0 4px; }
+.editor-mode { margin-left: auto; display: inline-flex; border: 1px solid var(--line); border-radius: 99px; overflow: hidden; }
+.editor-mode button { border: 0; background: transparent; color: var(--ink-soft); font: inherit; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; padding: 4px 10px; cursor: pointer; }
+.editor-mode button[aria-checked="true"] { background: var(--accent-quiet); color: var(--ink); }
+.editor-panes { display: grid; grid-template-columns: 1fr; min-height: 420px; }
+.editor-surface[data-mode="split"] .editor-panes { grid-template-columns: 1fr 1fr; }
+.editor-surface[data-mode="split"] .editor-preview-pane { border-left: 1px solid var(--line); }
+.editor-surface[data-mode="preview"] .editor-write { display: none; }
+.editor-write .cm-editor { border: 0; border-radius: 0; min-height: 420px; }
+.editor-preview-pane { overflow: auto; }
+.editor-preview-pane iframe { width: 100%; height: 100%; min-height: 420px; border: 0; background: var(--surface); }
+.editor-status { display: flex; gap: 16px; padding: 6px 12px; border-top: 1px solid var(--line); font-family: var(--font-ui); font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); }
+.editor-status .is-error { color: var(--bad); }
+
+/* The writing guide (Task A8): a Bootstrap offcanvas, themed through the same
+   --bs-offcanvas-* custom-property seam the buttons above use --bs-btn-*
+   for. Bootstrap's own show/hide rules then resolve to token colors with
+   nothing of our own needed to override them. */
+.editor-guide { --bs-offcanvas-bg: var(--surface); --bs-offcanvas-color: var(--ink); }
+.editor-guide .offcanvas-body .rail-group-label { margin-top: 16px; }
+.editor-guide-table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+.editor-guide-table td { padding: 4px 0; vertical-align: top; }
+.editor-guide-table td:first-child { width: 45%; padding-right: 12px; }
+.editor-guide-table code, .editor-guide-table kbd { font-family: var(--font-data); font-size: 13.5px; background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }

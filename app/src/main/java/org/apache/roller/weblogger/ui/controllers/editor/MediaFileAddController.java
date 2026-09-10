@@ -17,9 +17,13 @@
  */
 package org.apache.roller.weblogger.ui.controllers.editor;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -32,9 +36,13 @@ import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
 import org.apache.roller.weblogger.pojos.Weblog;
+import org.apache.roller.weblogger.ui.controllers.MediaUploads;
 import org.apache.roller.weblogger.util.RollerMessages;
 import org.apache.roller.weblogger.util.RollerMessages.RollerMessage;
 import org.apache.roller.weblogger.util.Utilities;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -42,6 +50,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
@@ -196,6 +205,63 @@ public class MediaFileAddController extends MediaFileBase {
     }
 
     /**
+     * The editor's paste/drop upload. JSON in, JSON out, one result per file;
+     * the per-file logic is {@link MediaUploads}, shared with the automation
+     * API so the two surfaces cannot drift on what a refusal is. A foreign
+     * directory is 404, never 403 (the by-id ownership rule); {@code
+     * uploads.enabled} off is 403.
+     */
+    @PostMapping(value = "/mediaFileAdd!upload.rol", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> upload(HttpServletRequest request,
+            @RequestParam(value = "directoryId", required = false) String directoryId,
+            @RequestParam(value = "file", required = false) MultipartFile[] files) throws WebloggerException {
+        Weblog weblog = getActionWeblog(request);
+        if (!WebloggerRuntimeConfig.getBooleanProperty("uploads.enabled")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "uploads.disabled"));
+        }
+        if (files == null || files.length == 0) {
+            return ResponseEntity.badRequest().body(Map.of("error", "no.files"));
+        }
+
+        MediaFileManager mfm = weblogger.getMediaFileManager();
+        MediaFileDirectory directory;
+        if (StringUtils.isNotBlank(directoryId)) {
+            directory = MediaUploads.directoryFor(weblogger, weblog, directoryId);
+            if (directory == null) {
+                return ResponseEntity.notFound().build();
+            }
+        } else {
+            directory = MediaUploads.defaultDirectory(weblog, mfm);
+        }
+
+        RollerMessages messages = new RollerMessages();
+        List<Map<String, Object>> results = new ArrayList<>();
+        int created = 0;
+        for (MultipartFile file : files) {
+            MediaUploads.Result r = MediaUploads.store(file, weblog, directory, mfm, messages);
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("fileName", r.fileName());
+            row.put("status", r.status());
+            row.put("detail", r.detail());
+            if (r.file() != null) {
+                created++;
+                row.put("id", r.file().getId());
+                row.put("url", weblogger.getUrlStrategy().getMediaFileURL(weblog, r.file().getId(), false));
+            }
+            results.add(row);
+        }
+        weblogger.flush();
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("results", results);
+        body.put("created", created);
+        body.put("failed", files.length - created);
+        return ResponseEntity.status(created == files.length ? HttpStatus.CREATED : HttpStatus.MULTI_STATUS)
+                .body(body);
+    }
+
+    /**
      * Kept for a POST that arrives without script (the form's Cancel is a plain
      * link now, so nothing in the shipped page posts here). The redirect
      * carries the directory the author was uploading into: without it, cancel
@@ -209,7 +275,7 @@ public class MediaFileAddController extends MediaFileBase {
         String url = "redirect:/roller-ui/authoring/mediaFileView.rol?weblog="
                 + (weblog != null ? weblog.getHandle() : "");
         if (StringUtils.isNotBlank(directoryId)) {
-            url += "&directoryId=" + directoryId;
+            url += "&directoryId=" + URLEncoder.encode(directoryId, StandardCharsets.UTF_8);
         }
         return url;
     }

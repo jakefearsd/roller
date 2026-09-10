@@ -21,6 +21,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.Map;
 
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.MediaFile;
@@ -28,6 +29,8 @@ import org.apache.roller.weblogger.pojos.MediaFileDirectory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.ui.Model;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -463,6 +466,16 @@ class MediaFileAddControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
+    void cancellingEncodesADirectoryIdContainingAnAmpersand() {
+        // directoryId used to be concatenated unencoded into the redirect
+        // query string; a value containing '&' injected an extra query
+        // parameter into the URL instead of round-tripping as one value.
+        assertEquals("redirect:/roller-ui/authoring/mediaFileView.rol?weblog=" + WEBLOG_HANDLE
+                        + "&directoryId=dir%2642",
+                controller.cancel(request, "dir&42"));
+    }
+
+    @Test
     void cancellingWithNoWeblogInContextStillProducesAUsableRedirect() {
         // The interceptor normally guarantees a weblog, but the cancel link is
         // the one path that tolerates its absence rather than throwing.
@@ -495,6 +508,79 @@ class MediaFileAddControllerTest extends EditorControllerTestSupport {
         verify(weblogger.getMediaFileManager(), never()).createMediaFile(any(), any(), any());
         assertTrue(errors(model).contains("MediaFile.error.view"),
                 "Expected the upload to be refused, got: " + errors(model));
+    }
+
+    // --- upload!.rol: the editor's session JSON upload endpoint ---
+
+    @Test
+    void uploadReturns201AndTheImageShortcodeIdForAGoodFile() throws Exception {
+        ResponseEntity<Map<String, Object>> response = controller.upload(request, null,
+                new MultipartFile[]{upload("photo.jpg", "image/jpeg", "binary")});
+
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        Map<String, Object> body = response.getBody();
+        assertEquals(1, body.get("created"));
+        assertEquals(0, body.get("failed"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> row = ((java.util.List<Map<String, Object>>) body.get("results")).get(0);
+        assertEquals("created", row.get("status"));
+        assertTrue(row.get("id") != null && !row.get("id").toString().isBlank(),
+                "Expected a non-blank id for the created file, got: " + row.get("id"));
+    }
+
+    @Test
+    void uploadReturns404ForAForeignDirectory() throws Exception {
+        // directoryId is client input and getMediaFileDirectory is a global
+        // by-id lookup -- the same ownership rule save()/resolveDirectory
+        // already enforces, exercised here on the new endpoint.
+        org.apache.roller.weblogger.pojos.Weblog other =
+                new org.apache.roller.weblogger.pojos.Weblog();
+        other.setId("weblog-2");
+        other.setHandle("otherblog");
+        MediaFileDirectory foreign = new MediaFileDirectory();
+        foreign.setId("dir-x");
+        foreign.setName("theirs");
+        foreign.setWeblog(other);
+        when(weblogger.getMediaFileManager().getMediaFileDirectory("dir-x")).thenReturn(foreign);
+
+        ResponseEntity<Map<String, Object>> response = controller.upload(request, "dir-x",
+                new MultipartFile[]{upload("photo.jpg", "image/jpeg", "binary")});
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        verify(weblogger.getMediaFileManager(), never()).createMediaFile(any(), any(), any());
+    }
+
+    @Test
+    void uploadReturns403WhenUploadsAreDisabled() throws Exception {
+        givenRuntimeProperty("uploads.enabled", "false");
+
+        ResponseEntity<Map<String, Object>> response = controller.upload(request, null,
+                new MultipartFile[]{upload("photo.jpg", "image/jpeg", "binary")});
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        assertEquals("uploads.disabled", response.getBody().get("error"));
+        verify(weblogger.getMediaFileManager(), never()).createMediaFile(any(), any(), any());
+    }
+
+    @Test
+    void uploadReturns207WhenOneOfTwoFilesIsRefused() throws Exception {
+        org.mockito.Mockito.doAnswer(invocation -> {
+            MediaFile target = invocation.getArgument(1);
+            if ("evil.exe".equals(target.getName())) {
+                org.apache.roller.weblogger.util.RollerMessages messages = invocation.getArgument(2);
+                messages.addError("error.upload.forbiddenFile");
+            }
+            return null;
+        }).when(weblogger.getMediaFileManager()).createMediaFile(any(), any(), any());
+
+        ResponseEntity<Map<String, Object>> response = controller.upload(request, null, new MultipartFile[]{
+                upload("good.jpg", "image/jpeg", "x"),
+                upload("evil.exe", "application/octet-stream", "y")});
+
+        assertEquals(HttpStatus.MULTI_STATUS, response.getStatusCode());
+        Map<String, Object> body = response.getBody();
+        assertEquals(1, body.get("created"));
+        assertEquals(1, body.get("failed"));
     }
 
     // --- helpers ---

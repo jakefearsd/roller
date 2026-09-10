@@ -276,11 +276,13 @@ public abstract class RollerIT {
      * <p>This exists because signing in was the single most expensive thing the suite did.
      * {@link #loginAs} drives the real form, which costs THREE full page loads -- the login
      * page, whatever {@code login-redirect.rol} forwards to, and the menu -- and every one
-     * of them re-fetches and re-parses jQuery UI, Bootstrap and EasyMDE, because the health
-     * recorder runs with the HTTP cache disabled. 21 of the 36 IT classes pay that from
-     * {@code @BeforeEach}. Measured: a test that logs in and opens one page costs 2.86s
-     * ({@code RouteSweepIT}) against 0.88s for one that opens a page without signing in
-     * ({@code PublicSurfaceIT}) -- so about 2s per test, roughly 30% of the suite.
+     * of them re-fetches and re-parses jQuery UI and Bootstrap, because the health recorder
+     * runs with the HTTP cache disabled. (The editor bundle is not among them: it loads only
+     * on the two screens that mount one, and none of these three is.) 21 of the 36 IT
+     * classes pay that from {@code @BeforeEach}. Measured: a test that logs in and opens
+     * one page costs 2.86s ({@code RouteSweepIT}) against 0.88s for one that opens a page
+     * without signing in ({@code PublicSurfaceIT}) -- so about 2s per test, roughly 30%
+     * of the suite.
      *
      * <p>An {@code HttpClient} fetches the login page as ONE document and no sub-resources,
      * so the two requests here cost a small fraction of the two page loads they replace.

@@ -367,114 +367,6 @@ label,
     margin-bottom: 4px;
 }
 
-/* ---- EasyMDE (Markdown editor) ---- */
-
-.editor-toolbar {
-    background: var(--surface);
-    border-color: var(--line);
-}
-
-.editor-toolbar .easymde-dropdown,
-.editor-toolbar button {
-    color: var(--ink);
-}
-
-.editor-toolbar button.active,
-.editor-toolbar button:hover {
-    background: var(--accent-quiet);
-    border-color: var(--accent);
-    color: var(--ink);
-}
-
-.CodeMirror,
-.EasyMDEContainer .CodeMirror {
-    background: var(--surface);
-    color: var(--ink);
-    border-color: var(--line);
-    font-family: var(--font-ui);
-    font-size: 14.5px;
-}
-
-/* easymde.min.css hardcodes the caret at #000 and selection at #d9d9d9 --
-   both effectively invisible/wrong against a dark --surface. Token them;
-   `.EasyMDEContainer .CodeMirror-focused .CodeMirror-selected` is the
-   highest-specificity of the three `.CodeMirror-selected` rules the
-   stylesheet declares, so it needs its own override alongside the
-   unfocused one. Separately, `.CodeMirror-line`(`>span`/`>span>span`)
-   `::selection`/`::-moz-selection` is easymde's OWN rule for native
-   browser text selection (distinct from the `.CodeMirror-selected`
-   rendered-highlight rule above -- CodeMirror uses whichever one applies
-   depending on browser/rendering mode) and is hardcoded to the same
-   light-lavender #d7d4f0, so it needs the identical selector list
-   token-overridden too or a native selection can still leak light-mode
-   color in dark mode. */
-.CodeMirror-cursor {
-    border-left-color: var(--ink);
-}
-
-.CodeMirror-selected,
-.CodeMirror-focused .CodeMirror-selected,
-.EasyMDEContainer .CodeMirror-focused .CodeMirror-selected {
-    background: var(--accent-quiet);
-}
-
-.CodeMirror-line::selection,
-.CodeMirror-line > span::selection,
-.CodeMirror-line > span > span::selection {
-    background: var(--accent-quiet);
-}
-
-.CodeMirror-line::-moz-selection,
-.CodeMirror-line > span::-moz-selection,
-.CodeMirror-line > span > span::-moz-selection {
-    background: var(--accent-quiet);
-}
-
-/* easymde.min.css (bundled CodeMirror markdown mode, webjar 2.21.0) renders
-   every heading level as a live-preview font-size jump -- .cm-header-1 at
-   calc(1.375rem + 1.5vw) (well over 2x the editor's 15px base) down to
-   .cm-header-6 at 1rem, plus its own margin-bottom/line-height on top --
-   the "app built for toddlers" scaling. The in-editor line should hint
-   "this is a heading" the same restrained way the design system hints
-   everything else: bold, not a second, bigger typeface living inside the
-   textarea. Both the base "header" token class and each numbered level
-   need overriding -- CodeMirror's markdown mode tags a heading span with
-   both ("header header-N"), and easymde's own rules key off "-N" alone --
-   and ".CodeMirror" ancestor-qualified selectors give this the same
-   (0,2,0) specificity as easymde's own ".cm-s-easymde .cm-header-N" rules
-   so this wins regardless of stylesheet load order. .cm-quote's italic is
-   deliberately left alone -- it never scaled the font and was never part
-   of the problem. */
-.CodeMirror .cm-header,
-.CodeMirror .cm-header-1,
-.CodeMirror .cm-header-2,
-.CodeMirror .cm-header-3,
-.CodeMirror .cm-header-4,
-.CodeMirror .cm-header-5,
-.CodeMirror .cm-header-6,
-.EasyMDEContainer .CodeMirror .cm-header,
-.EasyMDEContainer .CodeMirror .cm-header-1,
-.EasyMDEContainer .CodeMirror .cm-header-2,
-.EasyMDEContainer .CodeMirror .cm-header-3,
-.EasyMDEContainer .CodeMirror .cm-header-4,
-.EasyMDEContainer .CodeMirror .cm-header-5,
-.EasyMDEContainer .CodeMirror .cm-header-6 {
-    font-size: inherit;
-    font-weight: 600;
-    margin-bottom: 0;
-    line-height: inherit;
-}
-
-.editor-preview {
-    background: var(--surface);
-    color: var(--ink);
-    font-family: var(--font-ui);
-}
-
-.editor-preview pre {
-    background: var(--paper);
-}
-
 /* ---- Top bar ---- */
 
 .roller-topbar {
@@ -653,10 +545,10 @@ table.mm_table_actions td {
    scale (12px, .08em tracking, uppercase, 600 weight, --ink-soft) instead
    of Bootstrap's/the browser's oversized h3/h4 defaults. This targets the
    header text itself regardless of what markup rides inside a
-   .card-header: plain text (the newsletter and entry-revisions cards),
-   h4.card-title (EntryEditor's Summary panel, MediaFileAdd, TemplateEdit,
-   PageEdit -- EntryEdit's own panels are .editor-drawer now, and its
-   Plugins card was deleted with the plugin it held), or
+   .card-header: plain text, or h4.card-title (MediaFileAdd, TemplateEdit --
+   EntryEdit/EntryEditor's own panels are all .editor-box/.editor-drawer now,
+   the newsletter and revisions boxes and the Summary drawer included, and
+   the Plugins card was deleted with the plugin it held), or
    h3.setup-section-title (Setup.jsp) -- so any heading dropped into a
    card header inherits the quiet treatment instead of reintroducing its
    element's own default size. .section-head is the same role applied to
@@ -758,10 +650,13 @@ table.mm_table_actions td {
 /* ---- Entry editor: writing surface + publish rail ----
    The approved card is docs/design/editor/editor-writing-surface.html. The
    main column carries title/permalink/editor; a 252px rail carries Publish,
-   Organize, the SEO drawer, and (below the form, but in the
-   same grid column) the newsletter and revisions cards. The form itself is
-   display:contents so those cards -- which hold their own <form>s and
-   cannot nest inside #entry -- still place into the rail's column. */
+   Organize, the SEO drawer, and (below the form, but in the same grid
+   column) the newsletter and revisions boxes and the quiet delete link --
+   all .editor-box/.rail-group-label, the same shape as the boxes inside the
+   form, so the rail reads as one continuous column rather than boxes then
+   cards then a link. The form itself is display:contents so those boxes --
+   which hold their own <form>s and cannot nest inside #entry -- still place
+   into the rail's column. */
 
 .editor-grid {
     display: grid;
@@ -860,6 +755,28 @@ table.mm_table_actions td {
 
 .editor-permalink-copy.copied {
     color: var(--good);
+}
+
+/* The page editor's address line: the weblog's own root as a quiet prefix
+   and the slug as the only thing an author types, on the same 12px mono
+   line the entry permalink uses. Borderless except for a rule under the
+   editable half, so the row reads as text with one field in it rather than
+   as a form row with a label. */
+.editor-slug-prefix {
+    font-family: var(--font-data);
+    font-size: 12px;
+    color: var(--ink-soft);
+}
+
+.editor-permalink .editor-slug {
+    min-width: 12em;
+    padding: 0;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    background: transparent;
+    font-family: var(--font-data);
+    font-size: 12px;
+    color: var(--ink);
 }
 
 .editor-box {
@@ -998,6 +915,13 @@ table.mm_table_actions td {
 
 .editor-drawer-body {
     padding-top: 10px;
+}
+
+/* The Summary drawer sits in the main column, directly under the editor's
+   own status line -- unlike the SEO drawer, which is inside an .editor-box
+   in the rail and inherits that box's own top padding. */
+.editor-main > .editor-drawer {
+    margin: 14px 0 0;
 }
 
 /* Quiet destructive action: a text link, not a red button. Shared -- the

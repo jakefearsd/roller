@@ -29,9 +29,12 @@ import org.slf4j.LoggerFactory;
 import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.MediaFile;
+import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogPage;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -39,6 +42,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 /**
  * Add or edit a single static page.
@@ -209,12 +213,65 @@ public class PageEditController extends BaseController {
         return ".PageEdit";
     }
 
+    /**
+     * Renders unsaved editor text exactly as the published page will, and
+     * returns the HTML fragment the editor shows in its preview pane.
+     *
+     * <p>The twin of {@code EntryEditController#entryEditPreview}, and for the
+     * same reason: only the server can expand {@code [gallery]}, {@code [map]}
+     * or {@code [cta]}, so a browser-side Markdown library would disagree with
+     * the published page precisely where an author needs to trust the preview.
+     *
+     * <p>It renders through {@code EntryRenderer.pageContent}, the page's own
+     * production path, on a scratch {@link WeblogPage} rather than on the
+     * looked-up row. The scratch page carries the weblog and -- when an id was
+     * supplied -- that page's slug, which is all a {@code ShortcodeContext}
+     * exposes; building one instead of mutating the managed entity keeps a
+     * preview from ever dirtying the persistence context.
+     *
+     * <p>An id is client input, so it is ownership-checked the same way
+     * {@code edit} and {@code save} check theirs. Without that, previewing
+     * would be a way to ask what another weblog's shortcodes resolve to --
+     * its media directories, its geo, its slug.
+     */
+    @PostMapping("/pageEdit!preview.rol")
+    @ResponseBody
+    public ResponseEntity<String> pageEditPreview(HttpServletRequest request,
+                                                  @RequestParam(name = "id", required = false) String id,
+                                                  @RequestParam(name = "text", required = false) String text) {
+        Weblog weblog = getActionWeblog(request);
+        if (weblog == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        WeblogPage scratch = new WeblogPage();
+        scratch.setWeblog(weblog);
+        if (!StringUtils.isBlank(id)) {
+            WeblogPage page = lookupPage(id, request);
+            if (page == null) {
+                return ResponseEntity.notFound().build();
+            }
+            scratch.setSlug(page.getSlug());
+        }
+        scratch.setContent(text == null ? "" : text);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.valueOf("text/html;charset=UTF-8"))
+                .body(weblogger.getEntryRenderer().pageContent(scratch));
+    }
+
     private void addPageEditModelAttributes(HttpServletRequest request, Model model, PageBean bean) {
         // The editor's insert menu, generated from the shortcode registry
         // itself so it can never advertise a shortcode that does not render,
         // or omit one that does. Pages go through the same shortcode-expanding
         // render pipeline as entries (WeblogPage implements ShortcodeContext).
         model.addAttribute("shortcodeCards", weblogger.getEntryRenderer().shortcodeCards());
+
+        // The document the editor's split/preview panes frame -- the same
+        // shell the entry editor uses, through the same BaseController helper,
+        // so the two screens cannot come to preview against different
+        // documents.
+        model.addAttribute("previewShellURL", previewShellURL(getActionWeblog(request)));
 
         // Thumbnail preview for the SEO panel's social-image picker. Read off
         // the bean rather than the page so a save that failed validation

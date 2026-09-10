@@ -283,8 +283,8 @@
          * options.getText() is the caller's editor read seam, and every
          * other operation in this module is guarded against failure -- this
          * one was not. A caller that installs before its editor is fully
-         * constructed (CLAUDE.md already documents one such race, EasyMDE
-         * against the page's own ready handler) would have thrown a
+         * constructed (CLAUDE.md already documents one such race, the
+         * editor against the page's own ready handler) would have thrown a
          * TypeError straight out of install(), into the host page's
          * $(document).ready, aborting the rest of that handler. Returning
          * null here instead means a broken read seam disables the module for
@@ -324,6 +324,14 @@
                 // throwing on every keystroke; the editor matters more than
                 // the safety net.
                 stopped = true;
+                return;
+            }
+            // A save that actually landed, for anything else on the page
+            // that cares -- today, the status line's word-count-and-save-state
+            // indicator (Task A8), which listens on the bar element rather
+            // than reaching into this module's internals.
+            if (bar) {
+                dispatch(bar, 'roller-draft:saved');
             }
         }
 

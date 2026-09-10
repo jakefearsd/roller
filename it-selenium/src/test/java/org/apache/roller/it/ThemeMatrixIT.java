@@ -26,6 +26,7 @@ import java.util.List;
 import com.codeborne.selenide.Selenide;
 import com.codeborne.selenide.WebDriverRunner;
 import org.apache.roller.it.support.BrowserHealth;
+import org.apache.roller.it.support.Editor;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceLock;
@@ -34,7 +35,6 @@ import static com.codeborne.selenide.Condition.exist;
 import static com.codeborne.selenide.Condition.text;
 import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
-import static com.codeborne.selenide.Selenide.executeJavaScript;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -93,9 +93,6 @@ class ThemeMatrixIT extends RollerIT {
             new BundledTheme("journal", "body.qj .qj-entries", "body.qj main.qj-main-entry"),
             new BundledTheme("portfolio", "body.pf .pf-header", "body.pf main.pf-main-entry"),
             new BundledTheme("travel", "body.tg .tg-header", "body.tg main.tg-main-entry"));
-
-    /** The editor's editable surface; text goes in through the page's own seam. */
-    private static final String EDITOR_BODY = ".CodeMirror";
 
     /** Rendered on the edit page only once the entry is actually published. */
     private static final String PERMALINK = "#entry_bean_permalink";
@@ -213,10 +210,7 @@ class ThemeMatrixIT extends RollerIT {
         openPath("/roller-ui/authoring/entryAdd.rol?weblog=" + handle);
         $("#entry").should(exist);
         $("input[name='bean.title']").setValue(title);
-        $(EDITOR_BODY).should(visible);
-
-        executeJavaScript("rollerSetEntryText(arguments[0]);",
-                "<p>Fixture body for the theme matrix.</p>"
+        Editor.setText("<p>Fixture body for the theme matrix.</p>"
                         + "<p>[image id=\"" + mediaFileId + "\" alt=\"A hawk\""
                         + " caption=\"Hawk over the valley\"]</p>"
                         + "<p>[gallery dir=\"default\"]</p>"

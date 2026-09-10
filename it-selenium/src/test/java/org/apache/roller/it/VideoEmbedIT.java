@@ -19,15 +19,14 @@ package org.apache.roller.it;
 
 import com.codeborne.selenide.Selenide;
 import org.apache.roller.it.support.BrowserHealth;
+import org.apache.roller.it.support.Editor;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static com.codeborne.selenide.Condition.attribute;
 import static com.codeborne.selenide.Condition.exist;
-import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
-import static com.codeborne.selenide.Selenide.executeJavaScript;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
@@ -54,9 +53,6 @@ class VideoEmbedIT extends RollerIT {
 
     private static final String ENTRY_ADD = "/roller-ui/authoring/entryAdd.rol?weblog=" + WEBLOG_HANDLE;
 
-    /** The editor's editable surface; text goes in through the page's own seam. */
-    private static final String EDITOR_BODY = ".CodeMirror";
-
     /** Rendered on the edit page only once the entry has been saved. */
     private static final String PERMALINK = "#entry_bean_permalink";
 
@@ -76,10 +72,7 @@ class VideoEmbedIT extends RollerIT {
         openPath(ENTRY_ADD);
         $("#entry").should(exist);
         $("input[name='bean.title']").setValue("IT Video " + suffix);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript(
-                "rollerSetEntryText(arguments[0]);",
-                "<p>Watch this.</p><p>[video url=\"https://youtu.be/" + VIDEO_ID + "\"]</p>");
+        Editor.setText("<p>Watch this.</p><p>[video url=\"https://youtu.be/" + VIDEO_ID + "\"]</p>");
         $("button[formaction$='entryAdd!publish.rol']").click();
 
         $(PERMALINK).should(exist);

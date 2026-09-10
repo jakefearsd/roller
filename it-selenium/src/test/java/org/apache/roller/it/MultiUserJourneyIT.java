@@ -18,6 +18,7 @@
 package org.apache.roller.it;
 
 import org.apache.roller.it.support.BrowserHealth;
+import org.apache.roller.it.support.Editor;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceAccessMode;
@@ -56,9 +57,6 @@ class MultiUserJourneyIT extends RollerIT {
 
     private static final String CREATE_USER = "/roller-ui/admin/createUser.rol";
     private static final String CREATE_WEBLOG = "/roller-ui/createWeblog.rol";
-
-    /** The editor's editable surface; text goes in through the page's own seam. */
-    private static final String EDITOR_BODY = ".CodeMirror";
 
     /** Rendered on the edit page only once the entry is actually published. */
     private static final String PERMALINK = "#entry_bean_permalink";
@@ -115,7 +113,7 @@ class MultiUserJourneyIT extends RollerIT {
         openPath("/roller-ui/authoring/entryEdit.rol?weblog=" + bobBlog
                 + "&bean.id=" + aliceEntryId);
         BrowserHealth.current().settle();
-        String leaked = $$("#entry").isEmpty() ? "" : executeJavaScript("return rollerGetEntryText();");
+        String leaked = $$("#entry").isEmpty() ? "" : Editor.getText();
         assertFalse(leaked != null && leaked.contains("Rewritten by Alice"),
                 "Bob opened Alice's entry in his own editor; it holds: " + leaked);
 
@@ -199,8 +197,7 @@ class MultiUserJourneyIT extends RollerIT {
         openPath("/roller-ui/authoring/entryAdd.rol?weblog=" + weblogHandle);
         $("#entry").should(exist);
         $("input[name='bean.title']").setValue(title);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript("rollerSetEntryText(arguments[0]);", body);
+        Editor.setText(body);
         $("button[formaction$='entryAdd!publish.rol']").click();
 
         // Wait on the write landing, not the page moving: the permalink block
@@ -213,7 +210,7 @@ class MultiUserJourneyIT extends RollerIT {
 
     private void editEntryBody(String weblogHandle, String entryId, String body) {
         openEditor(weblogHandle, entryId);
-        executeJavaScript("rollerSetEntryText(arguments[0]);", body);
+        Editor.setText(body);
         $("button[formaction$='entryEdit!saveDraft.rol']").click();
         $("#entry").should(exist);
     }
@@ -221,7 +218,7 @@ class MultiUserJourneyIT extends RollerIT {
     /** The body currently stored for an entry, as its own editor reports it. */
     private String entryBody(String weblogHandle, String entryId) {
         openEditor(weblogHandle, entryId);
-        String text = executeJavaScript("return rollerGetEntryText();");
+        String text = Editor.getText();
         return text == null ? "" : text;
     }
 
@@ -229,7 +226,7 @@ class MultiUserJourneyIT extends RollerIT {
         openPath("/roller-ui/authoring/entryEdit.rol?weblog=" + weblogHandle
                 + "&bean.id=" + entryId);
         $("#entry").should(exist);
-        $(EDITOR_BODY).should(visible);
+        Editor.root();
     }
 
     /**

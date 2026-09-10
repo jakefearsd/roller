@@ -23,6 +23,7 @@ import java.net.URL;
 import java.util.Map;
 
 import com.codeborne.selenide.CollectionCondition;
+import org.apache.roller.it.support.Editor;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceLock;
@@ -31,7 +32,6 @@ import static com.codeborne.selenide.Condition.exist;
 import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
 import static com.codeborne.selenide.Selenide.$$;
-import static com.codeborne.selenide.Selenide.executeJavaScript;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -55,7 +55,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @ResourceLock(RollerIT.GLOBAL_CONFIG)
 class GlobalConfigMatrixIT extends RollerIT {
 
-    private static final String EDITOR_BODY = ".CodeMirror";
     private static final String PERMALINK = "#entry_bean_permalink";
 
     /**
@@ -182,8 +181,7 @@ class GlobalConfigMatrixIT extends RollerIT {
         openPath("/roller-ui/authoring/entryAdd.rol?weblog=" + handle);
         $("#entry").should(exist);
         $("input[name='bean.title']").setValue(title);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript("rollerSetEntryText(arguments[0]);", "Body of " + title);
+        Editor.setText("Body of " + title);
         $("button[formaction$='entryAdd!publish.rol']").click();
 
         $(PERMALINK).should(exist);

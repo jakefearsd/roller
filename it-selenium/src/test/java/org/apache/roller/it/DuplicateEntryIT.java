@@ -17,6 +17,7 @@
  */
 package org.apache.roller.it;
 
+import org.apache.roller.it.support.Editor;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,7 +27,6 @@ import static com.codeborne.selenide.Condition.value;
 import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
 import static com.codeborne.selenide.Selenide.$$;
-import static com.codeborne.selenide.Selenide.executeJavaScript;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -45,8 +45,6 @@ class DuplicateEntryIT extends RollerIT {
 
     private static final String ENTRY_ADD = "/roller-ui/authoring/entryAdd.rol?weblog=" + WEBLOG_HANDLE;
     private static final String ENTRIES = "/roller-ui/authoring/entries.rol?weblog=" + WEBLOG_HANDLE;
-
-    private static final String EDITOR_BODY = ".CodeMirror";
 
     /** Rendered on the edit page only once the entry is actually published. */
     private static final String PERMALINK = "#entry_bean_permalink";
@@ -75,8 +73,7 @@ class DuplicateEntryIT extends RollerIT {
                 "the redirect landed on the original, so the author would edit the published post");
 
         $("input[name='bean.title']").shouldHave(value("Copy of " + title));
-        $(EDITOR_BODY).should(visible);
-        String copyText = executeJavaScript("return rollerGetEntryText();");
+        String copyText = Editor.getText();
         assertTrue(copyText != null && copyText.contains(body),
                 "the copy did not carry the original's text; it holds: " + copyText);
 
@@ -91,8 +88,7 @@ class DuplicateEntryIT extends RollerIT {
         openPath(ENTRY_ADD);
         $("#entry").should(exist);
         $("input[name='bean.title']").setValue(title);
-        $(EDITOR_BODY).should(visible);
-        executeJavaScript("rollerSetEntryText(arguments[0]);", body);
+        Editor.setText(body);
         $("button[formaction$='entryAdd!publish.rol']").click();
 
         // Wait on the write landing, not on the page moving: the permalink

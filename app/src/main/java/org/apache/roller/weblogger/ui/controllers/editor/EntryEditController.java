@@ -797,6 +797,12 @@ public class EntryEditController extends BaseController {
                     .getWeblogEntryURL(getActionWeblog(request), null, entry.getAnchor(), true));
         }
 
+        // The document the editor's split/preview panes frame. Built by
+        // BaseController rather than here, because the page editor frames the
+        // same shell and two copies of the string is how the two screens'
+        // previews would come to differ.
+        model.addAttribute("previewShellURL", previewShellURL(getActionWeblog(request)));
+
         // Thumbnail previews for the SEO panel's featured/social image pickers.
         // Read off the bean rather than the entry so a save that failed
         // validation still shows the image the author picked in the form.
