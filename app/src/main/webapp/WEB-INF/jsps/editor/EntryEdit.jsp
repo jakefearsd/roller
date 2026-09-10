@@ -812,29 +812,9 @@
         $('#seo_jsonldType').on('change', updateSeoJsonLdRows);
     });
 
-    <%-- Featured/social image pickers: same media chooser as the editor's
-         "insert media file" link, routed to a hidden id input + thumbnail
-         preview instead of inserting into the editor. Shared by both targets:
-         'featuredImage' and 'ogImage'. --%>
-
-    function openImagePicker(target) {
-        onClickMediaFileInsert(target);
-    }
-
-    <%-- Called by onSelectMediaFile (EntryEditor.jsp) when a picker target is active. --%>
-    function onImagePicked(target, name, url, isImage, id) {
-        if (isImage !== "true" || !id) {
-            return;
-        }
-        $('#seo_' + target + 'Id').val(id);
-        $('#seo_' + target + '_preview').attr('src', url + '?t=true').show();
-        $('#seo_' + target + '_clear').show();
-    }
-
-    function clearPickedImage(target) {
-        $('#seo_' + target + 'Id').val('');
-        $('#seo_' + target + '_preview').removeAttr('src').hide();
-        $('#seo_' + target + '_clear').hide();
-    }
+    <%-- The featured/social image pickers themselves (openImagePicker /
+         onImagePicked / clearPickedImage) live in EditorScript.jsp: they are
+         generic over the seo_<target>* id convention, and the page editor's
+         own SEO drawer uses the same three. --%>
 
 </script>

@@ -44,8 +44,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class EntryEditorJspGuideTest {
 
+    /**
+     * The guide's markup and the function that opens it now live in the two
+     * shared editor includes rather than in {@code EntryEditor.jsp}: the page
+     * editor runs the same surface, so a guide homed on the entry screen
+     * would have been the fifth thing the page editor silently went without.
+     * Same assertions, repointed at the file that owns each half.
+     */
     private static final Path ENTRY_EDITOR =
-            Paths.get("src/main/webapp/WEB-INF/jsps/editor/EntryEditor.jsp");
+            Paths.get("src/main/webapp/WEB-INF/jsps/editor/EditorSurface.jsp");
+    private static final Path EDITOR_SCRIPT =
+            Paths.get("src/main/webapp/WEB-INF/jsps/editor/EditorScript.jsp");
 
     private static String read(Path jsp) throws IOException {
         return Files.readString(jsp, StandardCharsets.UTF_8);
@@ -55,15 +64,15 @@ class EntryEditorJspGuideTest {
     void theGuideIsAnOffcanvasWithTheExpectedId() throws IOException {
         String jsp = read(ENTRY_EDITOR);
         assertTrue(jsp.contains("id=\"editorGuide\""),
-                "EntryEditor.jsp must render the guide offcanvas with id=\"editorGuide\"");
+                "EditorSurface.jsp must render the guide offcanvas with id=\"editorGuide\"");
         assertTrue(jsp.contains("class=\"offcanvas"),
                 "the guide must be a Bootstrap offcanvas, not a modal");
     }
 
     @Test
     void theShortcodeTableIsGeneratedFromTheRegistryNotHandTyped() throws IOException {
-        // The Insert menu ALSO iterates shortcodeCards (a few hundred lines
-        // earlier in this file), so the assertion has to be scoped to the
+        // The Insert menu ALSO iterates shortcodeCards (earlier in this
+        // file), so the assertion has to be scoped to the
         // guide itself -- otherwise this test passes whether or not the guide
         // exists at all, which is exactly the failure a source scan must not
         // have.
@@ -110,7 +119,7 @@ class EntryEditorJspGuideTest {
 
     @Test
     void theHelpCommandOpensTheGuide() throws IOException {
-        String jsp = read(ENTRY_EDITOR);
+        String jsp = read(EDITOR_SCRIPT);
         assertTrue(jsp.contains("window.rollerOpenGuide"),
                 "commands.help() must call window.rollerOpenGuide(), and something "
                         + "on this page must define it");

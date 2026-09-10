@@ -754,6 +754,28 @@ table.mm_table_actions td {
     color: var(--good);
 }
 
+/* The page editor's address line: the weblog's own root as a quiet prefix
+   and the slug as the only thing an author types, on the same 12px mono
+   line the entry permalink uses. Borderless except for a rule under the
+   editable half, so the row reads as text with one field in it rather than
+   as a form row with a label. */
+.editor-slug-prefix {
+    font-family: var(--font-data);
+    font-size: 12px;
+    color: var(--ink-soft);
+}
+
+.editor-permalink .editor-slug {
+    min-width: 12em;
+    padding: 0;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    background: transparent;
+    font-family: var(--font-data);
+    font-size: 12px;
+    color: var(--ink);
+}
+
 .editor-box {
     background: var(--surface);
     border: 1px solid var(--line);

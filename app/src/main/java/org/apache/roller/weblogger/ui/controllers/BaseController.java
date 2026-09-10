@@ -23,6 +23,7 @@ import java.util.List;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.config.WebloggerConfig;
@@ -422,6 +423,28 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
      */
     public WeblogPage lookupPage(String id, HttpServletRequest request) {
         return WeblogOwnership.page(weblogger, id, getActionWeblog(request));
+    }
+
+    /**
+     * Where the editor's split/preview panes point their iframe: the weblog's
+     * own theme with one empty article for the rendered fragment to land in
+     * ({@code PreviewServlet}'s {@code ?shell=true} branch).
+     *
+     * <p>Built from the parts rather than asked of the preview URL strategy,
+     * because the strategy answers with the weblog's <em>root</em> and this is
+     * that root plus a query parameter -- one string, versus a strategy
+     * contract that does not cover it. The context path has to be on the
+     * front or an iframe under a servlet prefix loads the site root instead;
+     * that is the trap {@code ContactShortcode} already hit (see CLAUDE.md,
+     * Audience).
+     *
+     * <p>Shared by the entry editor and the page editor, which run the same
+     * surface: two copies of one string is exactly how the two screens'
+     * previews would come to frame different documents.
+     */
+    protected String previewShellURL(Weblog weblog) {
+        return StringUtils.defaultString(WebloggerRuntimeConfig.getRelativeContextURL())
+                + "/roller-ui/authoring/preview/" + weblog.getHandle() + "/?shell=true";
     }
 
     // --- Configuration property helpers ---

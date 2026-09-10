@@ -30,9 +30,7 @@
     <spring:message code="weblogPagesForm.subtitle" arguments="${actionWeblog.handle}"/>
 </p>
 
-<%-- Local draft recovery -- see EntryEdit.jsp; PageEdit carries its own copy
-     of the editor bootstrap, so it carries its own wiring too. Page scope is
-     fine here: nothing is jsp:include-d. --%>
+<%-- Local draft recovery -- see EntryEdit.jsp. --%>
 <script src="<c:url value='/theme/scripts/roller-draft.js'/>"></script>
 <script>
     // ClipboardJS is loaded globally by head.jsp.
@@ -44,70 +42,157 @@
             e.clearSelection();
         });
     });
+
+    <%-- Session-expiry banner, copied from EntryEdit.jsp: an author can spend
+         an hour on a page as easily as on an entry, and a save that lands on
+         the login screen loses the lot. Purely local arithmetic against the
+         container's own maxInactiveInterval -- no endpoint, no polling,
+         nothing that would itself keep the session alive. The timer restarts
+         on any input, so it measures inactivity the same way the container
+         does; clock drift can only make it warn EARLY, the safe direction. --%>
+    document.addEventListener('DOMContentLoaded', function () {
+        var bar = document.getElementById('sessionExpiryBar');
+        if (!bar) {
+            return;
+        }
+        var timeout = parseInt(bar.dataset.timeout, 10);
+        if (!(timeout > 180)) {
+            // A session shorter than the warning lead time would show the
+            // banner permanently, which teaches people to ignore it.
+            return;
+        }
+        var warnAfterMs = (timeout - 120) * 1000;
+        var timer = null;
+        var arm = function () {
+            bar.hidden = true;
+            window.clearTimeout(timer);
+            timer = window.setTimeout(function () {
+                bar.hidden = false;
+            }, warnAfterMs);
+        };
+        ['keydown', 'click', 'input'].forEach(function (type) {
+            document.addEventListener(type, arm, true);
+        });
+        arm();
+    });
 </script>
-<c:set var="draftKey"
+
+<%-- Request scope, not page scope: EditorSurface.jsp arrives via jsp:include
+     and cannot see page-scoped variables set here. --%>
+<c:set var="draftKey" scope="request"
        value="roller.draft.v1:${pageContext.request.contextPath}:${actionWeblog.handle}:pageEdit:${empty bean.id ? 'new' : bean.id}"/>
-<c:set var="draftNewKey"
+<c:set var="draftNewKey" scope="request"
        value="roller.draft.v1:${pageContext.request.contextPath}:${actionWeblog.handle}:pageEdit:new"/>
 
-<div id="draftRecoveryBar" class="draft-bar" hidden role="status" aria-live="polite"
-     data-restored="<spring:message code='weblogEdit.draftRecovery.restored'/>">
-    <span class="draft-bar-text"
-          data-template="<spring:message code='weblogEdit.draftRecovery.message'/>"></span>
-    <button type="button" class="draft-bar-restore"><spring:message code="weblogEdit.draftRecovery.restore"/></button>
-    <span class="draft-bar-sep">&#183;</span>
-    <button type="button" class="draft-bar-discard"><spring:message code="weblogEdit.draftRecovery.discard"/></button>
-</div>
+<%-- The same writing surface plus publish rail the entry editor runs (the
+     approved card is docs/design/editor/editor-writing-surface.html): the main
+     column carries title, address and the Markdown editor, and everything
+     about *managing* the page lives in a 252px rail. --%>
 
-<form id="pageEditForm" method="post" class="form-stacked"
+<div class="editor-grid">
+
+<form id="pageEditForm" method="post" class="form-stacked editor-form"
       action="${pageContext.request.contextPath}/roller-ui/authoring/pageEdit!save.rol">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <input type="hidden" name="bean.id" value="${bean.id}"/>
 
-    <%-- The page's own URL, once it has one: same mono line + copy control
-         the entry editor carries. Only on a saved, published page -- an
-         unsaved page has no slug and a draft's URL 404s. --%>
-    <c:if test="${not empty bean.id and bean.status == 'PUBLISHED'}">
+    <%-- ================================================================== --%>
+    <%-- The writing surface: title, address, editor --%>
+
+    <div class="editor-main">
+
+        <div id="sessionExpiryBar" class="draft-bar" hidden role="status" aria-live="polite"
+             data-timeout="${pageContext.session.maxInactiveInterval}">
+            <span class="draft-bar-text"><spring:message code="session.expiringSoon"/></span>
+        </div>
+
+        <%-- Draft recovery. Hidden until roller-draft.js finds a local
+             snapshot the server does not have. type="button" is load-bearing:
+             this sits inside the form, where a bare <button> submits it. --%>
+        <div id="draftRecoveryBar" class="draft-bar" hidden role="status" aria-live="polite"
+             data-restored="<spring:message code='weblogEdit.draftRecovery.restored'/>">
+            <span class="draft-bar-text"
+                  data-template="<spring:message code='weblogEdit.draftRecovery.message'/>"></span>
+            <button type="button" class="draft-bar-restore"><spring:message code="weblogEdit.draftRecovery.restore"/></button>
+            <span class="draft-bar-sep">&#183;</span>
+            <button type="button" class="draft-bar-discard"><spring:message code="weblogEdit.draftRecovery.discard"/></button>
+        </div>
+
+        <%-- title: the page's one piece of layout hierarchy. Large serif,
+             borderless -- emphasis elsewhere is weight, never size. --%>
+        <input type="text" id="page_bean_title" name="bean.title" value="${fn:escapeXml(bean.title)}" maxlength="255"
+               autofocus
+               class="editor-title"
+               placeholder="<spring:message code="weblogEdit.title"/>"
+               aria-label="<spring:message code="weblogEdit.title"/>"/>
+
+        <%-- The page's address, editable in place: the weblog's own root as a
+             quiet prefix and the slug as the only thing an author types. A
+             page is served at /<handle>/<slug> -- a bare single segment -- so
+             there is no "page/" in it; the old form showed one, which is the
+             CUSTOM-template route and handed out a URL that 404s. --%>
         <p class="editor-permalink" role="status" aria-live="polite">
-            <a id="page_permalink" href="${urls.weblogAbsolute(actionWeblog)}page/${fn:escapeXml(bean.slug)}"
-               target="_blank" rel="noopener">${urls.weblogAbsolute(actionWeblog)}page/${fn:escapeXml(bean.slug)}</a>
+            <span class="editor-slug-prefix">${urls.weblogAbsolute(actionWeblog)}</span><input
+                    type="text" id="page_bean_slug" name="bean.slug" value="${fn:escapeXml(bean.slug)}"
+                    maxlength="255" class="editor-slug"
+                    aria-label="<spring:message code='weblogPagesForm.slug'/>"/>
+            <%-- Only offered on a published page: a draft's address 404s, so
+                 copying it hands someone a broken link. ClipboardJS copies the
+                 attribute rather than a selected element, since the slug lives
+                 in an input whose value the author may be mid-edit. --%>
+            <c:if test="${not empty bean.id and bean.status == 'PUBLISHED'}">
             &#183;
             <button class="clipbutton editor-permalink-copy" type="button"
-                    data-clipboard-target="#page_permalink"
+                    data-clipboard-text="${urls.weblogAbsolute(actionWeblog)}${fn:escapeXml(bean.slug)}"
                     aria-label="<spring:message code='generic.copyToClipboard'/>"><spring:message code="weblogEdit.copyPermalink"/></button>
+            </c:if>
         </p>
-    </c:if>
 
-    <div class="row mb-3">
-        <label class="col-sm-3 col-form-label" for="page_bean_title"><spring:message code="weblogEdit.title"/></label>
-        <div class="col-sm-9">
-            <input type="text" id="page_bean_title" name="bean.title" value="${fn:escapeXml(bean.title)}" maxlength="255" autofocus class="form-control"/>
-        </div>
+        <%-- The writing surface and its script are shared with the entry
+             editor. editorFieldValue is escaped HERE rather than inside the
+             include -- see EditorSurface.jsp's header for why. --%>
+        <c:set var="editorFieldName" scope="request" value="bean.content"/>
+        <c:set var="editorFieldValue" scope="request" value="${fn:escapeXml(bean.content)}"/>
+        <c:set var="editorIdField" scope="request" value="bean.id"/>
+        <c:url var="editorPreviewUrl" scope="request" value="/roller-ui/authoring/pageEdit!preview.rol"/>
+
+        <jsp:include page="/WEB-INF/jsps/editor/EditorSurface.jsp"/>
+
     </div>
 
-    <div class="row mb-3">
-        <label class="col-sm-3 col-form-label" for="page_bean_slug"><spring:message code="weblogPagesForm.slug"/></label>
-        <div class="col-sm-9">
-            <div class="input-group">
-                <span class="input-group-text">/${actionWeblog.handle}/</span>
-                <input type="text" id="page_bean_slug" name="bean.slug" value="${fn:escapeXml(bean.slug)}" maxlength="255" class="form-control"/>
-            </div>
-        </div>
-    </div>
+    <%-- ================================================================== --%>
+    <%-- The publish rail --%>
 
-    <div class="row mb-3">
-        <label class="col-sm-3 col-form-label" for="page_bean_status"><spring:message code="weblogEdit.status"/></label>
-        <div class="col-sm-9">
+    <div class="editor-rail">
+
+        <div class="editor-box">
+            <p class="rail-group-label"><spring:message code="weblogEdit.publishGroup"/></p>
+
+            <label class="editor-field-label" for="page_bean_status"><spring:message code="weblogEdit.status"/></label>
             <select id="page_bean_status" name="bean.status" class="form-select">
                 <option value="DRAFT" ${bean.status == 'DRAFT' ? 'selected' : ''}><spring:message code="weblogEdit.draft"/></option>
                 <option value="PUBLISHED" ${bean.status == 'PUBLISHED' ? 'selected' : ''}><spring:message code="weblogEdit.published"/></option>
             </select>
-        </div>
-    </div>
 
-    <div class="row mb-3">
-        <div class="offset-sm-3 col-sm-9">
-            <div class="form-check">
+            <div class="editor-btnrow">
+                <button type="submit" id="pageSaveButton" class="btn btn-primary"><spring:message code="generic.save"/></button>
+            </div>
+
+            <%-- The reader's own view, opened in a new tab. An href rather
+                 than an onclick: fn:escapeXml renders an apostrophe as
+                 &#039;, which the HTML parser decodes back to ' BEFORE an
+                 onclick compiles as JavaScript -- in an attribute value there
+                 is no second parser. --%>
+            <c:if test="${not empty bean.id and bean.status == 'PUBLISHED'}">
+                <a class="editor-preview-link" target="_blank" rel="noopener"
+                   href="${urls.weblogAbsolute(actionWeblog)}${fn:escapeXml(bean.slug)}"><spring:message code="weblogEdit.fullPreviewMode"/></a>
+            </c:if>
+        </div>
+
+        <div class="editor-box">
+            <p class="rail-group-label"><spring:message code="pageEdit.navigationGroup"/></p>
+
+            <div class="form-check editor-quiet-check">
                 <%-- The "_showInNav" marker is Spring's documented way to tell
                      a plain HTML checkbox from "not part of this form":
                      PageBean.showInNav defaults to true (matching
@@ -140,74 +225,21 @@
                     <spring:message code="weblogPagesForm.showInNav"/>
                 </label>
             </div>
-        </div>
-    </div>
 
-    <div class="row mb-3">
-        <label class="col-sm-3 col-form-label" for="page_bean_navOrder"><spring:message code="weblogPagesForm.navOrder"/></label>
-        <div class="col-sm-3">
+            <label class="editor-field-label" for="page_bean_navOrder"><spring:message code="weblogPagesForm.navOrder"/></label>
             <input type="number" id="page_bean_navOrder" name="bean.navOrder" value="${bean.navOrder}" min="0" class="form-control"/>
             <div class="form-text"><spring:message code="weblogPagesForm.navOrder.tip"/></div>
         </div>
-    </div>
 
-    <div id="accordion">
-
-        <%-- ============================================================ --%>
-        <%-- Content editor. The same RollerEditor core the entry editor
-             mounts (toolbar and mode control arrive with Task A9), driven
-             through the same three functions
-             (insertMediaFile, rollerSetEntryText, rollerGetEntryText) so a
-             future editor swap only means reimplementing those. Not a
-             literal jsp:include of EntryEditor.jsp: that partial binds to
-             bean.text and carries entry-only pieces (summary, mediacast)
-             that have no equivalent on a page. --%>
-
-        <textarea name="bean.content" id="edit_content" rows="18" class="col-sm-12">${fn:escapeXml(bean.content)}</textarea>
-
-        <%-- A pasted/dropped image's upload refusal surfaces here -- same
-             marker and styling (roller-editor.css) as the entry editor's
-             #editorStatus, just without a toolbar of its own to sit under. --%>
-        <div class="editor-status" id="editorStatus"></div>
-
-        <div class="dropdown d-inline-block" id="shortcodeInsertMenu">
-            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
-                    id="shortcodeInsertButton" data-bs-toggle="dropdown" aria-expanded="false">
-                <spring:message code="weblogEdit.insertShortcode"/>
-            </button>
-            <ul class="dropdown-menu" aria-labelledby="shortcodeInsertButton">
-                <c:forEach items="${shortcodeCards}" var="card">
-                    <li>
-                        <button type="button" class="dropdown-item shortcode-card"
-                                data-shortcode="<c:out value='${card.name}'/>"
-                                data-snippet="<c:out value='${card.snippet}'/>"
-                                data-chooser="${card.usesMediaChooser}"><spring:message code="${card.labelKey}"/></button>
-                    </li>
-                </c:forEach>
-            </ul>
-        </div>
-
-        <%-- mb-4 rather than a spacer.png with an inline min-height: the gap
-             before the SEO card is margin, and margin is what should express
-             it. Same change as EntryEditor.jsp, whose shape this mirrors. --%>
-        <div class="mb-4">
-            <button type="button" class="btn btn-link p-0 align-baseline border-0"
-                    onclick="onClickPageMediaFileInsert();"><spring:message code="weblogEdit.insertMediaFile"/></button>
-        </div>
-
-        <%-- ============================================================ --%>
-        <%-- SEO and social sharing, matching EntryEdit.jsp's card --%>
-
-        <div class="card" id="panel-seo">
-            <div class="card-header">
-                <h4 class="card-title">
-                    <a class="collapsed" data-bs-toggle="collapse" data-bs-target="#collapseSeo" href="#">
-                        <spring:message code="weblogEdit.seoSettings"/>
-                    </a>
-                </h4>
-            </div>
+        <%-- SEO and social sharing: the same card the entry editor carries,
+             behind the same quiet drawer. Field ids/names and the picker JS
+             are a browser-test contract -- do not rename. --%>
+        <div class="editor-box">
+            <a class="editor-drawer collapsed" data-bs-toggle="collapse" data-bs-target="#collapseSeo" href="#">
+                <spring:message code="weblogEdit.seoSettings"/>
+            </a>
             <div id="collapseSeo" class="collapse">
-                <div class="card-body">
+                <div class="editor-drawer-body">
 
                     <div class="row mb-3">
                         <label class="col-sm-3 col-form-label" for="seo_metaTitle"><spring:message code="weblogEdit.metaTitle"/></label>
@@ -231,10 +263,10 @@
                                 <img id="seo_ogImage_preview" src="${ogImageThumbnailUrl}" alt=""
                                      style="max-height:120px;${empty ogImageThumbnailUrl ? 'display:none;' : ''}"/>
                             </div>
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="onClickPageMediaFileInsert('ogImage')"><spring:message code="weblogEdit.chooseImage"/></button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="openImagePicker('ogImage')"><spring:message code="weblogEdit.chooseImage"/></button>
                             <button type="button" class="btn btn-outline-danger btn-sm" id="seo_ogImage_clear"
                                     style="${empty bean.ogImageId ? 'display:none;' : ''}"
-                                    onclick="clearPickedOgImage()"><spring:message code="weblogEdit.clearImage"/></button>
+                                    onclick="clearPickedImage('ogImage')"><spring:message code="weblogEdit.clearImage"/></button>
                         </div>
                     </div>
 
@@ -260,35 +292,29 @@
             </div>
         </div>
 
-    </div>
-
-    <%-- ================================================================== --%>
-    <%-- Buttons --%>
-
-    <button type="submit" class="btn btn-primary"><spring:message code="generic.save"/></button>
-
-    <c:if test="${not empty bean.id}">
-        <span style="float:right">
-            <%-- id/title ride in data-* attributes, not an interpolated
-                 onclick string -- fn:escapeXml renders an apostrophe as
-                 &#039;, which the HTML parser decodes back to ' BEFORE the
-                 onclick attribute compiles as JavaScript, so a page titled
-                 e.g. "Maiia's bio" made this control a permanent
-                 SyntaxError. Delegated handler below (same convention as
-                 MediaFileView.jsp:493). --%>
-            <button type="button" id="pageDeleteButton" class="btn btn-danger"
+        <c:if test="${not empty bean.id}">
+            <%-- delete: a quiet text link, not a red button. id/title ride in
+                 data-* attributes rather than an interpolated onclick string --
+                 fn:escapeXml renders an apostrophe as &#039;, which the HTML
+                 parser decodes back to ' BEFORE the onclick attribute compiles
+                 as JavaScript, so a page titled e.g. "Maiia's bio" made this
+                 control a permanent SyntaxError. See the delegated handler
+                 below (same convention as MediaFileView.jsp:493). --%>
+            <button type="button" id="deletePageButton" class="delete-link"
                     data-page-id="${bean.id}" data-page-title="${fn:escapeXml(bean.title)}"
-                    aria-label="<spring:message code='generic.delete'/>: ${fn:escapeXml(bean.title)}">
-                <spring:message code="generic.delete"/>
-            </button>
-        </span>
-    </c:if>
+                    aria-label="<spring:message code='generic.delete'/>: ${fn:escapeXml(bean.title)}"><spring:message code="generic.delete"/></button>
+        </c:if>
+
+    </div>
 
     <sec:csrfInput/>
 </form>
 
+</div><%-- /editor-grid --%>
+
 <%-- ====================================================================== --%>
-<%-- Delete confirmation --%>
+<%-- Delete confirmation. Outside the edit form: it is its own POST with its
+     own CSRF token, and forms must not nest. --%>
 
 <div id="delete-page-modal" class="modal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="delete-page-modal-title">
     <div class="modal-dialog">
@@ -310,97 +336,27 @@
 </div>
 
 <%-- ====================================================================== --%>
-<%-- Media file chooser, for both "insert into the content editor" and the
-     og:image picker. Its own ids so this JSP never collides with the entry
-     editor's copy of the same modal. --%>
 
-<div id="page_mediafile_edit_lightbox" class="modal" role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="page-mediafile-edit-lightbox-title">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h4 id="page-mediafile-edit-lightbox-title" class="modal-title"><spring:message code="weblogEdit.insertMediaFile"/></h4>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<spring:message code='generic.close'/>"></button>
-            </div>
-            <div class="modal-body">
-                <iframe id="pageMediaFileEditor" style="visibility:inherit" height="600" width="100%"
-                        frameborder="no" scrolling="auto"></iframe>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><spring:message code="generic.close"/></button>
-            </div>
-        </div>
-    </div>
-</div>
+<jsp:include page="/WEB-INF/jsps/editor/EditorScript.jsp"/>
 
 <script>
 
-    var rollerEditor = null;
-
-    <%-- RollerEditor.create takes ONE onChange; the dirty flag and local
-         draft recovery both need it, so the page owns the fan-out. Same
-         shape as EntryEditor.jsp. --%>
-    var rollerEditorChangeListeners = [];
-
+    <%-- This page has one Save button, so save and publish are the same
+         action -- the same collapse the editor's keydown handling makes.
+         Declared at script top level, not inside ready(): EditorScript.jsp
+         reads both by name when it mounts the editor, which happens on
+         ready. --%>
     function rollerSavePage() {
-        var button = document.querySelector("#pageEditForm button[type='submit']");
+        var button = document.getElementById('pageSaveButton');
         if (button) {
             button.click();
         }
     }
 
-    $(document).ready(function () {
-        <%-- The minimal RollerEditor mount: no toolbar, no mode control.
-             Task A9 rebuilds this page on the entry editor's surface; until
-             then a page author gets the same editing core through the same
-             three seam functions, and nothing else changes here. --%>
-        var shortcodes = [];
-        document.querySelectorAll('#shortcodeInsertMenu .shortcode-card').forEach(function (b) {
-            shortcodes.push({ name: b.dataset.shortcode, snippet: b.dataset.snippet, label: b.textContent.trim() });
-        });
-        rollerEditor = RollerEditor.create({
-            textarea: document.getElementById('edit_content'),
-            placeholder: '<spring:message code="editor.placeholder" javaScriptEscape="true"/>',
-            shortcodes: shortcodes,
-            <%-- Bound on the editor as well as on document, because
-                 CodeMirror's default keymap owns Mod-Enter (insert blank
-                 line) and Mod-slash (toggle comment) and the document-level
-                 handler below bails on an already-handled event. This page
-                 has one Save button, so save and publish are the same
-                 action -- the same collapse the keydown handler makes. --%>
-            onSave: rollerSavePage,
-            onPublish: rollerSavePage,
-            onHelp: function () { if (window.rollerOpenGuide) { window.rollerOpenGuide(); } },
-            onUpload: rollerUploadImages,
-            onChange: function () {
-                rollerEditorChangeListeners.forEach(function (listener) {
-                    try {
-                        listener();
-                    } catch (e) {
-                        /* one bad listener is not the others' problem */
-                    }
-                });
-            }
-        });
+    var rollerSaveDraft = rollerSavePage;
+    var rollerPublish = rollerSavePage;
 
-        document.addEventListener('keydown', function (event) {
-            <%-- The shortcuts for focus OUTSIDE the editor; inside it they
-                 are bound on the editor (above). A binding that DID
-                 handle the key calls preventDefault without stopPropagation,
-                 so the event still reaches document -- and this handler would
-                 fire a second click, i.e. two saves per Ctrl-S. Bailing on an
-                 already-handled event is what keeps any such pair from
-                 overlapping. --%>
-            if (event.defaultPrevented) {
-                return;
-            }
-            if (!(event.ctrlKey || event.metaKey)) {
-                return;
-            }
-            if (event.key === 's' || event.key === 'S' || event.key === 'Enter') {
-                event.preventDefault();
-                rollerSavePage();
-            }
-        });
+    $(document).ready(function () {
 
         <%-- Bound once, tracking a dirty flag -- the same fix as
              EntryEditor.jsp, where registering both handlers inside the change
@@ -449,130 +405,21 @@
             });
         }
 
-        $(".shortcode-card").on('click', function (event) {
-            event.preventDefault();
-            if (this.dataset.chooser === 'true') {
-                onClickPageMediaFileInsert();
-            } else {
-                insertMediaFile(this.dataset.snippet);
-                rollerEditor.focus();
-            }
-        });
-    });
-
-    <%-- The one seam for putting text into the editor. --%>
-    function insertMediaFile(toInsert) {
-        rollerEditor.insert(toInsert);
-    }
-
-    function rollerSetEntryText(text) {
-        rollerEditor.setValue(text);
-    }
-
-    function rollerGetEntryText() {
-        return rollerEditor.getValue();
-    }
-
-    <%-- Paste/drop upload -- same seam and contract as EntryEditor.jsp's
-         rollerUploadImages: a placeholder line, one file at a time, replaced
-         with the shortcode on success and removed with a status-line error on
-         refusal. Kept here rather than shared because the two files do not
-         share a script include (see the file header comment); mirroring is
-         the minimum needed until Task A9 folds PageEdit onto the entry
-         editor's surface. --%>
-    function rollerUploadImages(files) {
-        var queue = Array.prototype.slice.call(files);
-        (function next() {
-            var file = queue.shift();
-            if (!file) { return; }
-            var placeholder = '[uploading ' + file.name.replace(/[\[\]]/g, '') + '…]';
-            rollerEditor.insert(placeholder + '\n');
-            var form = new FormData();
-            form.append('file', file, file.name);
-            form.append('weblog', $("input[name='weblog']").val());
-            form.append('${_csrf.parameterName}', '${_csrf.token}');
-            fetch('<c:url value="/roller-ui/authoring/mediaFileAdd!upload.rol"/>', { method: 'POST', body: form, credentials: 'same-origin' })
-                .then(function (r) { return r.json().then(function (body) { return { status: r.status, body: body }; }); })
-                .then(function (res) {
-                    var result = res.body && res.body.results && res.body.results[0];
-                    var text = rollerGetEntryText();
-                    if (result && result.id) {
-                        rollerSetEntryText(text.replace(placeholder, '[image id="' + result.id + '"]'));
-                    } else {
-                        rollerSetEntryText(text.replace(placeholder + '\n', '').replace(placeholder, ''));
-                        rollerStatusError((result && result.detail) || '<spring:message code="editor.uploadFailed" javaScriptEscape="true"/>');
-                    }
-                })
-                .catch(function () {
-                    rollerSetEntryText(rollerGetEntryText().replace(placeholder + '\n', '').replace(placeholder, ''));
-                    rollerStatusError('<spring:message code="editor.uploadFailed" javaScriptEscape="true"/>');
-                })
-                .then(next);
-        })();
-    }
-
-    <%-- The refusal detail is server text (RollerMessages), rendered via
-         textContent -- never innerHTML. --%>
-    function rollerStatusError(message) {
-        var status = document.getElementById('editorStatus');
-        var el = document.createElement('span');
-        el.className = 'is-error';
-        el.textContent = message;
-        status.appendChild(el);
-        window.setTimeout(function () { el.remove(); }, 8000);
-    }
-
-    <%-- Opens the media chooser. With no argument the chosen file is
-         inserted into the editor; with 'ogImage' the choice is routed to the
-         social-share image field instead. --%>
-    function onClickPageMediaFileInsert(pickerTarget) {
-        window.pageMediaPickerTarget = pickerTarget || null;
-        window.pageMediaLightboxCloseRequested = false;
-        <c:url var="mediaFileImageChooser" value="/roller-ui/authoring/overlay/mediaFileImageChooser.rol">
-        <c:param name="weblog" value="${actionWeblog.handle}"/>
-        </c:url>
-        $("#pageMediaFileEditor").attr('src', '${mediaFileImageChooser}');
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('page_mediafile_edit_lightbox')).show();
-    }
-
-    function closePageMediaFileLightbox() {
-        window.pageMediaLightboxCloseRequested = true;
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('page_mediafile_edit_lightbox')).hide();
-    }
-
-    document.getElementById('page_mediafile_edit_lightbox').addEventListener('shown.bs.modal', function () {
-        if (window.pageMediaLightboxCloseRequested) {
-            bootstrap.Modal.getOrCreateInstance(this).hide();
+        <%-- roller-draft.js dispatches this on the bar element right after it
+             writes a snapshot to localStorage. "Only if still dirty" matters
+             at submit time: this page's own submit handler above clears the
+             flag BEFORE roller-draft.js's runs save() and dispatches -- so a
+             real save does not flash "Draft saved locally" a moment before the
+             page reloads to "Saved". --%>
+        var draftBarForStatus = document.getElementById('draftRecoveryBar');
+        if (draftBarForStatus) {
+            draftBarForStatus.addEventListener('roller-draft:saved', function () {
+                if (rollerPageDirty) {
+                    rollerSetSaveState('savedLocally');
+                }
+            });
         }
     });
-
-    <%-- Callback from MediaFileImageChooser.jsp inside the iframe. --%>
-    function onSelectMediaFile(name, url, isImage, id) {
-        closePageMediaFileLightbox();
-        $("#pageMediaFileEditor").attr('src', 'about:blank');
-        if (window.pageMediaPickerTarget === 'ogImage') {
-            window.pageMediaPickerTarget = null;
-            if (isImage === "true" && id) {
-                $('#seo_ogImageId').val(id);
-                $('#seo_ogImage_preview').attr('src', url + '?t=true').show();
-                $('#seo_ogImage_clear').show();
-            }
-            return;
-        }
-        if (isImage === "true" && id) {
-            insertMediaFile('[image id="' + id + '"]');
-        } else if (isImage === "true") {
-            insertMediaFile('<a href="' + url + '"><img src="' + url + '?t=true" alt="' + name + '" /></a>');
-        } else {
-            insertMediaFile('<a href="' + url + '">' + name + '</a>');
-        }
-    }
-
-    function clearPickedOgImage() {
-        $('#seo_ogImageId').val('');
-        $('#seo_ogImage_preview').removeAttr('src').hide();
-        $('#seo_ogImage_clear').hide();
-    }
 
     function showPageDeleteModal(pageId, pageTitle) {
         $('#page-delete-id').val(pageId);
@@ -583,9 +430,9 @@
     <%-- The delete button only renders once the page has an id (see the
          c:if above), so this reads the id/title off it directly rather than
          from a form-level dataset lookup. --%>
-    var pageDeleteButton = document.getElementById('pageDeleteButton');
-    if (pageDeleteButton) {
-        pageDeleteButton.addEventListener('click', function () {
+    var deletePageButton = document.getElementById('deletePageButton');
+    if (deletePageButton) {
+        deletePageButton.addEventListener('click', function () {
             showPageDeleteModal(this.dataset.pageId, this.dataset.pageTitle);
         });
     }

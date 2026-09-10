@@ -134,10 +134,14 @@ class ShortcodeCardTest {
      * The menu must stay generated. Hand-listing the items in the JSP is the
      * one change that would let the editor and the registry drift apart again,
      * and it would not fail any other test here.
+     *
+     * <p>The menu lives in {@code EditorSurface.jsp} now -- the writing
+     * surface the entry editor and the page editor share -- rather than in
+     * {@code EntryEditor.jsp}, which is the entry-shaped wrapper around it.
      */
     @Test
     void theEditorBuildsItsMenuFromTheRegistry() throws IOException {
-        Path jsp = Paths.get("src/main/webapp/WEB-INF/jsps/editor/EntryEditor.jsp");
+        Path jsp = Paths.get("src/main/webapp/WEB-INF/jsps/editor/EditorSurface.jsp");
         assertTrue(Files.exists(jsp), "Expected " + jsp.toAbsolutePath());
         String source = Files.readString(jsp, StandardCharsets.UTF_8);
 

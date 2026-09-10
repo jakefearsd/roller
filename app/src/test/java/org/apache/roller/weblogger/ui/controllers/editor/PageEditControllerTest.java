@@ -29,6 +29,7 @@ import java.util.regex.Pattern;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogPage;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,6 +39,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.ServletRequestDataBinder;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -683,6 +685,108 @@ class PageEditControllerTest extends EditorControllerTestSupport {
     }
 
     // --- fixtures ---
+
+
+    // ------------------------------------------------------- live preview
+
+    /**
+     * The page editor previews through the same pipeline the published page
+     * renders with -- shortcodes, then Markdown, then the sanitizer. A
+     * Markdown library in the browser could not expand {@code [gallery]} or
+     * {@code [map]}, and a preview that disagreed with the page would mislead
+     * exactly where an author needs to trust it.
+     */
+    @Test
+    void previewRunsUnsavedTextThroughTheRealPipeline() {
+        var response = controller.pageEditPreview(requestFor(weblogA), null,
+                "## Opening hours\n\nWe open **early**.");
+
+        assertEquals(200, response.getStatusCode().value());
+        String html = response.getBody();
+        assertTrue(html.contains("<h2>Opening hours</h2>"), html);
+        assertTrue(html.contains("<strong>early</strong>"), html);
+    }
+
+    @Test
+    void previewSanitizesWhatItRenders() {
+        // commonmark passes raw HTML through by design, and the preview frame
+        // is same-origin with the admin page.
+        var response = controller.pageEditPreview(requestFor(weblogA), null,
+                "before\n\n<script>alert(1)</script>\n");
+
+        assertFalse(response.getBody().contains("<script"), response.getBody());
+    }
+
+    @Test
+    void previewOfAPageBelongingToAnotherWeblogIsNotFound() throws Exception {
+        // Same ownership rule as edit() and save(): the text comes from the
+        // request, but a supplied id must name a page on the action weblog.
+        // Without this, previewing is a way to ask what another weblog's
+        // shortcodes resolve to -- its media, its geo, its slug.
+        WeblogPage foreign = pageOn(weblogB, "their-about");
+
+        var response = controller.pageEditPreview(requestFor(weblogA), foreign.getId(), "anything");
+
+        assertEquals(404, response.getStatusCode().value());
+    }
+
+    @Test
+    void previewOfAnOwnedPageRendersInThatPagesOwnContext() throws Exception {
+        // The renderer takes a ShortcodeContext, and the slug is part of it
+        // ([cta]'s UTM campaign). A preview built on a scratch page with no
+        // slug would quietly render different links than the saved page does.
+        WeblogPage owned = pageOn(weblogA, "about");
+
+        var response = controller.pageEditPreview(requestFor(weblogA), owned.getId(),
+                "[cta href=\"https://example.com/book\" label=\"Book\"]");
+
+        assertEquals(200, response.getStatusCode().value());
+        // The sanitizer re-encodes "=" inside an href as &#61;, so compare
+        // against the decoded form rather than pinning that encoding here.
+        assertTrue(response.getBody().replace("&#61;", "=").contains("utm_campaign=about"),
+                "the page's own slug must reach the shortcode context, got: "
+                        + response.getBody());
+    }
+
+    // --------------------------------------------------- the preview shell
+
+    /**
+     * The preview pane frames the weblog's own theme rather than dumping the
+     * rendered fragment into a div, so the page needs the shell's URL -- the
+     * same attribute {@code EntryEditController} publishes, through the same
+     * {@code BaseController} helper, so the two editors cannot drift.
+     */
+    @Test
+    void theEditorIsToldWhereThePreviewShellLives() throws Exception {
+        // The context URL is a process-global static, so pin it rather than
+        // asserting against whatever an earlier test class left behind.
+        String previous = WebloggerRuntimeConfig.getRelativeContextURL();
+        WebloggerRuntimeConfig.setRelativeContextURL("");
+        try {
+            controller.edit(null, requestFor(weblogA), model);
+
+            assertEquals("/roller-ui/authoring/preview/" + WEBLOG_HANDLE + "/?shell=true",
+                    model.getAttribute("previewShellURL"));
+        } finally {
+            WebloggerRuntimeConfig.setRelativeContextURL(previous);
+        }
+    }
+
+    @Test
+    void thePreviewShellUrlCarriesTheServletContextPath() throws Exception {
+        // An absolute-root iframe src under a servlet prefix loads the site
+        // root instead -- the trap ContactShortcode already hit.
+        String previous = WebloggerRuntimeConfig.getRelativeContextURL();
+        WebloggerRuntimeConfig.setRelativeContextURL("/roller");
+        try {
+            controller.edit(null, requestFor(weblogA), model);
+
+            assertEquals("/roller/roller-ui/authoring/preview/" + WEBLOG_HANDLE + "/?shell=true",
+                    model.getAttribute("previewShellURL"));
+        } finally {
+            WebloggerRuntimeConfig.setRelativeContextURL(previous);
+        }
+    }
 
     private HttpServletRequest requestFor(Weblog weblog) {
         HttpServletRequest req = mock(HttpServletRequest.class);

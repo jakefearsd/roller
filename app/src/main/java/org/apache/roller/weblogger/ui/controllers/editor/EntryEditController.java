@@ -38,7 +38,6 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.ListmonkClient;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.search.IndexManager;
-import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -798,19 +797,11 @@ public class EntryEditController extends BaseController {
                     .getWeblogEntryURL(getActionWeblog(request), null, entry.getAnchor(), true));
         }
 
-        // The document the editor's split/preview panes frame: the weblog's
-        // own theme with one empty article for the rendered fragment to land
-        // in (PreviewServlet's ?shell=true branch). Built from the parts
-        // rather than asked of the preview URL strategy, because the strategy
-        // answers with the weblog's ROOT and this is that root plus a query
-        // parameter -- one string, versus a strategy contract that does not
-        // cover it. The context path has to be on the front or an iframe
-        // under a servlet prefix loads the site root instead; that is the
-        // trap ContactShortcode already hit (see CLAUDE.md, Audience).
-        model.addAttribute("previewShellURL",
-                StringUtils.defaultString(WebloggerRuntimeConfig.getRelativeContextURL())
-                        + "/roller-ui/authoring/preview/"
-                        + getActionWeblog(request).getHandle() + "/?shell=true");
+        // The document the editor's split/preview panes frame. Built by
+        // BaseController rather than here, because the page editor frames the
+        // same shell and two copies of the string is how the two screens'
+        // previews would come to differ.
+        model.addAttribute("previewShellURL", previewShellURL(getActionWeblog(request)));
 
         // Thumbnail previews for the SEO panel's featured/social image pickers.
         // Read off the bean rather than the entry so a save that failed
