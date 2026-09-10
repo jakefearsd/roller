@@ -278,6 +278,26 @@ class PageEditJspTest {
     }
 
     /**
+     * The shared guide's Ctrl+Enter row means "Post" on the entry editor and
+     * "Save" on the page editor (the page editor has no separate publish
+     * action). Each host hands the surface the message key for its own
+     * primary action, the same way it hands over the preview endpoint and id
+     * field above -- see {@code EntryEditorJspGuideTest
+     * .theCtrlEnterRowReadsTheHostSuppliedPrimaryActionKey} for the surface
+     * side.
+     */
+    @Test
+    void bothScreensSetTheirOwnPrimaryActionKeyForTheGuide() throws IOException {
+        assertTrue(read(ENTRY_EDITOR).contains(
+                        "var=\"editorPrimaryActionKey\" scope=\"request\" value=\"weblogEdit.post\""),
+                "EntryEditor.jsp must tell the shared guide its primary action is Post");
+        assertTrue(read(PAGE_EDIT).contains(
+                        "var=\"editorPrimaryActionKey\" scope=\"request\" value=\"generic.save\""),
+                "PageEdit.jsp must tell the shared guide its primary action is Save, "
+                        + "not the entry editor's Post");
+    }
+
+    /**
      * A resolved upload replaces its own placeholder by document range, not by
      * rewriting the whole buffer: {@code rollerSetEntryText} moves the caret to
      * the end, so a second file dropped in one go took the author's cursor with

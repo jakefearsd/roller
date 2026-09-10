@@ -155,6 +155,11 @@
         <c:set var="editorFieldValue" scope="request" value="${fn:escapeXml(bean.content)}"/>
         <c:set var="editorIdField" scope="request" value="bean.id"/>
         <c:url var="editorPreviewUrl" scope="request" value="/roller-ui/authoring/pageEdit!preview.rol"/>
+        <%-- The shared guide's Ctrl+Enter row reads this key. The page editor
+             has no separate publish action -- Ctrl+Enter does the same thing
+             #pageSaveButton does -- so it names generic.save, not the entry
+             editor's weblogEdit.post. --%>
+        <c:set var="editorPrimaryActionKey" scope="request" value="generic.save"/>
 
         <jsp:include page="/WEB-INF/jsps/editor/EditorSurface.jsp"/>
 

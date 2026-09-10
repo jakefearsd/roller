@@ -117,6 +117,30 @@ class EntryEditorJspGuideTest {
                 "the keyboard table must name Ctrl+/");
     }
 
+    /**
+     * The guide is shared by both editors, but "Ctrl+Enter" does not mean the
+     * same thing on both screens: it publishes on the entry editor and saves
+     * on the page editor (which has no separate publish action -- the status
+     * select decides that). A hardcoded {@code weblogEdit.post} label was
+     * therefore wrong on the page editor's guide. Each host sets
+     * {@code editorPrimaryActionKey} as a request attribute before including
+     * {@code EditorSurface.jsp}; the surface renders whatever key it was
+     * given rather than naming one itself. See
+     * {@code PageEditJspTest.bothScreensSetTheirOwnPrimaryActionKeyForTheGuide}
+     * for the host side of this.
+     */
+    @Test
+    void theCtrlEnterRowReadsTheHostSuppliedPrimaryActionKey() throws IOException {
+        String jsp = read(ENTRY_EDITOR);
+        int guideStart = jsp.indexOf("id=\"editorGuide\"");
+        assertTrue(guideStart > 0, "the guide must exist");
+        String guide = jsp.substring(guideStart);
+        assertTrue(guide.contains("<kbd>Ctrl</kbd>+<kbd>Enter</kbd></td>"
+                        + "<td><spring:message code=\"${editorPrimaryActionKey}\"/></td>"),
+                "the guide's Ctrl+Enter row must render editorPrimaryActionKey -- a "
+                        + "hardcoded weblogEdit.post mislabels the page editor's Save");
+    }
+
     @Test
     void theHelpCommandOpensTheGuide() throws IOException {
         String jsp = read(EDITOR_SCRIPT);

@@ -180,7 +180,7 @@
         <p class="rail-group-label"><spring:message code="editor.guide.shortcuts"/></p>
         <table class="editor-guide-table">
             <tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td><spring:message code="weblogEdit.save"/></td></tr>
-            <tr><td><kbd>Ctrl</kbd>+<kbd>Enter</kbd></td><td><spring:message code="weblogEdit.post"/></td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>Enter</kbd></td><td><spring:message code="${editorPrimaryActionKey}"/></td></tr>
             <tr><td><kbd>Ctrl</kbd>+<kbd>B</kbd> / <kbd>I</kbd></td><td><spring:message code="editor.bold"/> / <spring:message code="editor.italic"/></td></tr>
             <tr><td><kbd>Ctrl</kbd>+<kbd>F</kbd></td><td><spring:message code="editor.find"/></td></tr>
             <tr><td><kbd>Ctrl</kbd>+<kbd>/</kbd></td><td><spring:message code="editor.guide"/></td></tr>
