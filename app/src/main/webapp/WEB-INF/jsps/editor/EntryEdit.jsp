@@ -217,28 +217,33 @@
         <div class="editor-box">
             <p class="rail-group-label"><spring:message code="weblogEdit.publishGroup"/></p>
 
+            <%-- Status is the one shared pill component, the same five-variant
+                 vocabulary Entries.jsp and Pages.jsp render -- plus its sixth,
+                 UNSAVED, which exists for exactly this caller: an entry being
+                 composed has no PubStatus at all, so the rail needs no branch
+                 outside the component. The Bootstrap badges this replaced were
+                 four stock semantic colours (success/info/warning/danger) that
+                 said "danger" about an unsaved draft and used one colour, info,
+                 for two different states.
+
+                 Request scope, not page scope: <jsp:include> runs the included
+                 page in a fresh JspContext that cannot see page-scoped
+                 variables. The <c:remove> is the convention every other caller
+                 follows -- request scope outlives one include, and this rail
+                 has no scheduled pubtime to show. --%>
             <div class="editor-statusrow">
                 <c:choose>
-                <c:when test="${bean.published}">
-                    <span class="badge bg-success"><spring:message code="weblogEdit.published"/></span>
-                    <span class="editor-when" title="<spring:message code="weblogEdit.updateTime"/>"><fmt:formatDate value="${entry.updateTime}"/></span>
-                </c:when>
-                <c:when test="${bean.draft}">
-                    <span class="badge bg-info"><spring:message code="weblogEdit.draft"/></span>
-                    <span class="editor-when" title="<spring:message code="weblogEdit.updateTime"/>"><fmt:formatDate value="${entry.updateTime}"/></span>
-                </c:when>
-                <c:when test="${bean.pending}">
-                    <span class="badge bg-warning"><spring:message code="weblogEdit.pending"/></span>
-                    <span class="editor-when" title="<spring:message code="weblogEdit.updateTime"/>"><fmt:formatDate value="${entry.updateTime}"/></span>
-                </c:when>
-                <c:when test="${bean.scheduled}">
-                    <span class="badge bg-info"><spring:message code="weblogEdit.scheduled"/></span>
-                    <span class="editor-when" title="<spring:message code="weblogEdit.updateTime"/>"><fmt:formatDate value="${entry.updateTime}"/></span>
-                </c:when>
-                <c:otherwise>
-                    <span class="badge bg-danger"><spring:message code="weblogEdit.unsaved"/></span>
-                </c:otherwise>
+                <c:when test="${bean.published}"><c:set var="pillStatus" value="PUBLISHED" scope="request"/></c:when>
+                <c:when test="${bean.draft}"><c:set var="pillStatus" value="DRAFT" scope="request"/></c:when>
+                <c:when test="${bean.pending}"><c:set var="pillStatus" value="PENDING" scope="request"/></c:when>
+                <c:when test="${bean.scheduled}"><c:set var="pillStatus" value="SCHEDULED" scope="request"/></c:when>
+                <c:otherwise><c:set var="pillStatus" value="UNSAVED" scope="request"/></c:otherwise>
                 </c:choose>
+                <c:remove var="pillWhen" scope="request"/>
+                <jsp:include page="/WEB-INF/jsps/editor/StatusPill.jsp"/>
+                <c:if test="${not empty entry.updateTime}">
+                    <span class="editor-when" title="<spring:message code="weblogEdit.updateTime"/>"><fmt:formatDate value="${entry.updateTime}"/></span>
+                </c:if>
             </div>
 
             <label class="editor-field-label" for="entry_bean_pubTimeLocal"><spring:message code="weblogEdit.pubTime"/></label>
@@ -250,15 +255,15 @@
                 <c:choose>
 <c:when test="${userAnAuthor}">
                     <%-- publish --%>
-                    <button type="submit" class="btn btn-success" formaction="${pageContext.request.contextPath}/roller-ui/authoring/${mainAction}!publish.rol"><spring:message code="weblogEdit.post"/></button>
+                    <button type="submit" class="btn btn-primary" formaction="${pageContext.request.contextPath}/roller-ui/authoring/${mainAction}!publish.rol"><spring:message code="weblogEdit.post"/></button>
                 </c:when>
 <c:otherwise>
                     <%-- submit for review --%>
-                    <button type="submit" class="btn btn-success" formaction="${pageContext.request.contextPath}/roller-ui/authoring/${mainAction}!publish.rol"><spring:message code="weblogEdit.submitForReview"/></button>
+                    <button type="submit" class="btn btn-primary" formaction="${pageContext.request.contextPath}/roller-ui/authoring/${mainAction}!publish.rol"><spring:message code="weblogEdit.submitForReview"/></button>
                 </c:otherwise>
 </c:choose>
                 <%-- save draft --%>
-                <button type="submit" class="btn" formaction="${pageContext.request.contextPath}/roller-ui/authoring/${mainAction}!saveDraft.rol"><spring:message code="weblogEdit.save"/></button>
+                <button type="submit" class="btn btn-secondary" formaction="${pageContext.request.contextPath}/roller-ui/authoring/${mainAction}!saveDraft.rol"><spring:message code="weblogEdit.save"/></button>
             </div>
 
             <c:if test="${actionName == 'entryEdit'}">
@@ -705,11 +710,14 @@
 
                 </div>
 
+                <%-- Dismiss first, destructive last: Bootstrap packs a
+                     .modal-footer left-to-right in DOM order, so the reading
+                     order IS the markup order (task B7). --%>
                 <div class="modal-footer">
-                    <button type="submit" class="btn"><spring:message code="generic.yes"/></button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         <spring:message code="generic.no"/>
                     </button>
+                    <button type="submit" class="btn btn-danger"><spring:message code="generic.yes"/></button>
                 </div>
 
             <sec:csrfInput/>

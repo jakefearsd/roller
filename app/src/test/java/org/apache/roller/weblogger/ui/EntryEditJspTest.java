@@ -103,6 +103,57 @@ class EntryEditJspTest {
         }
     }
 
+    /**
+     * Task M1: the publish rail states status through the one shared pill
+     * component, not through a Bootstrap badge in stock semantic colours.
+     *
+     * <p>{@code JspConsistencyTest.statusIsAlwaysAStatusPill} bans the badge
+     * classes tree-wide; this pins the other half, which that scan cannot see
+     * -- that the rail actually <em>includes</em> {@code StatusPill.jsp}
+     * rather than hand-rolling a fifth spelling of the same five states. The
+     * sixth variant, {@code UNSAVED}, exists for exactly this caller: an entry
+     * being composed has no {@code PubStatus} at all, and the pill's vocabulary
+     * covers "not yet saved" so the rail does not need a branch outside it.
+     */
+    @Test
+    void theRailStatesStatusThroughTheSharedPill() throws IOException {
+        String rail = railRegion(read());
+        assertTrue(rail.contains("/WEB-INF/jsps/editor/StatusPill.jsp"),
+                "the publish rail must render status through the shared StatusPill.jsp "
+                        + "include, the same component Entries.jsp and Pages.jsp use");
+        assertTrue(rail.contains("value=\"UNSAVED\""),
+                "an entry with no status yet must render the pill's UNSAVED variant, "
+                        + "not a branch of its own");
+        for (String badge : new String[] {"badge bg-success", "badge bg-info",
+                "badge bg-warning", "badge bg-danger", "badge bg-primary"}) {
+            assertTrue(!rail.contains(badge),
+                    "the rail still carries a Bootstrap " + badge + " -- use the status pill");
+        }
+    }
+
+    /**
+     * Task M1 (task B2's three buckets, applied to the editor): Publish is the
+     * screen's one recommended action and wears {@code btn-primary}; every
+     * other control on it is {@code btn-secondary} or {@code btn-danger}.
+     * {@code btn-success} is not a fourth bucket, and a bare {@code class="btn"}
+     * -- which renders as unstyled grey with no bucket at all -- is not a way
+     * of opting out of the question.
+     */
+    @Test
+    void theRailsButtonsAreTheThreeBuckets() throws IOException {
+        String jsp = read();
+        assertTrue(!jsp.contains("btn-success"),
+                "btn-success is not a bucket: Publish is the screen's primary, "
+                        + "Save draft is secondary");
+        assertTrue(!jsp.matches("(?s).*class=\"btn\"[^>]*>.*"),
+                "a bare class=\"btn\" carries no bucket -- pick btn-primary, "
+                        + "btn-secondary or btn-danger");
+        assertTrue(jsp.contains("class=\"btn btn-primary\" formaction="),
+                "the publish/submit-for-review button is the screen's one primary");
+        assertTrue(jsp.contains("class=\"btn btn-secondary\" formaction="),
+                "Save draft is a secondary action beside it");
+    }
+
     @Test
     void theNewsletterNoListMessageIsFollowedByItsOwnLinkText() throws IOException {
         String jsp = read();

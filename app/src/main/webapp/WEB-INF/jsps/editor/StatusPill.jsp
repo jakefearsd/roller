@@ -26,7 +26,9 @@
                  "weblogEdit.<x>" message key -- the two vocabularies are
                  the same word on purpose, so a new PubStatus value needs
                  only a matching CSS rule and message key, not a new branch
-                 here.
+                 here. One value here is NOT a PubStatus: the entry editor's
+                 publish rail passes "UNSAVED" for an entry that has never
+                 been saved and therefore has no status at all.
     pillWhen    (optional) -- a java.util.Date rendered as the pill's
                  trailing timestamp (e.g. a Scheduled entry's pubTime).
 
@@ -44,7 +46,10 @@
   already carry weblogEdit.published/draft/pending/scheduled as literals.
   The full set this include can resolve to: weblogEdit.published,
   weblogEdit.draft, weblogEdit.pending, weblogEdit.scheduled,
-  weblogEdit.trashed.
+  weblogEdit.trashed and weblogEdit.unsaved -- six keys, and note that the
+  last of them must not be written with a trailing full stop here: the
+  orphan check matches WHOLE keys, and a "." continues a key, so
+  "weblogEdit.unsaved." is not a reference to weblogEdit.unsaved.
 --%>
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 <span class="status-pill status-${fn:toLowerCase(pillStatus)}"><spring:message code="weblogEdit.${fn:toLowerCase(pillStatus)}"/><c:if test="${not empty pillWhen}"> <span class="status-when"><rc:date value="${pillWhen}"/></span></c:if></span>
