@@ -67,8 +67,13 @@ class AuthoringJourneyIT extends RollerIT {
     /** Rendered on the edit page only once the entry is actually published — see EntryEdit.jsp. */
     private static final String PERMALINK = "#entry_bean_permalink";
 
-    /** The publish rail's status pill: Draft / Published / Pending / Scheduled. */
-    private static final String STATUS_BADGE = ".editor-statusrow .badge";
+    /**
+     * The publish rail's status pill: Draft / Published / Pending / Scheduled,
+     * plus Unsaved before the first save. Rendered by the one shared
+     * StatusPill.jsp component (task B1) since task M1 replaced the rail's
+     * Bootstrap badges with it.
+     */
+    private static final String STATUS_PILL = ".editor-statusrow .status-pill";
 
     private HttpClient http;
 
@@ -186,7 +191,7 @@ class AuthoringJourneyIT extends RollerIT {
         $(Editor.CONTENT).sendKeys(Keys.chord(Keys.CONTROL, Keys.ENTER));
 
         $(PERMALINK).should(exist);
-        $(STATUS_BADGE).shouldHave(text("Published"));
+        $(STATUS_PILL).shouldHave(text("Published"));
     }
 
     /**
@@ -222,7 +227,7 @@ class AuthoringJourneyIT extends RollerIT {
 
         // And it is still a DRAFT. A second handler firing the publish button
         // would show Published here, with a permalink beside it.
-        $(STATUS_BADGE).shouldHave(text("Draft"));
+        $(STATUS_PILL).shouldHave(text("Draft"));
         $(PERMALINK).shouldNot(exist);
     }
 
