@@ -42,6 +42,7 @@ class EditorBundlePomTest {
         assertTrue(install > 0 && ci > install && build > ci,
                 "install-node-and-npm, npm ci, npm run build must be declared in that order");
         assertTrue(app.contains("<workingDirectory>${project.basedir}/frontend</workingDirectory>"));
+        assertTrue(app.contains("<id>npm-test</id>"), "the frontend node:test suite must run in the test phase");
     }
 
     @Test
