@@ -249,7 +249,7 @@ public class TemplatesController extends BaseController {
                     .getTemplateByName(getActionWeblog(request), newTmplName);
             if (existingPage != null) {
                 addFieldError(model, "newTmplName", "pagesForm.error.alreadyExists",
-                        new Object[]{newTmplName}, request);
+                        new Object[]{StringEscapeUtils.escapeHtml4(newTmplName)}, request);
             }
         } catch (WebloggerException ex) {
             // Fail closed: the caller adds this template only when no errors

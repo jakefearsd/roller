@@ -201,6 +201,21 @@ class TemplatesControllerTest extends EditorControllerTestSupport {
     }
 
     @Test
+    void addEscapesTheDuplicateNameInTheAlreadyExistsError() throws Exception {
+        // The submitted name is user-typed and lands in the error tile's
+        // deliberately-raw sink (same as the success-message case above) --
+        // an unescaped name here is stored HTML in the error banner.
+        registerMessage("pagesForm.error.alreadyExists", "duplicate:{0}");
+        WeblogTemplate existing = templateNamed("<b>MyTemplate</b>", ComponentType.CUSTOM);
+        when(weblogger.getWeblogManager().getTemplateByName(weblog, "<b>MyTemplate</b>")).thenReturn(existing);
+
+        controller.add(request, model, "<b>MyTemplate</b>", ComponentType.CUSTOM);
+
+        assertTrue(errors(model).contains("duplicate:&lt;b&gt;MyTemplate&lt;/b&gt;"),
+                "Expected the template name HTML-escaped, got: " + errors(model));
+    }
+
+    @Test
     void addingACustomTemplateSetsItsLinkToItsName() throws Exception {
         when(weblogger.getWeblogManager().getTemplates(weblog)).thenReturn(List.of());
 

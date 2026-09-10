@@ -275,6 +275,28 @@ class MediaFileViewControllerTest extends EditorControllerTestSupport {
                 "After creating a folder the user must be looking at it, not back at the default");
     }
 
+    @Test
+    void creatingADirectoryEscapesTheSubmittedNameInTheSuccessMessage() throws Exception {
+        // The submitted directory name is user-typed and lands in
+        // messages.jsp's deliberately-raw sink, the same as the collision
+        // error above -- an unescaped name here is stored HTML in the
+        // success banner.
+        registerMessage("mediaFile.directoryCreate.success", "created:{0}");
+        // No literal "/" -- createNewDirectory refuses that shape as an
+        // invalid name (dirNameInvalid) before it ever reaches the create
+        // this test is pinning, same constraint the collision test above
+        // works around.
+        MediaFileDirectory created = directory("dir-3", "<script>trips");
+        when(weblogger.getMediaFileManager().createMediaFileDirectory(weblog, "<script>trips"))
+                .thenReturn(created);
+        when(weblogger.getMediaFileManager().getMediaFileDirectory("dir-3")).thenReturn(created);
+
+        controller.createNewDirectory(request, model, null, "<script>trips", null);
+
+        assertTrue(messages(model).contains("created:&lt;script&gt;trips"),
+                "Expected the directory name HTML-escaped, got: " + messages(model));
+    }
+
     // --- deleting ---
 
     @Test
