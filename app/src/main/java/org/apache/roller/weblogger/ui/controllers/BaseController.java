@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -553,26 +554,87 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
     // --- Common model population ---
 
     /**
+     * The rail's own tab actions -- the only {@code actionName} values a
+     * weblog-scoped screen can be showing. The top-bar switcher keeps the
+     * current screen when the reader picks a different weblog; anything else
+     * (an entry editor, a global admin screen reached without a weblog in
+     * play, ...) has no equivalent on the target weblog, so it falls back to
+     * {@code entries} instead. Kept here, rather than inlined in the JSP, so
+     * {@link BaseControllerTest} can pin it against a real
+     * {@code populateCommonModel} call.
+     */
+    protected static final Set<String> SWITCHER_ACTIONS = Set.of(
+            "entries", "trash", "submissions", "categories", "pages",
+            "mediaFileView", "themeEdit", "weblogConfig", "members");
+
+    /**
      * Populate common model attributes used across all pages:
      * authenticatedUser, actionWeblog, pageTitle, siteURL, absoluteSiteURL, menu.
      */
     protected void populateCommonModel(HttpServletRequest request, Model model) {
         User user = getAuthenticatedUser(request);
         Weblog weblog = getActionWeblog(request);
+        String actionName = getActionName();
 
         model.addAttribute("authenticatedUser", user);
         model.addAttribute("actionWeblog", weblog);
         model.addAttribute("pageTitle", getPageTitle());
         model.addAttribute("siteURL", WebloggerRuntimeConfig.getRelativeContextURL());
         model.addAttribute("absoluteSiteURL", WebloggerRuntimeConfig.getAbsoluteContextURL());
-        model.addAttribute("actionName", getActionName());
+        model.addAttribute("actionName", actionName);
         model.addAttribute("desiredMenu", getDesiredMenu());
+        model.addAttribute("switcherAction",
+                actionName != null && SWITCHER_ACTIONS.contains(actionName) ? actionName : "entries");
 
         // build menu if applicable
-        Menu menu = MenuHelper.getMenu(getDesiredMenu(), getActionName(), user, weblog,
+        Menu menu = MenuHelper.getMenu(getDesiredMenu(), actionName, user, weblog,
                 weblogger.getUserManager());
         if (menu != null) {
             model.addAttribute("menu", menu);
+        }
+
+        addUserWeblogsForSwitcher(user, model);
+    }
+
+    /**
+     * The top-bar weblog switcher's options: every weblog {@code user} holds a
+     * permission on, sorted by handle, added ONLY when there are two or more --
+     * with one weblog (or none) there is nothing to switch to, and the JSP
+     * renders the switcher only when {@code userWeblogs} is present.
+     *
+     * <p>This is a display path, not a decision path (see CLAUDE.md): a
+     * weblog the user can no longer reach, or a store that cannot answer the
+     * permission query at all, simply leaves the switcher off the page. The
+     * page underneath -- built from {@code actionWeblog}, resolved
+     * separately by the interceptor -- renders exactly as it would have
+     * before this method existed.
+     */
+    private void addUserWeblogsForSwitcher(User user, Model model) {
+        if (user == null) {
+            return;
+        }
+        try {
+            Set<String> handles = new TreeSet<>();
+            for (WeblogPermission permission : weblogger.getUserManager().getWeblogPermissions(user)) {
+                if (permission.getObjectId() != null) {
+                    handles.add(permission.getObjectId());
+                }
+            }
+            if (handles.size() < 2) {
+                return;
+            }
+            List<Weblog> weblogs = new ArrayList<>();
+            for (String handle : handles) {
+                Weblog weblog = weblogger.getWeblogManager().getWeblogByHandle(handle, null);
+                if (weblog != null) {
+                    weblogs.add(weblog);
+                }
+            }
+            if (weblogs.size() > 1) {
+                model.addAttribute("userWeblogs", weblogs);
+            }
+        } catch (WebloggerException ex) {
+            log.error("Error loading weblogs for the top-bar switcher", ex);
         }
     }
 

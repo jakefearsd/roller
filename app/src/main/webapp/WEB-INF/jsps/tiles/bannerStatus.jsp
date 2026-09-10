@@ -30,6 +30,35 @@
              and a redundant one did the job. --%>
         <a class="navbar-brand" href="<c:url value='/'/>">${rc:getProp('site.name')}</a>
 
+        <%-- Only rendered when populateCommonModel found two or more weblogs
+             for the signed-in user -- a one-weblog session's top bar is
+             unchanged. The target keeps the rail action the reader is
+             already on (BaseController.SWITCHER_ACTIONS via switcherAction),
+             falling back to entries.rol for anything off the rail. --%>
+        <c:if test="${not empty userWeblogs}">
+            <div class="dropdown weblog-switcher">
+                <button class="btn btn-secondary btn-sm dropdown-toggle" type="button"
+                        id="weblogSwitcher" data-bs-toggle="dropdown" aria-expanded="false"
+                        aria-label="<spring:message code='switcher.label'/>">
+                    <c:choose>
+                        <c:when test="${actionWeblog != null}">${fn:escapeXml(actionWeblog.name)}</c:when>
+                        <c:otherwise><spring:message code="switcher.label"/></c:otherwise>
+                    </c:choose>
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="weblogSwitcher">
+                    <c:forEach items="${userWeblogs}" var="w">
+                        <li>
+                            <a class="dropdown-item${actionWeblog != null && w.handle == actionWeblog.handle ? ' active' : ''}"
+                               href="<c:url value="/roller-ui/authoring/${switcherAction}.rol">
+                                   <c:param name="weblog" value="${w.handle}"/></c:url>">
+                                ${fn:escapeXml(w.name)} <span class="data">${fn:escapeXml(w.handle)}</span>
+                            </a>
+                        </li>
+                    </c:forEach>
+                </ul>
+            </div>
+        </c:if>
+
         <button type="button" class="navbar-toggler collapsed"
                 data-bs-toggle="collapse" data-bs-target="#navbar" aria-expanded="false" aria-controls="navbar"
                 aria-label="<spring:message code='generic.toggle'/>">

@@ -505,6 +505,24 @@ label,
     border-color: var(--line);
 }
 
+/* ---- Top bar: weblog switcher (task B10) ----
+   Only rendered when populateCommonModel found two or more weblogs for the
+   signed-in user; a one-weblog session's top bar carries none of this. */
+.weblog-switcher {
+    margin-left: 16px;
+}
+
+.weblog-switcher .dropdown-item .data {
+    margin-left: 8px;
+    font-size: 12px;
+    color: var(--ink-soft);
+}
+
+.weblog-switcher .dropdown-item.active {
+    background: var(--accent-quiet);
+    color: var(--ink);
+}
+
 /* ---- The rail: context header + tool groups ---- */
 
 .rail {

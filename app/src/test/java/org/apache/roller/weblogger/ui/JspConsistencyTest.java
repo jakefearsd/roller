@@ -678,6 +678,33 @@ class JspConsistencyTest {
         }
     }
 
+    // --- B10: the weblog switcher in the top bar ---
+
+    /**
+     * Task B10: the top bar's brand now carries a {@code .weblog-switcher}
+     * dropdown when the signed-in user holds more than one weblog
+     * ({@code BaseController.populateCommonModel} adds {@code userWeblogs}
+     * only in that case, so the {@code <c:if>} around this markup is what
+     * keeps a one-weblog session's top bar unchanged). The confirm-idiom
+     * rule applies here too: this is a navigation control, not a destructive
+     * one, so it needs no {@code data-confirm} -- but it must not regress to
+     * the inline {@code onclick} idiom {@code oneConfirmIdiomAndOneModalShape}
+     * already bans on every other admin screen.
+     */
+    @Test
+    void theTopBarCarriesTheSwitcher() throws IOException {
+        String markup = withoutJspComments(
+                Files.readString(JSPS.resolve("tiles/bannerStatus.jsp"), StandardCharsets.UTF_8));
+
+        assertTrue(markup.contains("weblog-switcher"),
+                "bannerStatus.jsp must render the .weblog-switcher dropdown");
+        assertFalse(markup.contains("onclick="),
+                "the switcher is a nav control -- no inline onclick, ever");
+
+        String css = Files.readString(ROLLER_CSS, StandardCharsets.UTF_8);
+        assertTrue(css.contains(".weblog-switcher"), "roller.css lacks .weblog-switcher");
+    }
+
     /**
      * JSP comments are not part of the rendered page, so a scan asserting
      * that some pattern is ABSENT must not be defeated by prose that merely

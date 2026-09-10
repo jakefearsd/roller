@@ -23,6 +23,11 @@ import java.util.Locale;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.MockWeblogger;
+import org.apache.roller.weblogger.pojos.User;
+import org.apache.roller.weblogger.pojos.Weblog;
+import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.support.StaticMessageSource;
@@ -34,6 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
 
 /**
  * {@code addFieldError} is {@code addError} plus the one extra fact the page
@@ -122,6 +128,105 @@ class BaseControllerTest {
         assertFalse(controller.errorsPresent(model));
     }
 
+    // --- B10: the weblog switcher's userWeblogs / switcherAction ---
+
+    @Test
+    void oneWeblogLeavesUserWeblogsAbsent() throws WebloggerException {
+        MockWeblogger mock = MockWeblogger.create();
+        controller.weblogger = mock.weblogger();
+        User user = userNamed("jake");
+        Weblog blogA = weblogNamed("blog-a", "Blog A");
+        when(mock.userManager().getWeblogPermissions(user))
+                .thenReturn(List.of(permissionFor(blogA, user)));
+        when(mock.weblogManager().getWeblogByHandle("blog-a", null)).thenReturn(blogA);
+        setUser(user);
+
+        controller.populate(request, model);
+
+        assertNull(model.getAttribute("userWeblogs"),
+                "a switcher with nothing to switch to is not a switcher");
+    }
+
+    @Test
+    void twoWeblogsAreListedSortedByHandle() throws WebloggerException {
+        MockWeblogger mock = MockWeblogger.create();
+        controller.weblogger = mock.weblogger();
+        User user = userNamed("jake");
+        Weblog blogB = weblogNamed("blog-b", "Blog B");
+        Weblog blogA = weblogNamed("blog-a", "Blog A");
+        when(mock.userManager().getWeblogPermissions(user)).thenReturn(
+                List.of(permissionFor(blogB, user), permissionFor(blogA, user)));
+        when(mock.weblogManager().getWeblogByHandle("blog-a", null)).thenReturn(blogA);
+        when(mock.weblogManager().getWeblogByHandle("blog-b", null)).thenReturn(blogB);
+        setUser(user);
+
+        controller.populate(request, model);
+
+        assertEquals(List.of(blogA, blogB), userWeblogs(model),
+                "sorted by handle, regardless of permission order");
+    }
+
+    @Test
+    void aWeblogLookupThatThrowsLeavesUserWeblogsAbsent() throws WebloggerException {
+        MockWeblogger mock = MockWeblogger.create();
+        controller.weblogger = mock.weblogger();
+        User user = userNamed("jake");
+        when(mock.userManager().getWeblogPermissions(user))
+                .thenThrow(new WebloggerException("store unreachable"));
+        setUser(user);
+
+        controller.populate(request, model);
+
+        assertNull(model.getAttribute("userWeblogs"),
+                "the switcher is a convenience -- a failed lookup must not fail the page");
+    }
+
+    @Test
+    void switcherActionKeepsARailAction() throws WebloggerException {
+        controller.weblogger = MockWeblogger.create().weblogger();
+        controller.setActionName("categories");
+
+        controller.populate(request, model);
+
+        assertEquals("categories", model.getAttribute("switcherAction"));
+    }
+
+    @Test
+    void switcherActionFallsBackToEntriesOffTheRail() throws WebloggerException {
+        controller.weblogger = MockWeblogger.create().weblogger();
+        controller.setActionName("stylesheetEdit");
+
+        controller.populate(request, model);
+
+        assertEquals("entries", model.getAttribute("switcherAction"));
+    }
+
+    private void setUser(User user) {
+        ((MockHttpServletRequest) request).setAttribute("authenticatedUser", user);
+    }
+
+    private static User userNamed(String userName) {
+        User user = new User();
+        user.setUserName(userName);
+        return user;
+    }
+
+    private static Weblog weblogNamed(String handle, String name) {
+        Weblog weblog = new Weblog();
+        weblog.setHandle(handle);
+        weblog.setName(name);
+        return weblog;
+    }
+
+    private static WeblogPermission permissionFor(Weblog weblog, User user) {
+        return new WeblogPermission(weblog, user, List.of(WeblogPermission.ADMIN));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<Weblog> userWeblogs(Model model) {
+        return (List<Weblog>) model.getAttribute("userWeblogs");
+    }
+
     @SuppressWarnings("unchecked")
     private static List<String> errors(Model model) {
         return (List<String>) model.getAttribute("errors");
@@ -138,6 +243,21 @@ class BaseControllerTest {
      * lives in the controllers package so it can be one.
      */
     private static final class TestController extends BaseController {
+
+        private String actionName;
+
+        void populate(HttpServletRequest request, Model model) {
+            populateCommonModel(request, model);
+        }
+
+        void setActionName(String actionName) {
+            this.actionName = actionName;
+        }
+
+        @Override
+        public String getActionName() {
+            return actionName;
+        }
 
         void error(Model model, String fieldId, String key, HttpServletRequest request) {
             addFieldError(model, fieldId, key, request);
