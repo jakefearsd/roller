@@ -72,8 +72,17 @@ class MapAssetsRenderingTest {
     private static final String MARKER_SHADOW =
             "/webjars/leaflet/1.9.4/dist/images/marker-shadow.png";
 
-    /** The cheap lazy-init guard: no .travel-map on the page, no leaflet.js. */
-    private static final String MAP_GUARD = "document.querySelectorAll('.travel-map')";
+    /**
+     * The cheap lazy-init guard: no .travel-map on the page, no leaflet.js.
+     *
+     * <p>The {@code :not([data-roller-map])} half arrived with the editor's
+     * live preview, which re-runs this initialiser over swapped-in content --
+     * an already-initialised container must be skipped, because
+     * {@code L.map()} throws on one. It is part of the guard rather than an
+     * extra check, so it is pinned here with it.
+     */
+    private static final String MAP_GUARD =
+            ".querySelectorAll('.travel-map:not([data-roller-map])')";
 
     private static final String TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 
@@ -266,6 +275,40 @@ class MapAssetsRenderingTest {
         assertTrue(body.contains("data-pins="),
                 "the pin payload must reach the reader:\n" + body);
         assertAssetsExactlyOnce(body, "journal permalink with a map");
+    }
+
+    // ------------------------------------------- re-runnable initialisers
+
+    /**
+     * The editor's live preview replaces {@code #previewArticle}'s innerHTML
+     * on every push, and the asset scripts bind on {@code DOMContentLoaded} --
+     * which fired long before. So each of the three macros exposes a named
+     * initialiser and chains it onto {@code window.rollerPreviewInit}, the seam
+     * {@code #showPreviewShellScript} calls after each swap.
+     *
+     * <p>Asserted on a public permalink rather than on the shell, deliberately:
+     * the shell only gets these functions because every ordinary theme head
+     * emits them, and a macro that defined its initialiser only under some
+     * preview-only condition would pass a shell-side test while leaving the
+     * published page's own galleries and maps unchanged. This also pins the
+     * other half of the bargain -- the load-time call is still there, so the
+     * public page keeps initialising exactly once with no preview involved.
+     */
+    @Test
+    void everyAssetMacroExposesARerunnableInitialiser() throws Exception {
+        entryWithText("rerunnable-init-entry", "<p>nothing to see</p>");
+        String body = render("/" + HANDLE + "/entry/rerunnable-init-entry");
+
+        for (String initialiser : new String[] {
+                "rollerInitGalleries", "rollerInitMaps", "rollerInitEmbeds" }) {
+            assertTrue(body.contains("function " + initialiser + "("),
+                    "journal permalink must declare " + initialiser + ":\n" + body);
+            assertTrue(body.contains(initialiser + "(document)"),
+                    "the public page must still initialise once on load via "
+                            + initialiser + ":\n" + body);
+        }
+        assertEquals(3, StringUtils.countMatches(body, "window.rollerPreviewInit ="),
+                "each of the three macros must chain onto the preview seam:\n" + body);
     }
 
     // ----------------------------------------------------------------- CSP

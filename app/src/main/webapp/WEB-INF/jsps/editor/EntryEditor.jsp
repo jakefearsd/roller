@@ -70,7 +70,13 @@
         <div class="editor-write">
             <textarea name="bean.text" id="edit_content" rows="18">${fn:escapeXml(bean.text)}</textarea>
         </div>
-        <div class="editor-preview-pane" id="editorPreviewPane" hidden aria-live="polite"></div>
+        <%-- The shell URL rides a data attribute rather than an inline JS
+             string: JSTL escapes it for the attribute and dataset hands back
+             the exact text, so a weblog handle carrying a quote (the allowed
+             character set is deployer-configurable) cannot break out of a
+             string literal. Same reasoning as the shortcode snippets above. --%>
+        <div class="editor-preview-pane" id="editorPreviewPane" hidden aria-live="polite"
+             data-shell-url="<c:out value='${previewShellURL}'/>"></div>
     </div>
     <div class="editor-status" id="editorStatus"></div>
 </div>
@@ -252,6 +258,34 @@
             }
         });
 
+        <%-- The preview follows the text. Registered on the page's own fan-out
+             array, not on the editor, so an editor swap carries it along. --%>
+        rollerEditorChangeListeners.push(rollerSchedulePreview);
+
+        <%-- Scroll sync, editor -> preview only. Proportional rather than
+             line-mapped: a rendered gallery or map is metres taller than the
+             two lines of Markdown that produced it, so there is no honest
+             line-to-pixel mapping to build. Throttled to one message per
+             animation frame -- a scroll event fires far faster than the frame
+             can repaint, and every extra postMessage is work nobody sees. --%>
+        var rollerScrollQueued = false;
+        rollerEditor.view.scrollDOM.addEventListener('scroll', function () {
+            if (rollerScrollQueued) {
+                return;
+            }
+            rollerScrollQueued = true;
+            window.requestAnimationFrame(function () {
+                rollerScrollQueued = false;
+                if (!rollerPreview.ready) {
+                    return;
+                }
+                rollerPostToPreview({
+                    type: 'roller-preview-scroll',
+                    scroll: rollerEditor.scrollFraction()
+                });
+            });
+        });
+
         document.getElementById('editorToolbar').addEventListener('click', function (event) {
             var button = event.target.closest('button[data-cmd]');
             if (button && commands[button.dataset.cmd]) {
@@ -350,9 +384,110 @@
         });
     });
 
-    <%-- Mode is a data attribute on the surface; CSS lays the panes out.
-         Preview content arrives via rollerRenderPreview (server fragment)
-         until Task A5 replaces the pane with the theme-true iframe. --%>
+    <%-- The preview is the weblog's own theme in an iframe, not a fragment
+         dumped into a div. The shell document (PreviewServlet's ?shell=true
+         branch) carries the theme stylesheet and the gallery/map/embed asset
+         scripts around one empty #previewArticle; we post the server-rendered
+         HTML in and it swaps and re-initialises. That is why an author sees
+         their prose set the way it will publish rather than unstyled. --%>
+    var rollerPreview = { frame: null, ready: false, timer: null, pending: false, inflight: false };
+
+    function rollerEnsurePreviewFrame() {
+        if (rollerPreview.frame) {
+            return;
+        }
+        var pane = document.getElementById('editorPreviewPane');
+        var frame = document.createElement('iframe');
+        <%-- allow-same-origin is required, not optional: without it the frame
+             gets an opaque origin, its postMessage arrives as "null" and the
+             origin check on both sides refuses it. The document is ours and
+             same-origin already, so this grants nothing new. --%>
+        frame.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+        frame.setAttribute('title', '<spring:message code="editor.mode.preview" javaScriptEscape="true"/>');
+        frame.src = pane.dataset.shellUrl;
+        pane.appendChild(frame);
+        rollerPreview.frame = frame;
+        <%-- Registered once, with the frame. The shell announces itself when
+             its document is ready, so the first push waits for that rather
+             than guessing -- and because the ensure/push pair below is
+             idempotent, re-entering preview mode costs nothing. --%>
+        window.addEventListener('message', function (event) {
+            if (event.origin !== window.location.origin) {
+                return;
+            }
+            if (event.data && event.data.type === 'roller-preview-ready') {
+                rollerPreview.ready = true;
+                rollerPushPreview();
+            }
+        });
+    }
+
+    <%-- Debounced: a POST per keystroke would render the whole shortcode
+         pipeline on every character. 400ms of idle is below "did it hang?" --%>
+    function rollerSchedulePreview() {
+        if (document.getElementById('editorSurface').dataset.mode === 'write') {
+            return;
+        }
+        window.clearTimeout(rollerPreview.timer);
+        rollerPreview.timer = window.setTimeout(rollerPushPreview, 400);
+    }
+
+    <%-- The preview is rendered by the SERVER, not by a Markdown library in
+         the browser. Only the server can expand [gallery], [map] and the rest,
+         and a preview that disagreed with the published page about those would
+         be worse than no preview at all.
+
+         In-flight coalescing rather than cancellation: a slow render must not
+         be overtaken by a later one whose response arrives first, which would
+         paint stale text over new. At most one request is out; anything that
+         happens while it is out collapses into a single follow-up. --%>
+    function rollerPushPreview() {
+        if (!rollerPreview.ready) {
+            return;
+        }
+        if (rollerPreview.inflight) {
+            rollerPreview.pending = true;
+            return;
+        }
+        rollerPreview.inflight = true;
+        $.ajax({
+            type: 'POST',
+            url: '<c:url value="/roller-ui/authoring/entryEdit!preview.rol"/>',
+            data: {
+                id: $("input[name='bean.id']").val(),
+                text: rollerGetEntryText(),
+                weblog: $("input[name='weblog']").val(),
+                '${_csrf.parameterName}': '${_csrf.token}'
+            },
+            success: function (html) {
+                rollerPostToPreview({ type: 'roller-preview', html: html, scroll: rollerEditor.scrollFraction() });
+            },
+            error: function () {
+                rollerPostToPreview({
+                    type: 'roller-preview',
+                    html: '<p class="roller-preview-error"><spring:message code="weblogEdit.previewFailed" javaScriptEscape="true"/></p>'
+                });
+            },
+            complete: function () {
+                rollerPreview.inflight = false;
+                if (rollerPreview.pending) {
+                    rollerPreview.pending = false;
+                    rollerPushPreview();
+                }
+            }
+        });
+    }
+
+    <%-- One place that talks to the frame, so the origin argument cannot
+         drift between the three callers. --%>
+    function rollerPostToPreview(message) {
+        if (!rollerPreview.frame || !rollerPreview.frame.contentWindow) {
+            return;
+        }
+        rollerPreview.frame.contentWindow.postMessage(message, window.location.origin);
+    }
+
+    <%-- Mode is a data attribute on the surface; CSS lays the panes out. --%>
     function rollerSetEditorMode(mode) {
         var surface = document.getElementById('editorSurface');
         surface.dataset.mode = mode;
@@ -362,38 +497,14 @@
         var pane = document.getElementById('editorPreviewPane');
         pane.hidden = (mode === 'write');
         if (mode !== 'write') {
-            rollerRenderPreview(rollerGetEntryText(), pane);
+            rollerEnsurePreviewFrame();
+            rollerPushPreview();
         }
         try {
             window.localStorage.setItem(ROLLER_EDITOR_MODE_KEY, mode);
         } catch (e) {
             /* storage unavailable: the choice simply does not persist */
         }
-    }
-
-    <%-- Split mode renders once, when the mode is entered -- it is a snapshot,
-         not a live pane; Task A5 wires it to the editor's change stream.
-
-         The preview is rendered by the SERVER, not by a Markdown library in
-         the browser. Only the server can expand [gallery], [map] and the rest,
-         and a preview that disagreed with the published page about those would
-         be worse than no preview at all. --%>
-    function rollerRenderPreview(plainText, preview) {
-        $.ajax({
-            type: 'POST',
-            url: '<c:url value="/roller-ui/authoring/entryEdit!preview.rol"/>',
-            data: {
-                id: $("input[name='bean.id']").val(),
-                text: plainText,
-                weblog: $("input[name='weblog']").val(),
-                '${_csrf.parameterName}': '${_csrf.token}'
-            },
-            success: function (html) { preview.innerHTML = html; },
-            error: function () {
-                preview.textContent = '<spring:message code="weblogEdit.previewFailed"/>';
-            }
-        });
-        return '<spring:message code="weblogEdit.previewLoading"/>';
     }
 
     <%-- The one seam for putting text into the editor, used by the media

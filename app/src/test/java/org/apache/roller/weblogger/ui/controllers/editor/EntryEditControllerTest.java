@@ -27,6 +27,7 @@ import java.util.Locale;
 import java.util.TimeZone;
 
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.JsonLdType;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
@@ -1043,6 +1044,53 @@ class EntryEditControllerTest extends EditorControllerTestSupport {
         var response = controller.entryEditPreview(request, "no-such-entry-id", "anything");
 
         assertEquals(404, response.getStatusCode().value());
+    }
+
+    // --------------------------------------------------- the preview shell
+
+    /**
+     * The editor frames the weblog's own theme rather than dumping the
+     * rendered fragment into a div, so the page needs the shell's URL. It is
+     * built here rather than by the preview URL strategy because the strategy
+     * answers with the weblog's <em>root</em>; the shell is the same document
+     * asked for with one query parameter, and building it from the parts is
+     * one string rather than a strategy call whose contract does not cover it.
+     */
+    @Test
+    void theEditorIsToldWhereThePreviewShellLives() {
+        // The context URL is a process-global static, so pin it rather than
+        // asserting against whatever an earlier test class left behind.
+        String previous = WebloggerRuntimeConfig.getRelativeContextURL();
+        WebloggerRuntimeConfig.setRelativeContextURL("");
+        try {
+            controller.entryAddExecute(request, model, bean);
+
+            assertEquals("/roller-ui/authoring/preview/" + WEBLOG_HANDLE + "/?shell=true",
+                    model.getAttribute("previewShellURL"));
+        } finally {
+            WebloggerRuntimeConfig.setRelativeContextURL(previous);
+        }
+    }
+
+    /**
+     * Under a servlet context prefix the shell is not at the site root, and an
+     * iframe pointed at an absolute-root path would load the login page (or
+     * nothing) instead. This is the same trap {@code ContactShortcode} hit --
+     * see CLAUDE.md's Audience section -- so the URL carries the context path
+     * the same way that one does.
+     */
+    @Test
+    void thePreviewShellUrlCarriesTheServletContextPath() {
+        String previous = WebloggerRuntimeConfig.getRelativeContextURL();
+        WebloggerRuntimeConfig.setRelativeContextURL("/roller");
+        try {
+            controller.entryAddExecute(request, model, bean);
+
+            assertEquals("/roller/roller-ui/authoring/preview/" + WEBLOG_HANDLE + "/?shell=true",
+                    model.getAttribute("previewShellURL"));
+        } finally {
+            WebloggerRuntimeConfig.setRelativeContextURL(previous);
+        }
     }
 
     // ------------------------------------------------------------- revisions

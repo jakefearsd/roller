@@ -56,8 +56,16 @@ class GalleryAssetsRenderingTest {
             "/webjars/photoswipe/5.4.3/dist/photoswipe-lightbox.esm.min.js";
     private static final String PSWP_CORE_MODULE =
             "/webjars/photoswipe/5.4.3/dist/photoswipe.esm.min.js";
-    /** The cheap lazy-init guard: no .jgrid on the page, no module downloads. */
-    private static final String JGRID_GUARD = "document.querySelector('.jgrid')";
+    /**
+     * The cheap lazy-init guard: no .jgrid on the page, no module downloads.
+     *
+     * <p>The {@code root ||} half arrived with the editor's live preview,
+     * which re-runs this initialiser over the fragment it just swapped in --
+     * so the guard asks about that subtree rather than the whole document.
+     * On a public page the caller passes {@code document} and it is the same
+     * question it always was.
+     */
+    private static final String JGRID_GUARD = "(root || document).querySelector('.jgrid')";
 
     private User user;
     private Weblog weblog;
