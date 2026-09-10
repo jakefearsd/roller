@@ -1318,7 +1318,9 @@ arrive the same way.
 
 The discriminator is what may legitimately be cancelled. Page script starts
 `Image`/`XHR`/`Fetch` and may abandon them (Leaflet cancels ~48 tiles per map
-render; jQuery UI's autocomplete cancels one XHR per keystroke), and a
+render; the editor's live preview coalesces in-flight requests as the author
+keeps typing — jQuery UI's autocomplete used to be the second example here
+and that dependency is gone), and a
 `Document` navigation is cancelled by navigating again. A `Stylesheet`,
 `Script` or `Font` is declared by the document and nothing cancels those, so an
 abort there means the browser refused it. A **blocked** request is never
@@ -1536,6 +1538,19 @@ excused whatever its type.
   it. Five variants (published/draft/pending/scheduled/trashed) replaced
   what used to be Bootstrap badges, a row-tint `<tr>` class and a separate
   legend paragraph explaining the tints — one component instead of three.
+  A **sixth**, `unsaved`, exists for one caller: the entry editor's publish
+  rail, where an entry being composed has no `PubStatus` at all. The pill
+  covers that case so the rail needs no branch outside the shared
+  vocabulary — it too used to carry Bootstrap badges, in stock semantic
+  colours that said "danger" about an unsaved draft and used `bg-info` for
+  both Draft and Scheduled. **The message code is composed in EL**
+  (`weblogEdit.${fn:toLowerCase(pillStatus)}`), so `MessageKeyTest`'s
+  literal-code scan cannot see which keys the include resolves to; the
+  file's own header comment names all six literally, and that is the only
+  thing keeping them off the orphan list. Note the trap that comment now
+  documents: the orphan arm matches WHOLE keys and `.` continues a key, so
+  writing `weblogEdit.unsaved.` with a trailing full stop is not a
+  reference to `weblogEdit.unsaved`.
 - **One selection bar for every list with bulk actions.** `.selection-bar`
   (`data-selection-bar="<form id>"`, `hidden` by default) sits directly
   above the table on Entries/Submissions/MediaFileView; a header checkbox
@@ -1554,7 +1569,13 @@ excused whatever its type.
   `WEB-INF/rollerConfig.tld` — no new taglib directive anywhere) is the one
   timestamp renderer for the admin UI, replacing `fmt:formatDate` (server
   zone, no machine-readable half) and the translated
-  `weblogEntryQuery.date.toStringFormat` key (request-locale zone). It emits
+  `weblogEntryQuery.date.toStringFormat` key (request-locale zone) — **that
+  key is deleted from every bundle now**, which is what makes the ban
+  unbypassable rather than merely observed: its real hazard was never the
+  one call site but a display FORMAT living in eight translated files that
+  could disagree (`ja` declared `yy/MM/dd HH:mm` against the base bundle's
+  `MM/dd/yy hh:mm a`). `JspConsistencyTest` fails if any bundle declares it
+  again. It emits
   `<time datetime="<UTC ISO-8601 instant>" class="data">yyyy-MM-dd HH:mm</time>`:
   `datetime` is absolute UTC because it is machine-readable, the visible text
   is the **weblog's** wall clock (`Locale.ROOT`, since these are tabular data
@@ -1624,16 +1645,60 @@ excused whatever its type.
 - **A JSP tag prefix with no declared taglib renders as literal text, not an
   error.** `<str:truncateNicely>` shipped in three places with no `str`
   taglib ever declared anywhere in the tree — Velocity's leniency lesson
-  (see Templates above) has a JSP-side sibling. `AdminJspBugSweepTest`
+  (see Templates above) has a JSP-side sibling. `JspConsistencyTest`
   scans for undeclared-prefix tags the same way it scans for other classes
   of dead/broken markup.
-- **`JspConsistencyTest` and `AdminJspBugSweepTest` are the scans that pin
-  all of the above as markup shape, not just prose**: status pill
-  presence, `.selection-bar`/`.selection-count` wiring, the one-confirm-
-  idiom/one-modal-shape rules, `data-invalid-fields` rendering, the
-  sidebar grammar, the switcher's absence of inline `onclick`, and the
-  literal-tag-prefix sweep all live there rather than in a design doc
-  alone.
+- **`JspConsistencyTest` is the one scan class that pins all of the above
+  as markup shape, not just prose**: status pill presence, `.selection-bar`/
+  `.selection-count` wiring, the one-confirm-idiom/one-modal-shape rules,
+  `data-invalid-fields` rendering, the sidebar grammar, the switcher's
+  absence of inline `onclick`, the literal-tag-prefix sweep, balanced
+  `<div>`s, heading levels and the href rule below all live there rather
+  than in a design doc alone. It covers **every** JSP: an `A_OWNED`
+  exemption carried three editor screens past six of these scans while the
+  CodeMirror rebuild owned them in a parallel worktree, and it was deleted
+  in the post-merge task rather than replaced with another mechanism.
+- **Every `href` built from an expression is `fn:escapeXml`'d, a `<c:url>`
+  (declared into a var or written inline), or a bare `urls.*` helper call —
+  and the rule is tree-wide because the obvious grep is what missed the
+  real one.** `grep 'href="${' | grep -v escapeXml | grep -v 'c:url\|urls\.'`
+  is almost all false positives, and grepping by variable NAME cannot see
+  the shape that actually broke: a `urls.*` call with a raw field appended
+  straight after it (`${urls.weblogAbsolute(w)}${p.slug}` on `Pages.jsp` —
+  a page slug is author-controlled and restricted only against `/` and
+  reserved names, never against quote characters). So the scan strips the
+  three accounted-for forms from the whole attribute value and fails on
+  whatever `${` is left. It also sees the *inline* `<c:url .../>` spelling,
+  which the grep cannot: three legitimate hrefs (UserEdit's Cancel, both
+  tab layouts' menu links) write the tag straight into the attribute and
+  never start with `${`.
+- **A message argument reaches the reader UNESCAPED, so escape it at the
+  call site.** `tiles/messages.jsp` renders `${msg}` bare and
+  `<c:out value="${error}" escapeXml="false"/>` — deliberately, because
+  several messages carry a link or a `<strong>` of their own. That decision
+  is fine; it just means the escaping boundary is the controller, and
+  thirteen call sites had not noticed. `StringEscapeUtils.escapeHtml4`
+  wraps every user-typed argument now, and `MessageArgumentEscapingTest`
+  is the ratchet: **any** accessor passed as a message argument must be
+  escaped or named in its allowlist with the mechanism that makes it safe.
+  Three things worth knowing before touching it.
+  **The blunt rule is deliberate** — a cleverer scan would try to infer
+  which accessors return author input, which is exactly the judgement that
+  went wrong at both `Weblog.getName()` (safe-looking because
+  `WeblogWrapper` escapes on the way to a theme) and `EntryBean.getTitle()`
+  (safe-looking because the *entity* is stored escaped).
+  **`Weblog.setName` runs `Utilities.removeHTML` and that is not a
+  boundary**: its no-closing-bracket branch appends the rest of the string
+  verbatim, `<` included, so an unterminated `<img src=x onerror=…`
+  survives it intact.
+  **Over-escaping is a real cost**, which is why the allowlist exists
+  rather than a blanket escape-everything: the sink is raw HTML, so
+  escaping a raw value is always right, but escaping an already-escaped one
+  (an entry title, escaped once at save by `EntryFieldRules`) renders
+  `&amp;lt;`. One related shape is deliberately outside the scan:
+  `CreateWeblogController` passes `e.getMessage()` as the message **key**,
+  and `getText` returns an unresolvable key verbatim, so that text reaches
+  the raw sink too — recorded, not fixed.
 
 ## Categories
 - **Ownership-check every id.** `BaseController.lookupCategory` is the third of
@@ -1727,7 +1792,11 @@ in a local index file worth clearing, not a search-correctness bug.
   `getActionWeblog(request).getTimeZoneInstance()` — pubtime has always meant
   the weblog's timezone, never the request locale's. A non-blank value that
   fails to parse now **throws** and the save is blocked with
-  `entryEdit.pubTimeInvalid` via the normal `hasErrors` gate; the old
+  `entryEdit.pubTimeInvalid` — through `addFieldError`, so
+  `entry_bean_pubTimeLocal` is marked and focused rather than only
+  banner-reported, which matters on a screen whose pubtime input sits in a
+  rail an author may well have scrolled past — via the normal `hasErrors`
+  gate; the old
   dateString parser used to swallow a bad value and silently publish "now",
   which is exactly the failure mode a mistyped pubtime must not have. A blank
   field still means "no time chosen" → publish now, unchanged.
@@ -1963,7 +2032,15 @@ distinction through all 25 of `WeblogEntryManager`'s query paths (date
 archives, tags, feeds, pagers …), every one of which a page has no business
 answering to.
 - **Routing**: a published page is served at `/<handle>/<slug>` — a bare,
-  single path segment. `ReservedSlugs` is the single source of truth for what
+  single path segment. **Not `/<handle>/page/<slug>`**: that is the
+  CUSTOM-*template* route (see Templates), and both admin screens that show
+  a page's URL emitted it for a while — the editor's own address line until
+  the editor rebuild fixed it, `Pages.jsp`'s list link until the post-merge
+  task did. Each was a 404 handed to an author by the admin UI itself, and
+  the second survived a bug-sweep that fixed an unrelated escaping defect on
+  the very same line, which is how a fix can make a defect look attended to.
+  `PageEditJspTest` now asserts the two screens against each other rather
+  than against two independent literals. `ReservedSlugs` is the single source of truth for what
   a slug may **not** be, shared by the page-save validator
   (`WeblogPageManager`) and the request parser (`WeblogPageRequest`), so a
   slug that would collide with `entry`/`category`/`tags`/`feed`/… can never be
@@ -2357,7 +2434,7 @@ expands `[name attr="v"]body[/name]` syntax **unconditionally** (independent of
 entry plugins) at both render seams (`WeblogEntry.render()` and
 `PluginManagerImpl.applyWeblogEntryPlugins`), immediately before
 sanitization. Built-in: `[image id=".." caption=".." alt=".."]` emits a
-responsive `<figure><picture>` (the Summernote media insert pastes it);
+responsive `<figure><picture>` (the editor's media chooser pastes it);
 `[gallery dir=".." row=".." max=".."]` renders a media directory as a
 justified grid (`GalleryMarkup`, flex-grow `--ar` CSS from the
 `#showGalleryGridStyles` macro) with a PhotoSwipe lightbox
