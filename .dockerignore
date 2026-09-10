@@ -16,6 +16,15 @@ docs
 target/
 app/target/
 app/logs/
+
+# frontend-maven-plugin's downloaded Node runtime and installed npm packages
+# (app/pom.xml, generate-resources). Both are host-platform artifacts a dev
+# checkout accumulates locally, never something the image build should reuse
+# -- if node/ is present it sits at exactly the path the plugin checks before
+# downloading its own, so the builder image would silently run a binary
+# built for the host instead of fetching its own for the image's platform.
+app/frontend/node/
+app/frontend/node_modules/
 it-selenium/target/
 it-selenium/build/
 it-selenium/overlays/
