@@ -34,15 +34,17 @@
         </div>
 
         <%-- Save, Close and Resize text area buttons--%>
-        <button type="submit" class="btn btn-success"><spring:message code="generic.save"/></button>
+        <button type="submit" class="btn btn-primary"><spring:message code="generic.save"/></button>
 
         <c:if test="${!customTheme}">
-            <button type="button" class="btn" onclick="revertStylesheet();"><spring:message code="stylesheetEdit.revert"/></button>
+            <button type="button" class="btn btn-secondary" onclick="revertStylesheet();"
+                    data-confirm="<spring:message code='stylesheetEdit.confirmRevert'/>"><spring:message code="stylesheetEdit.revert"/></button>
         </c:if>
 
         <%-- Only delete if we have no custom templates ie website.customStylesheetPath=null --%>
         <c:if test="${sharedThemeStylesheet}">
-            <button type="button" class="btn btn-danger" onclick="deleteStylesheet();"><spring:message code="stylesheetEdit.delete"/></button>
+            <button type="button" class="btn btn-danger" onclick="deleteStylesheet();"
+                    data-confirm="<spring:message code='stylesheetEdit.confirmDelete'/>"><spring:message code="stylesheetEdit.delete"/></button>
         </c:if>
 
     <sec:csrfInput/>
@@ -58,7 +60,7 @@
 
         <form action="${pageContext.request.contextPath}/roller-ui/authoring/stylesheetEdit!copyStylesheet.rol" method="post" class="form-vertical">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
-            <button type="submit" class="btn btn-success"><spring:message code="stylesheetEdit.copyStylesheet"/></button>
+            <button type="submit" class="btn btn-primary"><spring:message code="stylesheetEdit.copyStylesheet"/></button>
         <sec:csrfInput/>
 </form>
 
@@ -75,20 +77,18 @@
 
 <script type="text/javascript">
 
+    // Confirmation is handled upstream now, by data-confirm on each button
+    // (see roller.js): a click that fails to confirm never reaches here.
     function revertStylesheet() {
-        if (window.confirm('<spring:message code="stylesheetEdit.confirmRevert" javaScriptEscape="true"/>')) {
-            var form = document.getElementById('stylesheetEditForm');
-            form.action = "<c:url value='/roller-ui/authoring/stylesheetEdit!revert.rol'/>";
-            form.submit();
-        }
+        var form = document.getElementById('stylesheetEditForm');
+        form.action = "<c:url value='/roller-ui/authoring/stylesheetEdit!revert.rol'/>";
+        form.submit();
     };
     <c:if test="${sharedThemeStylesheet}">
         function deleteStylesheet() {
-            if (window.confirm('<spring:message code="stylesheetEdit.confirmDelete" javaScriptEscape="true"/>')) {
-                var form = document.getElementById('stylesheetEditForm');
-                form.action = "<c:url value='/roller-ui/authoring/stylesheetEdit!delete.rol'/>";
-                form.submit();
-            }
+            var form = document.getElementById('stylesheetEditForm');
+            form.action = "<c:url value='/roller-ui/authoring/stylesheetEdit!delete.rol'/>";
+            form.submit();
         };
     </c:if>
 

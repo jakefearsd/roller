@@ -83,19 +83,25 @@ public class MessagePlaceholderContractTest {
 
     /**
      * Messages deliberately allowed to declare a placeholder that no
-     * server-side call site fills: {@code EntryEdit.jsp} / {@code PageEdit.jsp}
-     * hand the raw pattern to the browser in a {@code data-template} attribute
-     * and {@code roller-draft.js} substitutes {@code &#123;0&#125;} itself with
-     * the draft's local timestamp, which only the browser knows.
-     * {@code editor.status.words} (Task A8) is the same shape:
-     * {@code EntryEditor.jsp} hands it to the browser in
+     * server-side call site fills, because the raw pattern is handed to the
+     * browser in a {@code data-template} attribute and JavaScript substitutes
+     * {@code &#123;0&#125;} itself with a value only the browser knows:
+     * {@code EntryEdit.jsp} / {@code PageEdit.jsp}'s {@code
+     * roller-draft.js} substitution with the draft's local timestamp;
+     * (task B3) every {@code .selection-bar}'s {@code .selection-count} span
+     * on {@code Entries.jsp}/{@code Submissions.jsp}/{@code MediaFileView.jsp},
+     * where {@code roller.js}'s delegated checkbox handler substitutes the
+     * live count of checked rows; and (task A8) {@code editor.status.words},
+     * which {@code EditorSurface.jsp} hands to the browser in
      * {@code #editorStatus}'s {@code data-words-template} attribute and
-     * {@code rollerUpdateWordCount()} substitutes both {@code &#123;0&#125;}
-     * (word count) and {@code &#123;1&#125;} (reading minutes) itself --
-     * neither is known until {@code rollerEditor.stats()} runs in the browser.
+     * {@code rollerUpdateWordCount()} fills with both {@code &#123;0&#125;}
+     * (word count) and {@code &#123;1&#125;} (reading minutes) -- neither is
+     * known until {@code rollerEditor.stats()} runs in the browser.
      */
     private static final Set<String> CLIENT_SIDE_SUBSTITUTION = Set.of(
-            "weblogEdit.draftRecovery.message", "editor.status.words");
+            "weblogEdit.draftRecovery.message",
+            "selection.count",
+            "editor.status.words");
 
     /**
      * Empty, and it stays empty.

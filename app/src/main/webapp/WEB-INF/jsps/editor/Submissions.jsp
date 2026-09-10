@@ -61,11 +61,23 @@
     <c:choose>
     <c:when test="${not empty submissions}">
 
+    <%-- The selection bar: hidden until roller.js's delegated checkbox
+         handler finds a checked row in #submissionsDeleteForm. Inquiries are
+         deleted permanently -- there is no trash for them -- so the one
+         action here is destructive and the button opens the confirmation
+         modal below rather than submitting directly. --%>
+    <div class="selection-bar" data-selection-bar="submissionsDeleteForm" hidden>
+        <span class="selection-count" data-template="<spring:message code='selection.count'/>"></span>
+        <button type="button" class="btn btn-danger" id="submissionsDeleteSelected">
+            <spring:message code="generic.delete.selected"/>
+        </button>
+    </div>
+
     <table class="rollertable table table-striped" width="100%">
 
             <tr>
                 <th scope="col" class="rollertable" width="3%">
-                    <input type="checkbox" id="selectAllSubmissions" class="form-check-input"
+                    <input type="checkbox" id="selectAllSubmissions" class="form-check-input" data-select-all
                            title="<spring:message code="weblogEntryQuery.selectAll"/>"/>
                 </th>
                 <th scope="col" class="rollertable"><spring:message code="submissions.column.received"/></th>
@@ -82,12 +94,7 @@
                                name="deleteIds" value="${fn:escapeXml(s.id)}"
                                aria-label="${fn:escapeXml(s.subject)}"/>
                     </td>
-                    <td class="data">
-                        <c:if test="${s.created != null}">
-                            <fmt:formatDate value="${s.created}" type="both"
-                                            dateStyle="short" timeStyle="short"/>
-                        </c:if>
-                    </td>
+                    <td class="data"><rc:date value="${s.created}"/></td>
                     <td>
                         <c:out value="${s.name}"/><br/>
                         <a href="mailto:${fn:escapeXml(s.email)}"><c:out value="${s.email}"/></a>
@@ -134,15 +141,6 @@
     </c:otherwise>
     </c:choose>
 
-    <c:if test="${not empty submissions}">
-        <%-- type="button": the real submit lives in the modal below, so the
-             count can be shown BEFORE anything is deleted. Inquiries are
-             deleted permanently -- there is no trash for them. --%>
-        <button type="button" class="btn btn-danger" id="submissionsDeleteSelected">
-            <spring:message code="generic.delete.selected"/>
-        </button>
-    </c:if>
-
 </form>
 
 <%-- Confirmation for the bulk delete, ported from Entries.jsp: a modal
@@ -161,14 +159,14 @@
                 <p id="submissionsDeleteCount" class="form-control-plaintext"></p>
             </div>
             <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <spring:message code="generic.no"/>
+                </button>
                 <%-- Outside the form, so form= names the one carrying the
                      selection (same shape as Entries.jsp's confirm). --%>
                 <button type="submit" class="btn btn-danger" id="submissionsDeleteConfirm"
                         form="submissionsDeleteForm">
                     <spring:message code="generic.yes"/>
-                </button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <spring:message code="generic.no"/>
                 </button>
             </div>
         </div>

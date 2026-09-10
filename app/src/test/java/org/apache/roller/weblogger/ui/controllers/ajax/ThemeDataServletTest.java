@@ -19,6 +19,8 @@ package org.apache.roller.weblogger.ui.controllers.ajax;
 
 import java.util.List;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.MockWeblogger;
 import org.apache.roller.weblogger.business.themes.SharedTheme;
@@ -130,6 +132,42 @@ class ThemeDataServletTest {
 
         assertTrue(response.getContentAsString().contains("\"journal\""),
                 "got: " + response.getContentAsString());
+    }
+
+    /**
+     * The endpoint used to build its JSON by hand with {@code print}, so any
+     * theme description carrying a quote or a newline -- both perfectly legal
+     * in {@code theme.xml}, and a description is prose -- emitted a document no
+     * parser accepts. jQuery answers unparseable JSON by never calling
+     * {@code success}, so the failure showed up as a thumbnail and description
+     * that silently never changed, with a console message nobody reads.
+     *
+     * <p>Parsed with the same {@code ObjectMapper} the servlet writes with, so
+     * this asserts the response is JSON rather than that it has some particular
+     * escaping.
+     */
+    @Test
+    void aDescriptionWithNewlineAndQuoteIsValidJson() throws Exception {
+        ThemeResource preview = mock(ThemeResource.class);
+        when(preview.getPath()).thenReturn("awkward-preview.png");
+
+        SharedTheme awkward = mock(SharedTheme.class);
+        when(awkward.getId()).thenReturn("awkward");
+        when(awkward.getName()).thenReturn("Awkward");
+        when(awkward.getDescription()).thenReturn("line one\nline \"two\"");
+        when(awkward.getPreviewImage()).thenReturn(preview);
+
+        when(weblogger.themeManager().getTheme("awkward")).thenReturn(awkward);
+        request.setParameter("theme", "awkward");
+
+        servlet.doGet(request, response);
+
+        String body = response.getContentAsString();
+        JsonNode parsed = new ObjectMapper().readTree(body);
+        assertEquals("line one\nline \"two\"", parsed.get("description").asText(),
+                "the description must survive the round trip intact: " + body);
+        assertEquals("/themes/awkward/awkward-preview.png",
+                parsed.get("previewPath").asText(), "got: " + body);
     }
 
     /**

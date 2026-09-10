@@ -189,7 +189,7 @@ class SubscribeFormIT extends RollerIT {
     private void setNewsletterUuid(String handle, String uuid) {
         openPath("/roller-ui/authoring/weblogConfig.rol?weblog=" + handle);
         $("input[name='bean.newsletterListUuid']").should(visible).setValue(uuid);
-        $("button[type='submit'].btn-success").should(visible).click();
+        $("button[type='submit'].btn-primary").should(visible).click();
         $("#messages").should(exist);
         BrowserHealth.current().settle();
     }

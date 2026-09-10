@@ -250,4 +250,31 @@ class ProfileControllerTest {
         user.setEnabled(Boolean.TRUE);
         return user;
     }
+
+    // --- errors point at the field they name (B8) ---
+
+    @Test
+    void aMistypedConfirmationMarksTheConfirmationFieldRatherThanThePasswordField() throws Exception {
+        // The typo is in the confirmation box by definition -- the first
+        // password is whatever the user meant to type.
+        User user = user("jake");
+        ProfileBean bean = new ProfileBean();
+        bean.setPasswordText("newpassword");
+        bean.setPasswordConfirm("newpasswrod");
+
+        controller.save(ControllerTestFixture.requestFor(user), model, bean, redirectAttributes);
+
+        assertEquals(List.of("passwordConfirm"), ControllerTestFixture.invalidFields(model));
+    }
+
+    @Test
+    void anUnknownTimeZoneMarksTheTimeZoneSelect() throws Exception {
+        User user = user("jake");
+        ProfileBean bean = new ProfileBean();
+        bean.setTimeZone("Mars/Phobos");
+
+        controller.save(ControllerTestFixture.requestFor(user), model, bean, redirectAttributes);
+
+        assertEquals(List.of("timeZone"), ControllerTestFixture.invalidFields(model));
+    }
 }

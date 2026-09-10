@@ -126,9 +126,38 @@ class EditorJspLabelBindingTest {
      * bound to nothing on exactly the templates an author can actually edit.
      *
      * <p>The rule checked is narrow on purpose: within one {@code c:choose},
-     * if two branches both declare a control with the same {@code name=}, they
-     * must agree on its {@code id=}. That is precisely the shape above, and it
-     * says nothing about branches that legitimately render different controls.
+     * if two branches both declare the same control, they must agree on its
+     * {@code id=}. That is precisely the shape above, and it says nothing
+     * about branches that legitimately render different controls.
+     *
+     * <p>"The same control" is its {@code name=} -- except for a radio or a
+     * checkbox, where it is {@code name=} plus {@code value=}. A radio GROUP
+     * is by definition several controls sharing one name and differing in id,
+     * so keying on name alone reports every grouped radio inside a
+     * {@code c:choose} as a violation of a rule it cannot obey.
+     * {@code ThemeEdit.jsp}'s shared/custom pair is the live example.
+     * {@code type="hidden"} is skipped outright: nothing labels a hidden
+     * input, so it has no {@code for=} that could dangle -- and a hidden input
+     * standing in for a control the other branch renders (again ThemeEdit,
+     * which ships {@code themeType=shared} when there is nothing to choose
+     * between) is the correct shape, not a defect.
+     *
+     * <p>Two blind spots this narrowing accepted, recorded rather than fixed
+     * because closing either would reintroduce the original false positive:
+     * <ul>
+     * <li>Keying a radio/checkbox on {@code name=} plus {@code value=} means
+     * two checkboxes that are really "the same control" across branches --
+     * meant to share one {@code id=} -- but whose {@code value=} diverges (a
+     * typo, or one branch dropping the attribute so it defaults to
+     * {@code "on"}) are read as two unrelated controls instead of one with a
+     * dangling label. The check cannot tell "different value, same control"
+     * from "different value, different control".
+     * <li>Skipping every {@code type="hidden"} control means a {@code for=}
+     * that happens to target a hidden input's id -- unusual, but nothing
+     * stops a JSP from doing it -- is invisible to this scan even if that id
+     * differs between branches. Hidden inputs are not meant to be labelled,
+     * which is why this is accepted rather than closed.
+     * </ul>
      */
     @Test
     void aControlDeclaredInSeveralBranchesKeepsTheSameIdInEachOfThem() throws Exception {
@@ -151,8 +180,18 @@ class EditorJspLabelBindingTest {
                         if (!name.find()) {
                             continue;
                         }
+                        Matcher type = Pattern.compile("\\btype=\"([^\"]+)\"").matcher(attrs);
+                        String controlType = type.find() ? type.group(1) : "";
+                        if ("hidden".equals(controlType)) {
+                            continue;
+                        }
+                        String key = name.group(1);
+                        if ("radio".equals(controlType) || "checkbox".equals(controlType)) {
+                            Matcher value = Pattern.compile("\\bvalue=\"([^\"]+)\"").matcher(attrs);
+                            key += "[" + (value.find() ? value.group(1) : "") + "]";
+                        }
                         Matcher id = Pattern.compile("\\bid=\"([^\"]+)\"").matcher(attrs);
-                        idsByName.computeIfAbsent(name.group(1), k -> new LinkedHashSet<>())
+                        idsByName.computeIfAbsent(key, k -> new LinkedHashSet<>())
                                 .add(id.find() ? id.group(1) : "(no id)");
                     }
                 }

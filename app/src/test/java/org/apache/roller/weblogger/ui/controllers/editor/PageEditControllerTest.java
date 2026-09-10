@@ -17,6 +17,8 @@
  */
 package org.apache.roller.weblogger.ui.controllers.editor;
 
+import java.util.List;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -804,5 +806,34 @@ class PageEditControllerTest extends EditorControllerTestSupport {
         page.setSlug(slug);
         when(weblogger.getWeblogPageManager().getPage(page.getId())).thenReturn(page);
         return page;
+    }
+
+    // --- errors point at the field they name (B8) ---
+
+    @Test
+    void aReservedSlugMarksTheSlugField() throws Exception {
+        doThrow(new WebloggerException("page slug is reserved: feed"))
+                .when(weblogger.getWeblogPageManager()).savePage(any());
+        PageBean bean = new PageBean();
+        bean.setSlug("feed");
+        bean.setTitle("Feed");
+
+        controller.save(requestFor(weblogA), model, bean);
+
+        assertEquals(List.of("page_bean_slug"), invalidFields(model));
+    }
+
+    @Test
+    void aRefusedCanonicalUrlMarksTheSeoFieldAndNotTheSlug() throws Exception {
+        // The canonical URL lives in the collapsed SEO drawer, which is
+        // exactly the field a top-of-page banner is worst at pointing at.
+        PageBean bean = new PageBean();
+        bean.setSlug("about");
+        bean.setTitle("About");
+        bean.setCanonicalUrl("data:text/html,x");
+
+        controller.save(requestFor(weblogA), model, bean);
+
+        assertEquals(List.of("seo_canonicalUrl"), invalidFields(model));
     }
 }

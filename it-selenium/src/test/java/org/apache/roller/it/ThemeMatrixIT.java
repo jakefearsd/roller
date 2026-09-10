@@ -235,8 +235,10 @@ class ThemeMatrixIT extends RollerIT {
      */
     private void switchToSharedTheme(String themeId, String handle) {
         openPath("/roller-ui/authoring/themeEdit.rol?weblog=" + handle);
-        $("#sharedRadio").should(visible).click();
-        $("#themeSelector").selectOptionByValue(themeId);
+        // Clicking the theme's own card reveals the Save button. The
+        // shared/custom radio row is not rendered on a default install (custom
+        // themes are off site-wide), so there is nothing else to click first.
+        $("label.theme-card input[value='" + themeId + "']").should(visible).click();
 
         $("#sharedChangeToShared").shouldBe(visible);
         $("#sharedChangeToShared button[type='submit']").click();

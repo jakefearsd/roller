@@ -130,7 +130,7 @@ public class ProfileController extends BaseController {
         if (!StringUtils.equals(bean.getPasswordText(), bean.getPasswordConfirm())) {
             // userRegister.* went away with public self-registration; this page
             // has its own key for the same message.
-            addError(model, "yourProfile.passwordsNotSame", request);
+            addFieldError(model, "passwordConfirm", "yourProfile.passwordsNotSame", request);
         }
 
         // validate timezone
@@ -138,7 +138,7 @@ public class ProfileController extends BaseController {
             final Optional<String> first = Arrays.stream(TimeZone.getAvailableIDs())
                     .filter(id -> id.equals(bean.getTimeZone())).findFirst();
             if (first.isEmpty()) {
-                addError(model, "error.add.user.invalid.timezone", request);
+                addFieldError(model, "timeZone", "error.add.user.invalid.timezone", request);
             }
         }
 
@@ -147,7 +147,7 @@ public class ProfileController extends BaseController {
             final Optional<Locale> first = Arrays.stream(Locale.getAvailableLocales())
                     .filter(locale -> locale.toString().equals(bean.getLocale())).findFirst();
             if (first.isEmpty() || "".equals(first.get().getDisplayName())) {
-                addError(model, "error.add.user.invalid.locale", request);
+                addFieldError(model, "locale", "error.add.user.invalid.locale", request);
             }
         }
     }

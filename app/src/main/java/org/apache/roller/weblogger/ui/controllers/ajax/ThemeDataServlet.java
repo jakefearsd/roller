@@ -17,16 +17,17 @@
  */
 package org.apache.roller.weblogger.ui.controllers.ajax;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.themes.SharedTheme;
 import org.apache.roller.weblogger.business.themes.ThemeManager;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -43,6 +44,16 @@ import jakarta.servlet.http.HttpServletResponse;
 public class ThemeDataServlet extends HttpServlet {
 
     private static final long serialVersionUID = 1L;
+
+    /**
+     * The JSON is written by Jackson rather than by hand. It used to be
+     * assembled with {@code print} calls, which meant a theme description
+     * carrying a quote or a newline -- both legal in {@code theme.xml}, and a
+     * description is prose -- emitted a document no parser accepts. jQuery
+     * answers unparseable JSON by never calling {@code success}, so the
+     * failure surfaced as a preview that silently never changed.
+     */
+    private final transient ObjectMapper mapper = new ObjectMapper();
 
     private final transient Weblogger weblogger;
 
@@ -87,32 +98,36 @@ public class ThemeDataServlet extends HttpServlet {
             }
         }
 
+        List<Map<String, Object>> rows = new ArrayList<>(themes.size());
+        for (SharedTheme theme : themes) {
+            rows.add(describe(theme));
+        }
+
         response.setContentType("application/json; charset=utf-8");
-        PrintWriter pw = response.getWriter();
-        if (themeId == null) {
-            pw.println("[" );
-        }
-        for (Iterator<SharedTheme> it = themes.iterator(); it.hasNext();) {
-            SharedTheme theme = it.next();
-            pw.print("    { \"id\" : \"");
-            pw.print(theme.getId());
-            pw.print("\", ");
-            pw.print("\"name\" : \"");
-            pw.print(theme.getName());
-            pw.print("\", ");
-            pw.print("\"description\" : \"");
-            pw.print(theme.getDescription());
-            pw.print("\", ");
-            pw.print("\"previewPath\" : \"");
-            pw.print("/themes" + "/" + theme.getId() + "/" + theme.getPreviewImage().getPath());
-            pw.print("\" }");
-            if (it.hasNext()) {
-                pw.println(", ");
-            }
-        }
-        if (themeId == null) {
-            pw.println("]" );
-        }
+        // Asked for one theme, the caller reads data.description off the answer
+        // directly, so a single theme is written unwrapped; asked for
+        // everything, it is an array. Serialized to a String rather than
+        // straight to the writer because Jackson closes a Writer it is handed
+        // (AUTO_CLOSE_TARGET), and the response's writer belongs to the
+        // container. These lists are a handful of themes.
+        response.getWriter().write(
+                mapper.writeValueAsString(themeId == null ? rows : rows.get(0)));
         response.flushBuffer();
+    }
+
+    /**
+     * The four fields the chooser reads. {@code getPreviewImage()} is
+     * dereferenced unguarded, exactly as it always has been: a theme whose
+     * {@code theme.xml} names a preview image that cannot be read leaves the
+     * field null and takes this endpoint down with it. Pre-existing and left
+     * alone here rather than fixed as a side effect of the encoding change.
+     */
+    private static Map<String, Object> describe(SharedTheme theme) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("id", theme.getId());
+        row.put("name", theme.getName());
+        row.put("description", theme.getDescription());
+        row.put("previewPath", "/themes/" + theme.getId() + "/" + theme.getPreviewImage().getPath());
+        return row;
     }
 }

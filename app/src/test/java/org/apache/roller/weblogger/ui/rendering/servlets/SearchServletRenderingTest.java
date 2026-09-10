@@ -80,6 +80,68 @@ class SearchServletRenderingTest {
     }
 
     /**
+     * {@code #showWeblogSearchAgainForm}'s category select compares against
+     * {@code $model.weblogCategory.name} with no null guard, unlike its twin
+     * in {@code #showWeblogSearchForm} a few lines above (the one the initial
+     * search box uses) which already checks {@code $model.weblogCategory &&}
+     * first before comparing. This app's Velocity engine runs with strict
+     * references off (see CLAUDE.md's "Velocity is lenient"), so a chained
+     * property read on a null intermediate degrades silently rather than
+     * throwing -- confirmed by {@link #searchAgainFormRendersCleanlyWithNoCategoryChosen}
+     * below, which is a characterisation test: it passes unmodified before
+     * and after this fix, because the lenient engine already tolerates the
+     * unguarded form. This scan is the one that actually discriminates: it
+     * pins the source matching the established null-safe idiom, so a
+     * template reference to a deleted member or a future strict-mode change
+     * cannot silently reintroduce the gap this mirrors closed.
+     */
+    @Test
+    void searchAgainFormCategorySelectMirrorsTheNullSafeGuardTheInitialFormUses() throws Exception {
+        Path template = Path.of("src/main/webapp/WEB-INF/velocity/weblog.vm");
+        String source = Files.readString(template, StandardCharsets.UTF_8);
+
+        // showWeblogSearchForm's own <option> (a few lines above, line ~1158)
+        // already reads "#if($model.weblogCategory && $cat.name == ...)" --
+        // this asserts on the DISTINCT unguarded prefix so a check against
+        // "the guarded string exists somewhere in the file" cannot pass
+        // trivially against that sibling occurrence.
+        assertFalse(source.contains(
+                        "#if($cat.name == $model.weblogCategory.name)selected=\"selected\"#end"),
+                "showWeblogSearchAgainForm's category <option> must guard the comparison the same way "
+                        + "showWeblogSearchForm's does a few lines above it, not compare "
+                        + "$model.weblogCategory.name unguarded:\n" + source);
+    }
+
+    /**
+     * Characterisation test: it passes unmodified both before and after the
+     * null-guard fix above, because this app's lenient Velocity config (see
+     * CLAUDE.md's "Velocity is lenient") already tolerates a chained property
+     * read on a null intermediate by degrading silently rather than throwing.
+     * It exists to pin the user-visible behaviour the guard protects, and to
+     * make that lenience explicit rather than assumed: a search with no
+     * {@code cat} parameter must render every category option unselected,
+     * with no unresolved reference leaking into the page as literal text.
+     */
+    @Test
+    void searchAgainFormRendersCleanlyWithNoCategoryChosen() throws Exception {
+        TestUtils.setupWeblogCategory(TestUtils.getManagedWebsite(weblog), "Travel");
+        TestUtils.endSession(true);
+
+        MockHttpServletRequest request = RenderingTestSupport
+                .anonymousGet("/roller-ui/rendering/search", "/searchblog");
+        request.setParameter("q", "zzznope");
+        MockHttpServletResponse response = RenderingTestSupport
+                .execute(RenderingTestSupport.searchServlet(), request);
+
+        assertEquals(200, response.getStatus());
+        String body = response.getContentAsString();
+        assertFalse(body.contains("selected=\"selected\""),
+                "no category was chosen, so no <option> may render pre-selected:\n" + body);
+        assertFalse(body.contains("$model.weblogCategory"),
+                "an unresolved reference must never print literally into the page:\n" + body);
+    }
+
+    /**
      * A search page is crawlable at every {@code ?q=} permutation, which is
      * an unbounded set of thin near-duplicate pages. {@code #showSeoHead}
      * now emits robots noindex whenever the model is a search result.

@@ -16,24 +16,6 @@
   directory of this distribution.
 --%>
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
-        
-<script>
-// <!--
-function confirmMemberRemoval() {
-    var radios = document.getElementById("memberPermissionsForm").getElementsByTagName("input");
-    var removing = false;
-    for (var i=0; i<radios.length; i++) {
-        if (radios[i].type === "radio" && radios[i].value === "-1" && radios[i].checked) {
-            removing = true;
-        }
-    }
-    if (removing) {
-        return confirm("<spring:message code="memberPermissions.confirmRemove"/>");
-    }
-    return true;
-}
-// -->
-</script>
 
 <p class="subtitle">
     <spring:message code="memberPermissions.subtitle" arguments="${actionWeblog.handle}"/>
@@ -52,44 +34,47 @@ function confirmMemberRemoval() {
      the menu gate only hides the tab -- so the form has to be gated here too,
      not merely left off the menu. --%>
 <c:if test="${rc:getBooleanProp('groupblogging.enabled')}">
-<form class="form-stacked mb-4"
+<form class="d-flex flex-wrap align-items-end gap-2 mb-4"
       action="${pageContext.request.contextPath}/roller-ui/authoring/members!grant.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
-    <div class="row mb-3">
-        <label for="grantUserName" class="col-sm-3 col-form-label">
+    <div>
+        <label for="grantUserName" class="form-label">
             <spring:message code="memberPermissions.userName"/>
         </label>
-        <div class="col-sm-9">
-            <input type="text" class="form-control" name="userName" id="grantUserName"
-                   size="30" maxlength="255"/>
-        </div>
+        <input type="text" class="form-control" name="userName" id="grantUserName"
+               size="30" maxlength="255"/>
     </div>
-    <div class="row mb-3">
-        <label for="grantPermission" class="col-sm-3 col-form-label">
+    <div>
+        <label for="grantPermission" class="form-label">
             <spring:message code="yourWebsites.permission"/>
         </label>
-        <div class="col-sm-9">
-            <select class="form-select" name="permissionString" id="grantPermission">
-                <option value="post" selected>
-                    <spring:message code="memberPermissions.author"/>
-                </option>
-                <option value="admin">
-                    <spring:message code="memberPermissions.administrator"/>
-                </option>
-                <option value="edit_draft">
-                    <spring:message code="memberPermissions.limited"/>
-                </option>
-            </select>
-        </div>
+        <select class="form-select" name="permissionString" id="grantPermission">
+            <option value="post" selected>
+                <spring:message code="memberPermissions.author"/>
+            </option>
+            <option value="admin">
+                <spring:message code="memberPermissions.administrator"/>
+            </option>
+            <option value="edit_draft">
+                <spring:message code="memberPermissions.limited"/>
+            </option>
+        </select>
     </div>
-    <div class="control">
-        <button type="submit" class="btn btn-primary"><spring:message code="generic.save"/></button>
-    </div>
+    <button type="submit" class="btn btn-secondary"><spring:message code="memberPermissions.add"/></button>
 <sec:csrfInput/>
 </form>
 </c:if>
 
-<form id="memberPermissionsForm" onsubmit="return confirmMemberRemoval();" action="${pageContext.request.contextPath}/roller-ui/authoring/members!save.rol" method="post">
+<%-- data-confirm on the FORM, not a control: whether removing anyone is even
+     happening depends on which of several radios across the whole table is
+     checked, which no single control can answer for itself. data-confirm-when
+     is roller.js's submit-handler extension for exactly this case -- prompt
+     only while the form currently has a match for the selector -- so saving
+     with no "-1" (Remove) radio checked needs no confirmation at all. --%>
+<spring:message code="memberPermissions.confirmRemove" var="memberRemovalConfirm"/>
+<form id="memberPermissionsForm"
+      data-confirm="${memberRemovalConfirm}" data-confirm-when="input[value='-1']:checked"
+      action="${pageContext.request.contextPath}/roller-ui/authoring/members!save.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
 
     <%-- Table is gated on there being members to show; the <form>
@@ -151,7 +136,7 @@ function confirmMemberRemoval() {
     <br />
 
     <div class="control">
-       <button type="submit" class="btn"><spring:message code="generic.save"/></button>
+       <button type="submit" class="btn btn-primary"><spring:message code="generic.save"/></button>
     </div>
 
     </c:if>

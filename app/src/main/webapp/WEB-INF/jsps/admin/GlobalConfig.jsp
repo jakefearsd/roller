@@ -23,12 +23,26 @@
 <spring:message code="configForm.prompt"/>
 
 
-<form method="post" action="<c:url value='/roller-ui/admin/globalConfig!save.rol'/>" class="form-stacked">
+<%-- Site settings is the other long form with a rail, built to the same card
+     as WeblogConfig.jsp (docs/design/forms/settings-with-rail.html): the
+     display groups on the left, a 252px rail on the right holding a section
+     index and a Save that is reachable without scrolling past nine groups of
+     fields to find it.
+
+     The <form> IS the grid container, so the rail sits in its second column
+     without a display:contents indirection and Save stays a plain descendant
+     of the form it submits. The index is generated from the SAME
+     globalConfigDef.displayGroups the fields are -- a hand-written list would
+     stop matching the moment runtimeConfigDefs.xml grew a group, silently. --%>
+<form method="post" action="<c:url value='/roller-ui/admin/globalConfig!save.rol'/>"
+      class="settings-grid form-stacked">
     <sec:csrfInput/>
+
+<div>
 
     <c:forEach var="dg" items="${globalConfigDef.displayGroups}">
 
-        <h3 class="section-head"><spring:message code="${dg.key}"/></h3>
+        <h3 class="section-head" id="cfg-${fn:escapeXml(dg.key)}"><spring:message code="${dg.key}"/></h3>
 
         <c:forEach var="pd" items="${dg.propertyDefs}">
 
@@ -77,16 +91,20 @@
                 </div>
             </c:if>
 
-            <%-- "boolean" type means use a checkbox --%>
+            <%-- "boolean" type means use a checkbox. A switch reads as a
+                 sentence -- box, then what it does -- so the label sits BESIDE
+                 the control in a .form-check rather than above it in the
+                 stacked-label column every other field uses. Bootstrap's
+                 .form-check is the shape that puts it there. --%>
             <c:if test="${pd.name != 'site.frontpage.weblog.handle' && pd.type == 'boolean'}">
                 <div class="row mb-3">
-                    <label class="col-sm-3 col-form-label"
-                           for='globalConfig_${pd.nameWithUnderbars}'><spring:message code="${pd.key}"/></label>
-                    <div class="col-sm-9">
+                    <div class="form-check">
                         <input type="checkbox" name="${fn:escapeXml(pd.name)}" value="true"
                             <c:if test="${properties[pd.name].value == 'true'}">checked="checked"</c:if>
                                id="globalConfig_${pd.nameWithUnderbars}"
-                               onchange="formChanged()" class="form-check-input boolean"/>
+                               class="form-check-input boolean"/>
+                        <label class="form-check-label"
+                               for='globalConfig_${pd.nameWithUnderbars}'><spring:message code="${pd.key}"/></label>
                     </div>
                 </div>
             </c:if>
@@ -102,7 +120,7 @@
                         <input type="number" name='${fn:escapeXml(pd.name)}' size="35"
                                value='${fn:escapeXml(properties[pd.name].value)}'
                                id='globalConfig_${pd.nameWithUnderbars}'
-                               class="form-control integer" onkeyup="formChanged()"/>
+                               class="form-control integer"/>
                     </div>
                 </div>
             </c:if>
@@ -118,7 +136,7 @@
                         <input type="number" name='${fn:escapeXml(pd.name)}' size="5"
                                value='${fn:escapeXml(properties[pd.name].value)}'
                                id='globalConfig_${pd.nameWithUnderbars}'
-                               class="form-control float" onkeyup="formChanged()"/>
+                               class="form-control float"/>
                     </div>
                 </div>
             </c:if>
@@ -142,18 +160,59 @@
         <%-- The gap between one display group and the next used to be a
              spacer.png with an inline min-height. It is margin, and
              .section-head already carries 32px of top margin, so the group
-             heading below spaces the groups on its own -- nothing goes here.
-             The save button carries its own mt-3 for the same reason: the
-             last group has no heading after it to do the work. --%>
+             heading below spaces the groups on its own -- nothing goes here. --%>
 
     </c:forEach>
 
-    <button id="saveButton" class="btn btn-primary mt-3" type="submit"><spring:message code="generic.save"/></button>
+</div>
+
+<%-- ====================================================================== --%>
+<%-- The rail: where you are, and Save. --%>
+
+<aside class="settings-rail">
+
+    <div class="rail-box">
+        <%-- websiteSettings.sections is the bare word "Sections", already
+             translated in every locale bundle for the weblog-settings rail.
+             Reused rather than adding a second key for the same word, the way
+             MainMenu.jsp reuses the inviteMember.* role names. --%>
+        <h3 class="section-head"><spring:message code="websiteSettings.sections"/></h3>
+        <nav class="section-index" id="globalConfigSectionIndex"
+             aria-label="<spring:message code="websiteSettings.sections"/>">
+            <c:forEach var="dg" items="${globalConfigDef.displayGroups}" varStatus="dgStatus">
+                <a href="#cfg-${fn:escapeXml(dg.key)}"<c:if test="${dgStatus.first}"> class="is-current"</c:if>><spring:message code="${dg.key}"/></a>
+            </c:forEach>
+        </nav>
+    </div>
+
+    <div class="rail-box">
+        <%-- id="saveButton" is load-bearing beyond this page:
+             RollerIT.setGlobalFlags -- which every browser test that permutes a
+             runtime property goes through -- clicks it by that id. --%>
+        <button id="saveButton" class="btn btn-primary w-100" type="submit"><spring:message code="generic.save"/></button>
+    </div>
+
+</aside>
 
 </form>
 
 
 <script type="text/javascript">
+
+    <%-- The numeric fields used to carry onkeyup="formChanged()" and the
+         checkboxes onchange="formChanged()" -- an inline handler per control,
+         which is a second place translated or generated text can reach raw
+         JavaScript (see roller.js's data-confirm note for what that costs).
+         One delegated listener on the form covers every control it will ever
+         have, including ones runtimeConfigDefs.xml has not grown yet. --%>
+    (function () {
+        var save = document.getElementById("saveButton");
+        if (!save || !save.form) {
+            return;
+        }
+        save.form.addEventListener("input", formChanged);
+        save.form.addEventListener("change", formChanged);
+    }());
 
     function formChanged() {
         var saveButton = $('#saveButton:first');
@@ -178,16 +237,6 @@
                     $(this).removeClass("field-invalid-highlight")
                 }
 
-            } else if (isFloat) {
-
-                if (isNaN(this.valueAsNumber)) {
-                    $(this).addClass("field-invalid-highlight")
-                    error = true;
-
-                } else {
-                    $(this).removeClass("field-invalid-highlight")
-                }
-
             } else if (isBoolean) {
                 // not sure why this is necessary, value does not track checked state?
                 $(this).prop("value", !(!$(this).prop("checked")));
@@ -198,5 +247,55 @@
         saveButton.prop("disabled", error);
     }
 
-</script>
+    <%-- The index marks where you are while scrolling, exactly as the weblog
+         settings rail does. IntersectionObserver only, guarded: without it the
+         index is still a working list of anchor links and the server-rendered
+         .is-current simply stays on the first group. --%>
+    (function () {
+        var index = document.getElementById('globalConfigSectionIndex');
+        if (!index || !('IntersectionObserver' in window)) {
+            return;
+        }
 
+        var links = {};
+        var heads = [];
+        Array.prototype.forEach.call(index.querySelectorAll('a[href^="#"]'), function (link) {
+            var head = document.getElementById(decodeURIComponent(link.getAttribute('href').substring(1)));
+            if (head) {
+                links[head.id] = link;
+                heads.push(head);
+            }
+        });
+        if (heads.length === 0) {
+            return;
+        }
+
+        var inBand = {};
+
+        function mark(id) {
+            heads.forEach(function (head) {
+                links[head.id].classList.toggle('is-current', head.id === id);
+            });
+        }
+
+        // The band is the top 30% of the viewport: the heading in it is the
+        // group you are reading. When a long group has scrolled past its own
+        // heading nothing is in the band, and the previous mark stays put.
+        var observer = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+                inBand[entry.target.id] = entry.isIntersecting;
+            });
+            for (var i = 0; i < heads.length; i++) {
+                if (inBand[heads[i].id]) {
+                    mark(heads[i].id);
+                    return;
+                }
+            }
+        }, { rootMargin: '0px 0px -70% 0px' });
+
+        heads.forEach(function (head) {
+            observer.observe(head);
+        });
+    }());
+
+</script>

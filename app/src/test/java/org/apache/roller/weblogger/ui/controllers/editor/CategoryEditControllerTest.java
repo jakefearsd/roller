@@ -17,6 +17,8 @@
  */
 package org.apache.roller.weblogger.ui.controllers.editor;
 
+import java.util.List;
+
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
@@ -332,5 +334,76 @@ class CategoryEditControllerTest extends EditorControllerTestSupport {
         category.setName(name);
         category.setWeblog(weblog);
         return category;
+    }
+
+    // --- errors point at the field they name (B8) ---
+
+    @Test
+    void aRefusedCategoryNameMarksTheNameField() throws Exception {
+        weblog.getWeblogCategories().add(categoryNamed("cat-1", "Travel"));
+        bean.setName("Travel");
+
+        controller.categoryAddSave(request, model, bean, redirectAttributes);
+
+        assertEquals(List.of("category_bean_name"), invalidFields(model));
+    }
+
+    @Test
+    void anUnescapedCategoryNameMarksTheSameField() throws Exception {
+        bean.setName("<b>Travel</b>");
+
+        controller.categoryAddSave(request, model, bean, redirectAttributes);
+
+        assertEquals(List.of("category_bean_name"), invalidFields(model));
+    }
+
+    /**
+     * The error path redirects (Add/edit is driven by #category-edit-modal on
+     * the category list; there is no standalone form page to redisplay), and
+     * a redirect starts a brand new request -- the {@code model} this test's
+     * siblings above assert on is thrown away with it. Before this fix the
+     * only thing that survived the redirect was a generic "check the logs"
+     * flash error, which told the author nothing about what was actually
+     * wrong and did not mark the name field either. The specific duplicate-
+     * name message and its field marker must survive the same way
+     * {@code errors}/{@code messages} already do (see {@code addFlashError}).
+     */
+    @Test
+    void addRejectsADuplicateNameAndTheDetailSurvivesTheRedirect() throws Exception {
+        registerMessage("categoryForm.error.duplicateName", "duplicate:{0}");
+        weblog.getWeblogCategories().add(categoryNamed("cat-1", "Travel"));
+        bean.setName("Travel");
+
+        controller.categoryAddSave(request, model, bean, redirectAttributes);
+
+        assertEquals(List.of("duplicate:Travel"), flashErrors(redirectAttributes),
+                "the specific duplicate-name complaint must survive the redirect, not a "
+                        + "generic check-the-logs message: " + flashErrors(redirectAttributes));
+        assertEquals(List.of("category_bean_name"), flashInvalidFields(redirectAttributes),
+                "the field marker must survive the redirect too, so the reopened modal can "
+                        + "highlight the name field: " + flashInvalidFields(redirectAttributes));
+    }
+
+    /**
+     * Same defect, the edit endpoint's own validation path.
+     */
+    @Test
+    void editRejectsRenamingOntoAnotherCategorysNameAndTheDetailSurvivesTheRedirect() throws Exception {
+        registerMessage("categoryForm.error.duplicateName", "duplicate:{0}");
+        WeblogCategory other = categoryNamed("cat-2", "Food");
+        weblog.getWeblogCategories().add(other);
+        when(weblogger.getWeblogEntryManager().getWeblogCategoryByName(weblog, "Food"))
+                .thenReturn(other);
+
+        bean.setId("cat-1");
+        bean.setName("Food");
+
+        controller.categoryEditSave(request, model, bean, redirectAttributes);
+
+        assertEquals(List.of("duplicate:Food"), flashErrors(redirectAttributes),
+                "the specific duplicate-name complaint must survive the redirect: "
+                        + flashErrors(redirectAttributes));
+        assertEquals(List.of("category_bean_name"), flashInvalidFields(redirectAttributes),
+                "the field marker must survive the redirect too: " + flashInvalidFields(redirectAttributes));
     }
 }

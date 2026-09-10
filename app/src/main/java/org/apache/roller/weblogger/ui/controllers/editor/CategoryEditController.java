@@ -18,6 +18,7 @@
 
 package org.apache.roller.weblogger.ui.controllers.editor;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -97,8 +98,12 @@ public class CategoryEditController extends BaseController {
         }
 
         // Add/edit is driven by #category-edit-modal on the category list; there
-        // is no standalone form page to redisplay, so report and go back.
-        addFlashError(redirectAttributes, "generic.error.check.logs", request);
+        // is no standalone form page to redisplay, so the specific complaint
+        // (myValidate's field error, or the generic save-failure message just
+        // added above) has to survive the redirect as a flash, or the list
+        // page shows a bland "check the logs" banner no matter what was wrong
+        // and never marks the field that caused it.
+        carryModelErrorsToFlash(model, redirectAttributes);
         return "redirect:/roller-ui/authoring/categories.rol?weblog="
                 + getActionWeblog(request).getHandle();
     }
@@ -146,25 +151,54 @@ public class CategoryEditController extends BaseController {
             }
         }
 
-        // Add/edit is driven by #category-edit-modal on the category list; there
-        // is no standalone form page to redisplay, so report and go back.
-        addFlashError(redirectAttributes, "generic.error.check.logs", request);
+        // Same reason as categoryAddSave's fallback above.
+        carryModelErrorsToFlash(model, redirectAttributes);
         return "redirect:/roller-ui/authoring/categories.rol?weblog="
                 + getActionWeblog(request).getHandle();
     }
 
+    /**
+     * Carries whatever {@link #myValidate} (or a caught save failure) put on
+     * the model's {@code errors}/{@code invalidFields} across a redirect, the
+     * same way {@link BaseController#addFlashError} carries a single message.
+     * By the time either save method reaches this call the model is
+     * guaranteed to hold at least one error -- either a field-specific
+     * complaint from {@code myValidate} (the {@code hasErrors} gate above
+     * never entered the try block) or the generic
+     * {@code generic.error.check.logs} the catch block just added -- so this
+     * replaces a separate explicit flash of that generic key rather than
+     * supplementing it.
+     */
+    @SuppressWarnings("unchecked")
+    private void carryModelErrorsToFlash(Model model, RedirectAttributes redirectAttributes) {
+        List<String> modelErrors = (List<String>) model.getAttribute("errors");
+        if (modelErrors != null && !modelErrors.isEmpty()) {
+            redirectAttributes.addFlashAttribute("errors", new ArrayList<>(modelErrors));
+        }
+        Object invalidFields = model.getAttribute(INVALID_FIELDS);
+        if (invalidFields != null) {
+            redirectAttributes.addFlashAttribute(INVALID_FIELDS, invalidFields);
+        }
+        Object invalidFieldIds = model.getAttribute(INVALID_FIELD_IDS);
+        if (invalidFieldIds != null) {
+            redirectAttributes.addFlashAttribute(INVALID_FIELD_IDS, invalidFieldIds);
+        }
+    }
+
     private void myValidate(CategoryBean bean, boolean isAdd, HttpServletRequest request, Model model) {
         if (bean.getName() == null || !bean.getName().equals(StringEscapeUtils.escapeHtml4(bean.getName()))) {
-            addError(model, "categoryForm.error.invalidName", request);
+            addFieldError(model, "category_bean_name", "categoryForm.error.invalidName", request);
         } else if (isAdd) {
             if (getActionWeblog(request).hasCategory(bean.getName())) {
-                addError(model, "categoryForm.error.duplicateName", bean.getName(), request);
+                addFieldError(model, "category_bean_name", "categoryForm.error.duplicateName",
+                        new Object[]{bean.getName()}, request);
             }
         } else {
             try {
                 WeblogCategory wc = categoryNamed(getActionWeblog(request), bean.getName());
                 if (wc != null && !wc.getId().equals(bean.getId())) {
-                    addError(model, "categoryForm.error.duplicateName", bean.getName(), request);
+                    addFieldError(model, "category_bean_name", "categoryForm.error.duplicateName",
+                            new Object[]{bean.getName()}, request);
                 }
             } catch (WebloggerException ex) {
                 // Fail closed. A uniqueness check that could not run is not a

@@ -74,7 +74,7 @@
 
     <div class="maintenance-op">
         <p><spring:message code="maintenance.prompt.flush"/></p>
-        <button type="submit" class="btn"
+        <button type="submit" class="btn btn-secondary"
                 formaction="${pageContext.request.contextPath}/roller-ui/admin/maintenance!flushCache.rol"><spring:message code="maintenance.button.flush"/></button>
     </div>
 
@@ -92,7 +92,7 @@
         <spring:message code="maintenance.confirm.index" arguments="${fn:escapeXml(selectedWeblogLabel)}" var="confirmIndex"/>
         <div class="maintenance-op">
             <p><spring:message code="maintenance.prompt.index"/></p>
-            <button type="submit" class="btn"
+            <button type="submit" class="btn btn-secondary"
                     data-confirm="${confirmIndex}"
                     data-busy-label="<spring:message code='maintenance.index.building'/>"
                     formaction="${pageContext.request.contextPath}/roller-ui/admin/maintenance!index.rol"><spring:message code="maintenance.button.index"/></button>
@@ -102,7 +102,7 @@
     <spring:message code="maintenance.confirm.regenerateRenditions" arguments="${fn:escapeXml(selectedWeblogLabel)}" var="confirmRenditions"/>
     <div class="maintenance-op">
         <p><spring:message code="maintenance.prompt.regenerateRenditions"/></p>
-        <button type="submit" class="btn"
+        <button type="submit" class="btn btn-secondary"
                 data-confirm="${confirmRenditions}"
                 data-busy-label="<spring:message code='maintenance.regenerateRenditions.building'/>"
                 formaction="${pageContext.request.contextPath}/roller-ui/admin/maintenance!regenerateRenditions.rol"><spring:message code="maintenance.button.regenerateRenditions"/></button>

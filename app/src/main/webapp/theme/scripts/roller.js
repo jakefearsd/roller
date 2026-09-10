@@ -253,6 +253,14 @@ if (typeof jQuery !== "undefined") {
  * seeing the same attribute -- prompts again. That is not hypothetical; it
  * shipped for one round on UserEdit's send-password-link form.
  *
+ * A form-level data-confirm may also carry data-confirm-when, a CSS selector
+ * evaluated against the form itself: the prompt fires only when the form
+ * currently has a match. Members.jsp is the one caller -- whether removing a
+ * member needs confirming depends on which of several radios across the whole
+ * table is checked, a decision no single control can answer for itself, so
+ * this is the one legitimate reason for a form-level (rather than
+ * per-control) data-confirm.
+ *
  * Capture phase, so this runs before any other handler commits to the action.
  */
 (function () {
@@ -261,6 +269,14 @@ if (typeof jQuery !== "undefined") {
     function confirmed(element) {
         var message = element.getAttribute("data-confirm");
         return !message || window.confirm(message);
+    }
+
+    // A form's own data-confirm is unconditional unless it also names
+    // data-confirm-when, in which case it only applies while the form has a
+    // live match for that selector.
+    function formNeedsConfirming(form) {
+        var when = form.getAttribute("data-confirm-when");
+        return !when || form.querySelector(when) !== null;
     }
 
     // Deliberately stops BEFORE the form: a form's own data-confirm belongs to
@@ -288,9 +304,98 @@ if (typeof jQuery !== "undefined") {
         // prompt was already answered by the click handler above, which is
         // why that handler stops at the form and this one does not climb.
         var form = event.target;
-        if (form.hasAttribute && form.hasAttribute("data-confirm") && !confirmed(form)) {
+        if (form.hasAttribute && form.hasAttribute("data-confirm")
+                && formNeedsConfirming(form) && !confirmed(form)) {
             event.preventDefault();
             event.stopPropagation();
         }
     }, true);
 })();
+
+// Selection bars: shown while any checkbox in the form named by
+// data-selection-bar is checked; the count text comes from the bar's own
+// data-template ("{0} selected"), so the string stays in the bundle.
+document.addEventListener('change', function (event) {
+    var box = event.target;
+    if (!(box instanceof HTMLInputElement) || box.type !== 'checkbox') { return; }
+    var form = box.form;
+    if (!form) { return; }
+    var bar = document.querySelector('.selection-bar[data-selection-bar="' + form.id + '"]');
+    if (!bar) { return; }
+    var checked = form.querySelectorAll('input[type=checkbox]:checked:not([data-select-all])').length;
+    bar.hidden = checked === 0;
+    var count = bar.querySelector('.selection-count');
+    if (count) { count.textContent = count.dataset.template.replace('{0}', checked); }
+});
+
+/*
+ * A control marked data-submit-on-change submits its own form the moment its
+ * value changes -- the Entries sidebar's sort <select> is the first caller.
+ *
+ * Delegated and attribute-driven for the same reason data-confirm is (see the
+ * long comment above): an inline onchange="this.form.submit()" is JavaScript
+ * living in an HTML attribute, where the HTML parser has already decoded
+ * whatever the JSP escaped before the script ever compiles.
+ *
+ * requestSubmit(), not submit(): the native submit() method skips the form's
+ * own submit handlers, which on this page would step around the data-confirm
+ * prompt above and any future guard registered the same way.
+ */
+document.addEventListener('change', function (event) {
+    var control = event.target;
+    if (!control || !control.hasAttribute || !control.hasAttribute('data-submit-on-change')) { return; }
+    var form = control.form || (control.closest && control.closest('form'));
+    if (!form) { return; }
+    if (form.requestSubmit) {
+        form.requestSubmit();
+    } else {
+        form.submit();
+    }
+});
+
+/*
+ * Validation errors point at the field they name.
+ *
+ * A controller that refuses a value calls BaseController.addFieldError, which
+ * records the control's DOM id alongside the message; the three admin layouts
+ * render the joined ids as <body data-invalid-fields="a b c">. This marks each
+ * one and focuses the first, so a form with thirty fields does not leave the
+ * author hunting for whichever box the banner is about.
+ *
+ * Every step is null-guarded because THIS FILE ALSO LOADS ON PUBLIC WEBLOG
+ * PAGES (see the jQuery guard above), where no layout ever writes the
+ * attribute -- a page with nothing wrong must be a silent no-op, not a
+ * console error on every blog post.
+ *
+ * The class and the aria state are set together on purpose: .is-invalid is
+ * the red border a sighted reader sees (roller.css defines it in terms of
+ * --bad), aria-invalid is the same fact for a screen reader, and shipping one
+ * without the other means the marker exists for only half the audience.
+ */
+document.addEventListener('DOMContentLoaded', function () {
+    var body = document.body;
+    if (!body || !body.dataset) { return; }
+    var ids = body.dataset.invalidFields;
+    if (!ids) { return; }
+
+    var first = null;
+    ids.trim().split(/\s+/).forEach(function (id) {
+        if (!id) { return; }
+        var field = document.getElementById(id);
+        // A field that is not on this page is not an error: a validation may
+        // name a control the current branch of the form did not render (the
+        // template Action select only exists once actions are available).
+        if (!field) { return; }
+        field.classList.add('is-invalid');
+        field.setAttribute('aria-invalid', 'true');
+        if (!first) { first = field; }
+    });
+
+    // Scrolling is wanted, not suppressed -- the refused field is frequently
+    // below the fold on a long settings form, which is the whole reason the
+    // banner alone was not enough. This runs on DOMContentLoaded, so it wins
+    // over any autofocus attribute the page carries, which is correct: the
+    // field that needs fixing outranks the field you would start a fresh form
+    // in.
+    if (first) { first.focus({ preventScroll: false }); }
+});

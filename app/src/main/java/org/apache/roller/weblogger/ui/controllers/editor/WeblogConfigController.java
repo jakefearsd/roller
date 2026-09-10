@@ -109,32 +109,38 @@ public class WeblogConfigController extends BaseController {
     private void myValidate(WeblogConfigBean bean, HttpServletRequest request, Model model) {
         int maxEntries = WebloggerRuntimeConfig.getIntProperty("site.pages.maxEntries");
         if (bean.getEntryDisplayCount() > maxEntries) {
-            addError(model, "websiteSettings.error.entryDisplayCount", request);
+            addFieldError(model, "weblog_bean_entryDisplayCount",
+                    "websiteSettings.error.entryDisplayCount", request);
         }
 
         String newsletterListUuid = StringUtils.trimToNull(bean.getNewsletterListUuid());
         if (newsletterListUuid != null && !UUID_PATTERN.matcher(newsletterListUuid).matches()) {
-            addError(model, "websiteSettings.newsletterListUuid.invalid", request);
+            addFieldError(model, "weblog_bean_newsletterListUuid",
+                    "websiteSettings.newsletterListUuid.invalid", request);
         }
 
         String analyticsSiteId = StringUtils.trimToNull(bean.getAnalyticsSiteId());
         if (analyticsSiteId != null && !UUID_PATTERN.matcher(analyticsSiteId).matches()) {
-            addError(model, "websiteSettings.analyticsSiteId.invalid", request);
+            addFieldError(model, "weblog_bean_analyticsSiteId",
+                    "websiteSettings.analyticsSiteId.invalid", request);
         }
 
         String analyticsShareUrl = StringUtils.trimToNull(bean.getAnalyticsShareUrl());
         if (analyticsShareUrl != null && !analyticsShareUrl.matches("(?i)^https?://.*")) {
-            addError(model, "websiteSettings.analyticsShareUrl.invalid", request);
+            addFieldError(model, "weblog_bean_analyticsShareUrl",
+                    "websiteSettings.analyticsShareUrl.invalid", request);
         }
 
         String customDomain = CustomDomainRules.normalise(bean.getCustomDomain());
         bean.setCustomDomain(customDomain);
         if (customDomain != null) {
             if (!CustomDomainRules.isWellFormed(customDomain)) {
-                addError(model, "websiteSettings.customDomain.invalid", request);
+                addFieldError(model, "weblog_bean_customDomain",
+                        "websiteSettings.customDomain.invalid", request);
             } else if (CustomDomainRules.isSiteHost(customDomain,
                     WebloggerRuntimeConfig.getPropertyWithConfigFallback("site.absoluteurl"))) {
-                addError(model, "websiteSettings.customDomain.isSiteHost", request);
+                addFieldError(model, "weblog_bean_customDomain",
+                        "websiteSettings.customDomain.isSiteHost", request);
             } else {
                 try {
                     Weblog claimant = weblogger.getWeblogManager()
@@ -148,10 +154,12 @@ public class WeblogConfigController extends BaseController {
                     // actually own (I4).
                     if (claimant != null
                             && !claimant.getHandle().equals(getActionWeblog(request).getHandle())) {
-                        addError(model, "websiteSettings.customDomain.taken", request);
+                        addFieldError(model, "weblog_bean_customDomain",
+                                "websiteSettings.customDomain.taken", request);
                     }
                 } catch (WebloggerException e) {
-                    addError(model, "websiteSettings.customDomain.invalid", request);
+                    addFieldError(model, "weblog_bean_customDomain",
+                            "websiteSettings.customDomain.invalid", request);
                 }
             }
         }

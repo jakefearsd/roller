@@ -41,7 +41,7 @@
         <jsp:include page="${tile_styles}" />
     </style>
 </head>
-<body>
+<body<c:if test="${not empty invalidFieldIds}"> data-invalid-fields="${fn:escapeXml(invalidFieldIds)}"</c:if>>
 
 <jsp:include page="${tile_banner}"/>
 
@@ -89,11 +89,9 @@
             </nav>
 
             <c:if test="${tile_sidebar != '/WEB-INF/jsps/tiles/empty.jsp'}">
-                <div class="card">
-                    <div class="card-body">
-                        <jsp:include page="${tile_sidebar}"/>
-                    </div>
-                </div>
+                <aside class="sidebar" id="adminSidebar">
+                    <jsp:include page="${tile_sidebar}"/>
+                </aside>
             </c:if>
 
         </div>

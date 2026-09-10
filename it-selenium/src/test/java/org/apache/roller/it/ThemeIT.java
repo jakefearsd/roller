@@ -24,7 +24,6 @@ import org.junit.jupiter.api.parallel.ResourceLock;
 
 import static com.codeborne.selenide.Condition.checked;
 import static com.codeborne.selenide.Condition.exist;
-import static com.codeborne.selenide.Condition.value;
 import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
 import static com.codeborne.selenide.Selenide.$$;
@@ -138,8 +137,9 @@ class ThemeIT extends RollerIT {
         switchToSharedTheme("travel", handle);
 
         openPath(themeEditPath(handle));
-        $("#themeSelector").shouldHave(value("travel"));
-        $("#sharedRadio").shouldBe(checked);
+        $("label.theme-card input[value='travel']").shouldBe(checked);
+        // No type chooser at all while custom themes are off site-wide.
+        $("#customRadio").shouldNot(exist);
 
         boolean wasAllowed = setGlobalFlag(CUSTOM_THEMES_ALLOWED, true);
         try {
@@ -181,8 +181,12 @@ class ThemeIT extends RollerIT {
                             + templateNames());
 
             openPath(themeEditPath(handle));
-            $("#sharedRadio").shouldBe(checked);
+            // The whole type-chooser row is omitted when there is nothing to
+            // choose between -- it used to render a lone "Shared theme" radio,
+            // already selected, beside an empty column.
+            $("#sharedRadio").shouldNot(exist);
             $("#customRadio").shouldNot(exist);
+            $(".theme-cards").should(exist);
         } finally {
             setGlobalFlag(CUSTOM_THEMES_ALLOWED, wasAllowed);
             logout();
@@ -219,8 +223,11 @@ class ThemeIT extends RollerIT {
      */
     private void switchToSharedTheme(String themeId, String handle) {
         openPath(themeEditPath(handle));
-        $("#sharedRadio").should(visible).click();
-        $("#themeSelector").selectOptionByValue(themeId);
+        // Clicking the theme's own card is what reveals the Save button, and
+        // it is now the ONLY way in on a default install: with
+        // themes.customtheme.allowed off there is nothing to choose between,
+        // so the shared/custom radio row is not rendered at all.
+        $("label.theme-card input[value='" + themeId + "']").should(visible).click();
 
         $("#sharedChangeToShared").shouldBe(visible);
         $("#sharedChangeToShared button[type='submit']").click();
@@ -241,11 +248,17 @@ class ThemeIT extends RollerIT {
      */
     private void postCustomThemeSwitch(String handle) {
         openPath(themeEditPath(handle));
+        // SETS the themeType the page already carries rather than appending a
+        // second one: with custom themes off the form ships a hidden
+        // themeType=shared, and two parameters of the same name would bind the
+        // FIRST -- so the POST would quietly be an ordinary shared-theme save
+        // and this test would pass without ever exercising the refusal.
         executeJavaScript(
                 "var f = document.querySelector(\"form[action$='themeEdit!save.rol']\");"
-                        + "var t = document.createElement('input');"
-                        + "t.type = 'hidden'; t.name = 'themeType'; t.value = 'custom';"
-                        + "f.appendChild(t); f.submit();");
+                        + "var t = f.querySelector(\"input[name='themeType']\");"
+                        + "if (!t) { t = document.createElement('input');"
+                        + "  t.type = 'hidden'; t.name = 'themeType'; f.appendChild(t); }"
+                        + "t.value = 'custom'; f.submit();");
         BrowserHealth.current().settle();
     }
 

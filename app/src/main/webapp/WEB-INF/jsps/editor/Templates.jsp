@@ -28,9 +28,9 @@
     <p><spring:message code="pagesForm.themesReminder" arguments="${actionWeblog.editorTheme}"/></p>
 </c:if>
 
+<spring:message code="pageRemove.confirm" var="templateDeleteConfirmBase"/>
 <form id="templateRemoveForm" action="${pageContext.request.contextPath}/roller-ui/authoring/templates!remove.rol" method="post">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
-    <input type="hidden" name="removeId" value="${removeId}" id="removeId"/>
 
     <%-- rollertable, not just table: it is the class that carries the token
          palette and the caps-label header row every other admin list gets.
@@ -73,17 +73,23 @@
                     <td class="center" style="vertical-align:middle">
                         <c:choose>
 <c:when test="${!p.required || !customTheme}">
-                            <%-- id/name ride in data-* attributes, not an
-                                 interpolated onclick string -- fn:escapeXml
-                                 renders an apostrophe as &#039;, which the
-                                 HTML parser decodes back to ' BEFORE the
-                                 onclick attribute compiles as JavaScript, so
-                                 a template named e.g. "Maiia's Sidebar" made
-                                 this control a permanent SyntaxError.
-                                 Delegated handler below (same convention as
-                                 MediaFileView.jsp:493). --%>
-                            <button type="button" class="btn btn-link p-0 align-baseline border-0 template-delete-btn"
-                                    data-template-id="${p.id}" data-template-name="${fn:escapeXml(p.name)}"
+                            <%-- A real submit button carrying its own name/value,
+                                 not a hidden field a delegated click handler had to
+                                 populate first -- same shape as Trash.jsp's per-row
+                                 restore/delete-forever buttons. data-confirm, not an
+                                 inline onclick/window.confirm: fn:escapeXml renders
+                                 an apostrophe as &#039;, which the HTML parser
+                                 decodes back to ' BEFORE a JS-string position
+                                 compiles, so a template named e.g. "Maiia's Sidebar"
+                                 made the old onclick-string approach a permanent
+                                 SyntaxError. An HTML attribute has no second parser,
+                                 so data-confirm is safe with the same escape.
+                                 data-template-name is kept for TemplateIT, which
+                                 targets this control by it. --%>
+                            <button type="submit" class="btn btn-link p-0 align-baseline border-0 template-delete-btn"
+                                    name="removeId" value="${p.id}"
+                                    data-template-name="${fn:escapeXml(p.name)}"
+                                    data-confirm="${templateDeleteConfirmBase}: '${fn:escapeXml(p.name)}'?"
                                     aria-label="<spring:message code='generic.delete'/>: ${fn:escapeXml(p.name)}">
                                 <span class="bi bi-trash" aria-hidden="true"></span>
                             </button>
@@ -115,24 +121,3 @@
 
 <sec:csrfInput/>
 </form>
-
-
-<script>
-    <%-- Delegated: a row's id/name ride in data-* attributes on the button
-         (see the comment above it), never in an inline onclick string. --%>
-    $(document).on('click', '.template-delete-btn', function () {
-        confirmTemplateDelete(this.dataset.templateId, this.dataset.templateName);
-    });
-
-    function confirmTemplateDelete(templateId, templateName) {
-        // The form is submitted by id. It used to be getElementById("templates")
-        // -- an id Struts generated from the action name and the JSP never
-        // reproduced -- so this threw "Cannot read properties of null (reading
-        // 'submit')" after the confirm dialog, and no template could be deleted
-        // through the UI at all.
-        $('#removeId').val(templateId);
-        if (window.confirm('<spring:message code="pageRemove.confirm" javaScriptEscape="true"/>: \'' + templateName + '\'?')) {
-            document.getElementById("templateRemoveForm").submit();
-        }
-    }
-</script>

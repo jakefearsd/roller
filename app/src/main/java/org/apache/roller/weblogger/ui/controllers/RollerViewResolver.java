@@ -207,7 +207,13 @@ public class RollerViewResolver implements ViewResolver, Ordered {
         addExtendedDefinition(".Setup", ".tiles-simplepage",
                 Map.of("content", "/WEB-INF/jsps/core/Setup.jsp"));
 
-        addExtendedDefinition(".Profile", ".tiles-simplepage",
+        // Profile is a signed-in screen with no weblog scope, so it has no tabs
+        // to render -- but it is still admin chrome, and mainmenupage is the
+        // layout for exactly that (the rail with the account context block and
+        // no tab groups, which is what MainMenu itself uses). On simplepage --
+        // the install/login chrome -- it rendered as a bare card with no rail,
+        // so a reader who opened it had nothing to navigate back by.
+        addExtendedDefinition(".Profile", ".tiles-mainmenupage",
                 Map.of("content", "/WEB-INF/jsps/core/Profile.jsp"));
 
         addExtendedDefinition(".CreateWeblog", ".tiles-simplepage",
@@ -405,8 +411,17 @@ public class RollerViewResolver implements ViewResolver, Ordered {
                         "styles",  "/WEB-INF/jsps/tiles/empty.jsp"
                 ));
 
-        addExtendedDefinition(".Submissions", ".tiles-simplepage",
-                Map.of("content", "/WEB-INF/jsps/editor/Submissions.jsp"));
+        // Inquiries is an authoring screen reached from the editor tabs, so it
+        // wears the same tabbed chrome the rest of them do. The attribute map
+        // is .Trash's -- the minimal tabbed shape: explicit head, the content
+        // tile, no page-specific styles, and the base layout's empty menu tile
+        // (the tabs come from the navMenu model attribute, not from a tile).
+        addExtendedDefinition(".Submissions", ".tiles-tabbedpage",
+                Map.of(
+                        "head",    "/WEB-INF/jsps/tiles/head.jsp",
+                        "content", "/WEB-INF/jsps/editor/Submissions.jsp",
+                        "styles",  "/WEB-INF/jsps/tiles/empty.jsp"
+                ));
 
         addExtendedDefinition(".Members", ".tiles-tabbedpage",
                 Map.of(

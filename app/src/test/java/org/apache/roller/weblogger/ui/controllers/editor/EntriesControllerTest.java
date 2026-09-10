@@ -17,6 +17,8 @@
  */
 package org.apache.roller.weblogger.ui.controllers.editor;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -32,6 +34,7 @@ import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntrySearchCriteria;
+import org.apache.roller.weblogger.util.URLUtilities;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -129,6 +132,32 @@ class EntriesControllerTest extends EditorControllerTestSupport {
         assertNull(captor.getValue().getStatus(), "\"ALL\" must not be passed through as a literal enum value");
     }
 
+    /**
+     * Folded in from B5's round-1 fix (task-B5-report.md, "Held back"):
+     * {@code EntriesBean.status} defaults to {@code "ALL"}, but a request
+     * that posts {@code bean.status=} (empty, not absent) binds an empty
+     * string over that default. Before this fix, only the literal "ALL" was
+     * treated as "no filter" and {@code PubStatus.valueOf("")} threw an
+     * uncaught {@code IllegalArgumentException} -- outside the
+     * {@code catch (WebloggerException)} below, i.e. a 500. A blank status
+     * must mean the same thing as "ALL". This is a second line of defence
+     * behind EntriesSidebar.jsp's own {@code <c:if test="${not empty
+     * bean.status}">} guard on its hidden field, for any other caller
+     * (a hand-built query string, the API) that reaches this controller with
+     * an explicitly empty status.
+     */
+    @Test
+    void aBlankStatusIsTreatedTheSameAsAllRatherThanThrowing() throws Exception {
+        bean.setStatus("");
+
+        controller.execute(request, model, bean);
+
+        ArgumentCaptor<WeblogEntrySearchCriteria> captor =
+                ArgumentCaptor.forClass(WeblogEntrySearchCriteria.class);
+        org.mockito.Mockito.verify(weblogger.getWeblogEntryManager()).getWeblogEntries(captor.capture());
+        assertNull(captor.getValue().getStatus(), "a blank status must not be passed through to PubStatus.valueOf");
+    }
+
     @Test
     void aSpecificStatusIsPassedThroughAsItsPubStatusEnumValue() throws Exception {
         bean.setStatus("DRAFT");
@@ -183,6 +212,110 @@ class EntriesControllerTest extends EditorControllerTestSupport {
         controller.execute(request, model, bean);
 
         assertEquals(5, ((List<?>) model.getAttribute("statusOptions")).size());
+    }
+
+    /**
+     * A status chip changes exactly ONE thing about the query and leaves every
+     * other filter where the author put it.
+     *
+     * <p>The chips replaced a radio set that lived inside the sidebar's filter
+     * form, where "carry the rest of the filter" was free -- the form posted
+     * all of its own fields. A link has no such form behind it, so each chip
+     * url has to be built with the whole filter baked in, or clicking "Drafts"
+     * silently discards the text search, the tag, the category and the date
+     * range the author had narrowed to. That is the failure this test exists
+     * for: it is invisible on an unfiltered list, which is the only state
+     * anyone clicks a chip in while developing.
+     *
+     * <p>The urls come from the same {@code filterParams} the pager's base url
+     * and the bulk-action redirect are built from, so the three cannot drift
+     * on which filters they carry.
+     */
+    @Test
+    void aStatusChipUrlCarriesEveryOtherFilterTheAuthorHasSet() throws Exception {
+        bean.setStatus("PUBLISHED");
+        bean.setText("cinque terre");
+        bean.setTagsAsString("liguria");
+        bean.setCategoryName("Travel");
+        bean.setStartDateString("2026-01-01");
+        bean.setEndDateString("2026-12-31");
+        stubActionUrlWithContextPath("");
+
+        controller.execute(request, model, bean);
+
+        @SuppressWarnings("unchecked")
+        Map<String, String> chipUrls = (Map<String, String>) model.getAttribute("statusChipUrls");
+        assertNotNull(chipUrls, "the JSP has no chip urls to render");
+        String draftChip = chipUrls.get("DRAFT");
+        assertNotNull(draftChip, "no chip url for DRAFT");
+
+        Map<String, String> params = queryParams(draftChip);
+        assertEquals("cinque terre", params.get("bean.text"), draftChip);
+        assertEquals("liguria", params.get("bean.tagsAsString"), draftChip);
+        assertEquals("Travel", params.get("bean.categoryName"), draftChip);
+        assertEquals("2026-01-01", params.get("bean.startDateString"), draftChip);
+        assertEquals("2026-12-31", params.get("bean.endDateString"), draftChip);
+        assertEquals(WEBLOG_HANDLE, params.get("weblog"), draftChip);
+
+        // The one thing the chip does change.
+        assertEquals("DRAFT", params.get("bean.status"), draftChip);
+    }
+
+    /**
+     * A filter value full of query punctuation reaches the chip intact.
+     *
+     * <p>This is the case that used to be corrupted three different ways at
+     * once, none of them visible on the page: {@code &} started a new
+     * parameter (so the search became "R"), {@code #} started the fragment and
+     * took every parameter after it -- {@code bean.status} included -- out of
+     * the request entirely, and {@code +} came back as a space. Escaping the
+     * href with {@code fn:escapeXml} does not touch any of it, because the
+     * browser decodes {@code &amp;} back to {@code &} before building the
+     * request; the encoding has to happen when the url is built.
+     *
+     * <p>Note this asserts on the DECODED parameters, so it is a statement
+     * about what the next request will carry rather than about a particular
+     * spelling of the escape.
+     */
+    @Test
+    void aStatusChipUrlKeepsAFilterValueThatIsFullOfQueryPunctuation() throws Exception {
+        bean.setStatus("ALL");
+        bean.setText("R&D #1");
+        bean.setCategoryName("C# / R+D");
+        stubActionUrlWithContextPath("");
+
+        controller.execute(request, model, bean);
+
+        @SuppressWarnings("unchecked")
+        Map<String, String> chipUrls = (Map<String, String>) model.getAttribute("statusChipUrls");
+        String draftChip = chipUrls.get("DRAFT");
+
+        Map<String, String> params = queryParams(draftChip);
+        assertEquals("R&D #1", params.get("bean.text"), draftChip);
+        assertEquals("C# / R+D", params.get("bean.categoryName"), draftChip);
+        // The status filter survives a '#' earlier in the query -- unencoded it
+        // would have been swallowed by the fragment along with everything else.
+        assertEquals("DRAFT", params.get("bean.status"), draftChip);
+    }
+
+    /**
+     * "All" means no status filter, so its chip carries no status parameter at
+     * all rather than the sentinel string -- {@code execute} already treats a
+     * literal "ALL" as no filter, so putting it in the url would say nothing
+     * while making the url the author sees longer.
+     */
+    @Test
+    void theAllChipClearsTheStatusParameterRatherThanSpellingOutTheSentinel() throws Exception {
+        bean.setStatus("DRAFT");
+        stubActionUrlWithContextPath("");
+
+        controller.execute(request, model, bean);
+
+        @SuppressWarnings("unchecked")
+        Map<String, String> chipUrls = (Map<String, String>) model.getAttribute("statusChipUrls");
+        String allChip = chipUrls.get("ALL");
+        assertNotNull(allChip, "no chip url for ALL");
+        assertFalse(allChip.contains("bean.status="), allChip);
     }
 
     @Test
@@ -338,8 +471,17 @@ class EntriesControllerTest extends EditorControllerTestSupport {
                         + "nothing to rebuild it from. Missing: " + missing);
     }
 
-    /** Answers the way {@code AbstractURLStrategy} does under a servlet prefix:
-     *  a context-relative url that already begins with the context path. */
+    /**
+     * Answers the way {@code AbstractURLStrategy} does under a servlet prefix:
+     * a context-relative url that already begins with the context path.
+     *
+     * <p>It joins the parameters through the REAL {@link URLUtilities#
+     * getQueryString}, not a hand-rolled {@code key=value} concatenation.
+     * That matters: the encoding of a filter value is the behaviour under
+     * test in {@link #aStatusChipUrlKeepsAFilterValueThatIsFullOfQueryPunctuation},
+     * and a stub that joined the pairs itself would assert against a url
+     * shape the application never produces.
+     */
     private void stubActionUrlWithContextPath(String contextPath) {
         when(weblogger.getUrlStrategy().getActionURL(any(), any(), any(), any(), org.mockito.ArgumentMatchers.anyBoolean()))
                 .thenAnswer(invocation -> {
@@ -347,11 +489,24 @@ class EntriesControllerTest extends EditorControllerTestSupport {
                     Map<String, String> params = new LinkedHashMap<>(
                             (Map<String, String>) invocation.getArgument(3));
                     params.put("weblog", invocation.getArgument(2));
-                    return contextPath + "/roller-ui/authoring/entries.rol?"
-                            + params.entrySet().stream()
-                                    .map(e -> e.getKey() + "=" + e.getValue())
-                                    .collect(Collectors.joining("&"));
+                    return contextPath + "/roller-ui/authoring/entries.rol"
+                            + URLUtilities.getQueryString(params);
                 });
+    }
+
+    /** The parameters of a built url, percent-decoded back to what they mean. */
+    private static Map<String, String> queryParams(String url) {
+        Map<String, String> params = new LinkedHashMap<>();
+        int q = url.indexOf('?');
+        if (q < 0) {
+            return params;
+        }
+        for (String pair : url.substring(q + 1).split("&")) {
+            int eq = pair.indexOf('=');
+            params.put(URLDecoder.decode(pair.substring(0, eq), StandardCharsets.UTF_8),
+                    URLDecoder.decode(pair.substring(eq + 1), StandardCharsets.UTF_8));
+        }
+        return params;
     }
 
     /**

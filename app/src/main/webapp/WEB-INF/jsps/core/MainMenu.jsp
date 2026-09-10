@@ -45,7 +45,14 @@
 
     <c:forEach items="${existingPermissions}" var="perms">
 
-        <div class="card card-body yourWeblogBox">
+        <%-- A quiet row, not a Bootstrap card with a toolbar. This is the
+             first screen an author lands on and its job is to get them into
+             one weblog, so the row carries the name (which IS the link to the
+             weblog -- the raw absolute URL used to sit under it on its own
+             line, saying nothing the link does not), the handle and entry
+             count in the mono data face, the role sentence, and one
+             recommended action. --%>
+        <div class="weblog-row">
 
             <%-- .section-head carries the caps-label type role; mm_weblog_name
                  now also carries the icon/label gap (roller.css) that used to
@@ -55,11 +62,9 @@
                  without moving that marker in the same commit. --%>
             <h3 class="mm_weblog_name section-head">
                 <span class="bi bi-folder2-open" aria-hidden="true"></span>
-                ${fn:escapeXml(perms.weblog.name)}
+                <a href="${fn:escapeXml(urls.weblogAbsolute(perms.weblog))}">${fn:escapeXml(perms.weblog.name)}</a>
+                <span class="data">${fn:escapeXml(perms.weblog.handle)}</span>
             </h3>
-
-            <p> <a href='${fn:escapeXml(urls.weblogAbsolute(perms.weblog))}'>
-            ${fn:escapeXml(urls.weblogAbsolute(perms.weblog))}</a></p>
 
             <p><c:out value="${perms.weblog.about}" escapeXml="false"/></p>
 
@@ -81,30 +86,30 @@
             <c:if test='${perms.hasAction("edit_draft")}'><spring:message code="inviteMember.limited" var="roleLabel"/><c:set var="permLabels" value="${empty permLabels ? roleLabel : permLabels.concat(', ').concat(roleLabel)}"/></c:if>
             <p><spring:message code="yourWebsites.permission.summary" arguments="${fn:escapeXml(permLabels)}"/></p>
 
-            <%-- The label was the literal string "..." -- a placeholder that
-                 shipped. It names the weblog its buttons act on. --%>
-            <div class="btn-group" role="group"
+            <%-- One recommended action, then the quiet ways in. The four
+                 equally-loud buttons this replaced were a toolbar: nothing in
+                 them said which one an author wanted. The label was the
+                 literal string "..." -- a placeholder that shipped -- and now
+                 names the weblog its actions act on. --%>
+            <div class="weblog-actions" role="group"
                  aria-label="${fn:escapeXml(perms.weblog.name)}">
 
-                <%-- New entry button --%>
                 <c:url value="/roller-ui/authoring/entryAdd.rol" var="newEntry">
                     <c:param name="weblog" value="${perms.weblog.handle}"/>
                 </c:url>
-                <a href="${newEntry}" class="btn btn-primary">
-                    <span class="bi bi-pencil" aria-hidden="true"></span>
+                <a href="${newEntry}" class="btn btn-primary btn-sm">
                     <spring:message code="yourWebsites.newEntry"/>
                 </a>
 
                 <c:if test='${!perms.hasAction("edit_draft")}'>
 
-                    <%-- Show Entries button with count for users above LIMITED permission --%>
+                    <%-- Entries, with its count, for users above LIMITED permission --%>
                     <c:url value="/roller-ui/authoring/entries.rol" var="editEntries">
                         <c:param name="weblog" value="${perms.weblog.handle}"/>
                     </c:url>
-                    <a href="${editEntries}" class="btn btn-secondary">
-                        <span class="bi bi-list" aria-hidden="true"></span>
+                    <a href="${editEntries}" class="quiet-link">
                         <spring:message code="yourWebsites.editEntries"/>
-                        <span class="badge bg-secondary">${perms.entryCount}</span>
+                        <span class="data">${perms.entryCount}</span>
                     </a>
 
                 </c:if>
@@ -122,8 +127,7 @@
                                 <c:url value="/roller-ui/authoring/templates.rol" var="weblogTheme">
                                     <c:param name="weblog" value="${perms.weblog.handle}" />
                                 </c:url>
-                                <a href='${weblogTheme}' class="btn btn-secondary">
-                                    <span class="bi bi-eye" aria-hidden="true"></span>
+                                <a href='${weblogTheme}' class="quiet-link">
                                     <spring:message code="yourWebsites.theme" />
                                 </a>
                             </c:if>
@@ -132,19 +136,16 @@
                             <c:url value="/roller-ui/authoring/themeEdit.rol" var="weblogTheme">
                                 <c:param name="weblog" value="${perms.weblog.handle}" />
                             </c:url>
-                            <a href='${weblogTheme}' class="btn btn-secondary">
-                                <span class="bi bi-eye" aria-hidden="true"></span>
+                            <a href='${weblogTheme}' class="quiet-link">
                                 <spring:message code="yourWebsites.theme" />
                             </a>
                         </c:otherwise>
                     </c:choose>
 
-                    <%-- settings button --%>
                     <c:url value="/roller-ui/authoring/weblogConfig.rol" var="manageWeblog">
                         <c:param name="weblog" value="${perms.weblog.handle}"/>
                     </c:url>
-                    <a href='${manageWeblog}' class="btn btn-secondary">
-                        <span class="bi bi-gear" aria-hidden="true"></span>
+                    <a href='${manageWeblog}' class="quiet-link">
                         <spring:message code="yourWebsites.manage"/>
                     </a>
 

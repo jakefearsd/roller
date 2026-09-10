@@ -17,6 +17,7 @@
  */
 package org.apache.roller.it;
 
+import com.codeborne.selenide.WebDriverRunner;
 import org.apache.roller.it.support.BrowserHealth;
 import org.apache.roller.it.support.Editor;
 import org.apache.roller.it.support.RollerIT;
@@ -140,6 +141,53 @@ class MultiUserJourneyIT extends RollerIT {
         signInAs(bob, PASSWORD);
         assertTrue(entryBody(bobBlog, bobEntryId).contains("Written by Bob"),
                 "Bob's entry did not survive Alice's activity");
+        logout();
+    }
+
+    /**
+     * Task B10: {@code BaseController.populateCommonModel} adds
+     * {@code userWeblogs} only when the signed-in user holds two or more
+     * weblogs, and {@code bannerStatus.jsp} renders {@code #weblogSwitcher}
+     * only then. This is the one end-to-end proof neither half is enough on
+     * its own: a one-weblog session must render no switcher at all, and
+     * picking a weblog out of the switcher's menu must land on the SAME rail
+     * screen ({@code entries.rol}) for the newly chosen weblog rather than,
+     * say, the main menu.
+     */
+    @Test
+    void theSwitcherAppearsOnlyWithTwoWeblogsAndKeepsTheScreen() {
+        String suffix = Long.toString(System.nanoTime(), 36);
+        String user = "carol" + suffix;
+        String blogA = "carolbloga" + suffix;
+        String blogB = "carolblogb" + suffix;
+
+        loginAsAdmin();
+        createUser(user, "Carol " + suffix);
+        logout();
+
+        signInAs(user, PASSWORD);
+        createWeblog(blogA, "Carol's Blog A " + suffix);
+
+        // --- one weblog: no switcher at all ---------------------------------
+        openPath("/roller-ui/authoring/entries.rol?weblog=" + blogA);
+        BrowserHealth.current().settle();
+        $("#weblogSwitcher").shouldNot(exist);
+
+        // --- a second weblog makes the switcher appear ----------------------
+        createWeblog(blogB, "Carol's Blog B " + suffix);
+
+        openPath("/roller-ui/authoring/entries.rol?weblog=" + blogA);
+        BrowserHealth.current().settle();
+        $("#weblogSwitcher").should(exist).click();
+        $(".weblog-switcher .dropdown-item[href*='weblog=" + blogB + "']").should(visible).click();
+        BrowserHealth.current().settle();
+
+        String url = WebDriverRunner.url();
+        assertTrue(url.contains("entries.rol"),
+                "choosing another weblog from the switcher must keep the same rail screen: " + url);
+        assertTrue(url.contains("weblog=" + blogB),
+                "choosing Blog B from the switcher did not land on its entries list: " + url);
+
         logout();
     }
 

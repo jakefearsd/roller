@@ -20,6 +20,10 @@ package org.apache.roller.weblogger.ui.controllers.editor;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Date;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
@@ -56,29 +60,64 @@ public class EntriesBean {
     
     public Date getStartDate() {
         if(!StringUtils.isEmpty(getStartDateString())) {
-            try {
-                DateFormat df = new SimpleDateFormat("MM/dd/yy");
-                return df.parse(getStartDateString());
-            } catch(Exception ignored) {
-                // A malformed hand-typed search-date is routine, not an
-                // error -- the search simply proceeds without a start-date
-                // bound.
-            }
+            return parseFilterDate(getStartDateString(), false);
         }
         return null;
     }
 
+    /**
+     * The search criteria filters {@code pubTime <= endDate}, so a date-only
+     * end value must resolve to the LAST instant of that day -- otherwise an
+     * end date of "the 30th" excludes every entry published that day except
+     * one landing in the first millisecond, which is not what a reader who
+     * typed that date means.
+     */
     public Date getEndDate() {
         if(!StringUtils.isEmpty(getEndDateString())) {
-            try {
-                DateFormat df = new SimpleDateFormat("MM/dd/yy");
-                return df.parse(getEndDateString());
-            } catch(Exception ignored) {
-                // Same as getStartDate() above: a malformed end-date just
-                // leaves the search with no end-date bound.
-            }
+            return parseFilterDate(getEndDateString(), true);
         }
         return null;
+    }
+
+    /**
+     * Parses a search-date filter value. The sidebar's date inputs became
+     * native {@code <input type="date">} elements (Task B4, replacing jQuery
+     * UI's datepicker), which submit ISO-8601 {@code yyyy-MM-dd} -- tried
+     * first -- but a bookmarked search URL from before that change still
+     * carries the old {@code MM/dd/yy} format, so that is tried second
+     * rather than dropped. Both formats are date-only, so {@code endOfDay}
+     * applies the same 23:59:59.999 adjustment to either one.
+     */
+    private static Date parseFilterDate(String s, boolean endOfDay) {
+        try {
+            LocalDate localDate = LocalDate.parse(s, DateTimeFormatter.ISO_LOCAL_DATE);
+            return toDate(localDate, endOfDay);
+        } catch (DateTimeParseException ignored) {
+            // Not an ISO yyyy-MM-dd value -- fall through to the legacy
+            // format a bookmarked search URL may still carry.
+        }
+        try {
+            DateFormat df = new SimpleDateFormat("MM/dd/yy");
+            Date parsed = df.parse(s);
+            if (!endOfDay) {
+                return parsed;
+            }
+            LocalDate localDate = parsed.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+            return toDate(localDate, true);
+        } catch (Exception ignored) {
+            // A malformed hand-typed/bookmarked search-date is routine, not
+            // an error -- the search simply proceeds without this date
+            // bound.
+        }
+        return null;
+    }
+
+    private static Date toDate(LocalDate localDate, boolean endOfDay) {
+        if (endOfDay) {
+            return Date.from(localDate.atTime(23, 59, 59, 999_000_000)
+                    .atZone(ZoneId.systemDefault()).toInstant());
+        }
+        return Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
     }
     
     

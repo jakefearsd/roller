@@ -19,7 +19,10 @@
 package org.apache.roller.weblogger.ui.controllers;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -200,6 +203,69 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
      */
     protected void addError(Model model, String key, Object[] args, HttpServletRequest request) {
         addToModel(model, "errors", getText(key, args, request));
+    }
+
+    /**
+     * The ordered set of DOM ids naming the form controls a validation
+     * refused. Read by tests; the page reads {@link #INVALID_FIELD_IDS}.
+     */
+    public static final String INVALID_FIELDS = "invalidFields";
+
+    /**
+     * The same ids, space-joined, which is the form the three layouts render
+     * into {@code <body data-invalid-fields>}. Joined here rather than in the
+     * page because JSTL's {@code fn:join} only accepts a {@code String[]}.
+     */
+    public static final String INVALID_FIELD_IDS = "invalidFieldIds";
+
+    /**
+     * An error message, plus the DOM id of the control it is about.
+     *
+     * <p>Identical to {@link #addError(Model, String, HttpServletRequest)} in
+     * every respect the caller's {@code hasErrors} gate can see -- the message
+     * lands in the same list and refuses the save the same way. The addition
+     * is the id, which travels to the page as {@code
+     * <body data-invalid-fields>} and lets {@code roller.js} put
+     * {@code .is-invalid} and {@code aria-invalid} on the control and focus
+     * the first one. A banner at the top of a long settings form says
+     * <em>that</em> something was refused; only the marker says <em>which</em>
+     * of thirty fields.
+     *
+     * <p>The id must be the control's real {@code id} attribute in the JSP
+     * this controller renders -- {@code JspConsistencyTest} checks every id
+     * named here against that file, so a renamed field fails the build rather
+     * than silently marking nothing.
+     */
+    protected void addFieldError(Model model, String fieldId, String key, HttpServletRequest request) {
+        addError(model, key, request);
+        markInvalidField(model, fieldId);
+    }
+
+    /**
+     * The {@link #addError(Model, String, Object[], HttpServletRequest)}
+     * counterpart of {@link #addFieldError(Model, String, String,
+     * HttpServletRequest)}, for a message whose text names the offending value.
+     */
+    protected void addFieldError(Model model, String fieldId, String key, Object[] args,
+                                 HttpServletRequest request) {
+        addError(model, key, args, request);
+        markInvalidField(model, fieldId);
+    }
+
+    /**
+     * A {@link LinkedHashSet}, so two complaints about one control mark it
+     * once and the joined string is deterministic (the first id named is the
+     * one the page focuses).
+     */
+    @SuppressWarnings("unchecked")
+    private void markInvalidField(Model model, String fieldId) {
+        Set<String> fields = (Set<String>) model.getAttribute(INVALID_FIELDS);
+        if (fields == null) {
+            fields = new LinkedHashSet<>();
+            model.addAttribute(INVALID_FIELDS, fields);
+        }
+        fields.add(fieldId);
+        model.addAttribute(INVALID_FIELD_IDS, String.join(" ", fields));
     }
 
     /**
@@ -511,26 +577,87 @@ public abstract class BaseController implements UISecurityEnforced, UIActionPrep
     // --- Common model population ---
 
     /**
+     * The rail's own tab actions -- the only {@code actionName} values a
+     * weblog-scoped screen can be showing. The top-bar switcher keeps the
+     * current screen when the reader picks a different weblog; anything else
+     * (an entry editor, a global admin screen reached without a weblog in
+     * play, ...) has no equivalent on the target weblog, so it falls back to
+     * {@code entries} instead. Kept here, rather than inlined in the JSP, so
+     * {@link BaseControllerTest} can pin it against a real
+     * {@code populateCommonModel} call.
+     */
+    protected static final Set<String> SWITCHER_ACTIONS = Set.of(
+            "entries", "trash", "submissions", "categories", "pages",
+            "mediaFileView", "themeEdit", "weblogConfig", "members");
+
+    /**
      * Populate common model attributes used across all pages:
      * authenticatedUser, actionWeblog, pageTitle, siteURL, absoluteSiteURL, menu.
      */
     protected void populateCommonModel(HttpServletRequest request, Model model) {
         User user = getAuthenticatedUser(request);
         Weblog weblog = getActionWeblog(request);
+        String actionName = getActionName();
 
         model.addAttribute("authenticatedUser", user);
         model.addAttribute("actionWeblog", weblog);
         model.addAttribute("pageTitle", getPageTitle());
         model.addAttribute("siteURL", WebloggerRuntimeConfig.getRelativeContextURL());
         model.addAttribute("absoluteSiteURL", WebloggerRuntimeConfig.getAbsoluteContextURL());
-        model.addAttribute("actionName", getActionName());
+        model.addAttribute("actionName", actionName);
         model.addAttribute("desiredMenu", getDesiredMenu());
+        model.addAttribute("switcherAction",
+                actionName != null && SWITCHER_ACTIONS.contains(actionName) ? actionName : "entries");
 
         // build menu if applicable
-        Menu menu = MenuHelper.getMenu(getDesiredMenu(), getActionName(), user, weblog,
+        Menu menu = MenuHelper.getMenu(getDesiredMenu(), actionName, user, weblog,
                 weblogger.getUserManager());
         if (menu != null) {
             model.addAttribute("menu", menu);
+        }
+
+        addUserWeblogsForSwitcher(user, model);
+    }
+
+    /**
+     * The top-bar weblog switcher's options: every weblog {@code user} holds a
+     * permission on, sorted by handle, added ONLY when there are two or more --
+     * with one weblog (or none) there is nothing to switch to, and the JSP
+     * renders the switcher only when {@code userWeblogs} is present.
+     *
+     * <p>This is a display path, not a decision path (see CLAUDE.md): a
+     * weblog the user can no longer reach, or a store that cannot answer the
+     * permission query at all, simply leaves the switcher off the page. The
+     * page underneath -- built from {@code actionWeblog}, resolved
+     * separately by the interceptor -- renders exactly as it would have
+     * before this method existed.
+     */
+    private void addUserWeblogsForSwitcher(User user, Model model) {
+        if (user == null) {
+            return;
+        }
+        try {
+            Set<String> handles = new TreeSet<>();
+            for (WeblogPermission permission : weblogger.getUserManager().getWeblogPermissions(user)) {
+                if (permission.getObjectId() != null) {
+                    handles.add(permission.getObjectId());
+                }
+            }
+            if (handles.size() < 2) {
+                return;
+            }
+            List<Weblog> weblogs = new ArrayList<>();
+            for (String handle : handles) {
+                Weblog weblog = weblogger.getWeblogManager().getWeblogByHandle(handle, null);
+                if (weblog != null) {
+                    weblogs.add(weblog);
+                }
+            }
+            if (weblogs.size() > 1) {
+                model.addAttribute("userWeblogs", weblogs);
+            }
+        } catch (WebloggerException ex) {
+            log.error("Error loading weblogs for the top-bar switcher", ex);
         }
     }
 

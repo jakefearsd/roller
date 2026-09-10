@@ -74,7 +74,7 @@ public class PreviewURLStrategy extends MultiWeblogURLStrategy {
     protected Map<String, String> commonParams() {
         return previewTheme == null
                 ? Map.of()
-                : Map.of("theme", URLUtilities.encode(previewTheme));
+                : Map.of("theme", previewTheme);
     }
 
 
@@ -94,7 +94,7 @@ public class PreviewURLStrategy extends MultiWeblogURLStrategy {
 
         Map<String, String> params = new HashMap<>(commonParams());
         if (previewAnchor != null) {
-            params.put("previewEntry", URLUtilities.encode(previewAnchor));
+            params.put("previewEntry", previewAnchor);
         }
 
         return weblogRoot(weblog, locale, absolute)
@@ -140,7 +140,7 @@ public class PreviewURLStrategy extends MultiWeblogURLStrategy {
         
         Map<String, String> params = Collections.emptyMap();
         if(previewTheme != null && !WeblogTheme.CUSTOM.equals(previewTheme)) {
-            params = Map.of("theme", URLUtilities.encode(previewTheme));
+            params = Map.of("theme", previewTheme);
         }
         
         return url.append(URLUtilities.getQueryString(params)).toString();

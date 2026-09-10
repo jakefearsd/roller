@@ -30,7 +30,7 @@
     <input type="hidden" name="bean.enclosureURL" value="" id="enclosureURL"/>
 
     <c:if test="${fn:length(newImages) > 0}">
-        <h4 class="section-head"><spring:message code="mediaFileSuccess.selectImagesTitle"/></h4>
+        <h3 class="section-head"><spring:message code="mediaFileSuccess.selectImagesTitle"/></h3>
         <p><spring:message code="mediaFileSuccess.selectImages"/></p>
 
         <%-- select images via checkboxes --%>
@@ -104,7 +104,7 @@
 
         <%-- select enclosure file via radio boxes --%>
 
-        <h4 class="section-head"><spring:message code="mediaFileSuccess.selectEnclosureTitle"/></h4>
+        <h3 class="section-head"><spring:message code="mediaFileSuccess.selectEnclosureTitle"/></h3>
         <p><spring:message code="mediaFileSuccess.selectEnclosure"/></p>
 
         <c:forEach items="${newFiles}" var="newFile">
@@ -193,7 +193,7 @@
             <c:param name="directoryId" value="${bean.directoryId}"/>
         </c:url>
 
-        <button type="submit" id="createPostButton" class="btn btn-success" formaction="${pageContext.request.contextPath}/roller-ui/authoring/entryAddWithMediaFile.rol"><spring:message code="mediaFileSuccess.createPost"/></button>
+        <button type="submit" id="createPostButton" class="btn btn-primary" formaction="${pageContext.request.contextPath}/roller-ui/authoring/entryAddWithMediaFile.rol"><spring:message code="mediaFileSuccess.createPost"/></button>
 
         <%-- Anchors, not buttons. These two navigate; only "create post" above
              submits. As typeless <button>s inside this action-less form they
@@ -208,7 +208,7 @@
             <spring:message code="mediaFileSuccess.uploadMore"/>
         </a>
 
-        <a href="${mediaFileViewURL}" class="btn">
+        <a href="${mediaFileViewURL}" class="btn btn-secondary">
             <spring:message code="generic.cancel"/>
         </a>
     </div>

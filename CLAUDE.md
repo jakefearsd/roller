@@ -1470,6 +1470,20 @@ excused whatever its type.
   without that stop it finds the form-level attribute, prompts, allows the
   native submit, and the submit handler prompts again. Two dialogs for one
   click reads as a bug, and it shipped that way for a round on `UserEdit`.
+  **`data-confirm` on a `<form>` is the one legitimate case, and
+  `data-confirm-when` is what keeps it honest.** `Members.jsp`'s removal
+  confirm depends on which of several radios across the whole permissions
+  table is checked, not on the one Save button — no single control can
+  answer "is anyone being removed?" for itself, so the confirm has to live
+  on the form. An optional `data-confirm-when` names a CSS selector; the
+  submit handler only prompts when `form.querySelector(selector)` matches
+  (`!when || matches`, so a form-level `data-confirm` with no
+  `data-confirm-when` prompts unconditionally, unchanged). This is the
+  **only** confirm idiom in the admin UI — `data-confirm`(`-when`) on
+  `click` or `submit` — and `JspConsistencyTest.oneConfirmIdiomAndOneModalShape`
+  bans both `confirm(` and `onsubmit=` anywhere outside the CodeMirror
+  editor screens, so a reintroduced inline `window.confirm()` fails the
+  build, not just the review.
 - **Buttons theme through Bootstrap's `--bs-btn-*` custom properties**
   (`--bs-btn-hover-bg`, `--bs-btn-active-bg`, `--bs-btn-disabled-bg`, …),
   never literal `:hover`/`:active` rules of our own — Bootstrap's own
@@ -1507,6 +1521,119 @@ excused whatever its type.
 - Enabling/disabling an account is the Weblog-Settings-shaped hazard again: the
   checkbox persists whatever happens, so only an end-to-end check (disable, then
   try to sign in) proves it works. `UserAdminIT` does that.
+- **One status pill for every screen that shows an entry's or page's
+  publication state.** `WEB-INF/jsps/editor/StatusPill.jsp` is a
+  `<jsp:include>`; callers set `pillStatus` (a `PubStatus` name) and
+  optionally `pillWhen` (a `Date`, for `SCHEDULED` rows) as
+  **request**-scoped attributes before including it — request scope, not
+  page scope, because `<jsp:include>` runs the target in a fresh
+  `JspContext` that cannot see the includer's page-scoped variables. It
+  renders `<span class="status-pill status-<lower>">` and, when `pillWhen`
+  is present, a trailing `.status-when`. Inside a `c:forEach` (`Entries.jsp`,
+  `Pages.jsp`), a row that sets no `pillWhen` must `<c:remove>` it
+  explicitly — request scope persists across loop iterations, so a
+  `SCHEDULED` row's timestamp otherwise leaks onto every row that follows
+  it. Five variants (published/draft/pending/scheduled/trashed) replaced
+  what used to be Bootstrap badges, a row-tint `<tr>` class and a separate
+  legend paragraph explaining the tints — one component instead of three.
+- **One selection bar for every list with bulk actions.** `.selection-bar`
+  (`data-selection-bar="<form id>"`, `hidden` by default) sits directly
+  above the table on Entries/Submissions/MediaFileView; a header checkbox
+  carries `data-select-all` so it is excluded from the count. `roller.js`'s
+  delegated `change` listener (document-level, same pattern as
+  `data-confirm`) finds the bar whose `data-selection-bar` matches the
+  changed checkbox's `form.id`, counts
+  `input[type=checkbox]:checked:not([data-select-all])`, toggles
+  `bar.hidden`, and writes the count into `.selection-count` via the
+  `selection.count` message (`"{0} selected"`, arity 1, all eight bundles).
+  Trash.jsp deliberately has none — `TrashController` has no
+  `restoreSelected`/`deleteSelected` pair, only per-row and whole-trash
+  endpoints, so there is nothing for a selection bar to submit; decided by
+  reading the controller, not invented in the JSP.
+- **`<rc:date>`** (`app/.../ui/tags/DateTag.java`, declared in the existing
+  `WEB-INF/rollerConfig.tld` — no new taglib directive anywhere) is the one
+  timestamp renderer for the admin UI, replacing `fmt:formatDate` (server
+  zone, no machine-readable half) and the translated
+  `weblogEntryQuery.date.toStringFormat` key (request-locale zone). It emits
+  `<time datetime="<UTC ISO-8601 instant>" class="data">yyyy-MM-dd HH:mm</time>`:
+  `datetime` is absolute UTC because it is machine-readable, the visible text
+  is the **weblog's** wall clock (`Locale.ROOT`, since these are tabular data
+  cells that must line up and sort by eye, not read as localized prose) —
+  matching what an entry's pubtime has always meant
+  (`EntryEditController` parses `bean.pubTimeLocal` against
+  `getActionWeblog(request).getTimeZoneInstance()`). A null value renders
+  nothing, so every existing `<c:if test="${x != null}">` around a date
+  keeps working unchanged.
+- **Field errors point at the field, not just a banner.** `BaseController`
+  adds `addFieldError(model, fieldId, key, request)` (and an `Object[] args`
+  overload) beside the existing `addError` — same message-adding, plus the
+  control's DOM **id** into model attribute `invalidFields`
+  (`BaseController.INVALID_FIELDS`, a `LinkedHashSet<String>`, ordered,
+  deduped) and its space-joined form `invalidFieldIds`
+  (`INVALID_FIELD_IDS`). All three admin layouts render
+  `<body data-invalid-fields="${fn:escapeXml(invalidFieldIds)}">`
+  **only when non-empty** — a sticky attribute would make every later clean
+  render look refused. `roller.js` reads `document.body.dataset.invalidFields`
+  on `DOMContentLoaded`, and for each id that resolves on the page adds
+  `.is-invalid`, sets `aria-invalid="true"`, and focuses the first one.
+  Every step is null-guarded (this script also loads on public weblog
+  pages, which never set the attribute) and a validation naming a field the
+  current form branch did not render is silently skipped, not an error —
+  the CSS was already there (`.form-control.is-invalid` etc., an earlier
+  task), so this shipped with no new hex literal and no `DesignTokenTest`
+  change.
+- **Sidebars render on the rail's own grammar, not a Bootstrap card.**
+  `<aside class="sidebar">` replaces `.card`/`.card-body`; each logical
+  block is a `.sidebar-group` (`border-top`, padding) with a
+  `.sidebar-label` heading — the same 12px/600/.08em-tracking/uppercase
+  caps-label role the admin rail itself uses, so a sidebar and the rail
+  read as one vocabulary rather than two. Every sidebar form gets
+  `class="form-stacked"`.
+- **The top bar's weblog switcher only appears for a user on two or more
+  weblogs.** `BaseController.populateCommonModel` resolves the caller's
+  weblog permissions to `List<Weblog>` and adds model attribute
+  `userWeblogs` **only when its size is ≥ 2** — one weblog has nothing to
+  switch to, and the dropdown must not appear to offer a choice that isn't
+  one. `switcherAction` (also computed once in Java) is the current admin
+  action when it is one of the nine the switcher can sensibly reuse
+  (`entries`, `trash`, `submissions`, `categories`, `pages`,
+  `mediaFileView`, `themeEdit`, `weblogConfig`, `members`), else it falls
+  back to `entries` — so switching weblogs from, say, Global Config lands
+  on the new weblog's entry list, not a 403 on an action it doesn't have.
+  The whole permission lookup is wrapped in a log-and-return `catch` (a
+  display path: the switcher is a convenience, and the page underneath is
+  built from `actionWeblog`, resolved separately by the interceptor, so it
+  renders unchanged either way).
+- **`URLUtilities.getQueryString` URL-encodes both key and value now — it
+  used to concatenate them raw, and that was a live bug, not a style
+  choice.** An unencoded `&` in a value started the next parameter, an
+  unencoded `#` started the fragment and silently dropped every parameter
+  after it, and an unencoded `+` round-tripped as a space. `fn:escapeXml`
+  on the emitted `href` **cannot** fix any of this — it writes `&amp;`,
+  which the browser decodes back to `&` before building the request; that
+  escape is correct defence against markup injection in the attribute
+  context, and stays, but it was never a repair for the parameter split
+  the way an earlier version of this file's comments assumed. **Every
+  caller of `getQueryString`/`getActionURL` now passes RAW values** — do
+  not re-encode before calling it, or the value round-trips double-encoded
+  (this bit `MultiWeblogURLStrategy`'s `cat`/`q` params and
+  `PreviewURLStrategy`'s `theme` param, all fixed to pass raw). The one
+  deliberate exception is `getWeblogSearchPageURLTemplate`, whose `{searchTerms}`
+  braces are OpenSearch template placeholders for a future consumer to
+  substitute, not values to encode.
+- **A JSP tag prefix with no declared taglib renders as literal text, not an
+  error.** `<str:truncateNicely>` shipped in three places with no `str`
+  taglib ever declared anywhere in the tree — Velocity's leniency lesson
+  (see Templates above) has a JSP-side sibling. `AdminJspBugSweepTest`
+  scans for undeclared-prefix tags the same way it scans for other classes
+  of dead/broken markup.
+- **`JspConsistencyTest` and `AdminJspBugSweepTest` are the scans that pin
+  all of the above as markup shape, not just prose**: status pill
+  presence, `.selection-bar`/`.selection-count` wiring, the one-confirm-
+  idiom/one-modal-shape rules, `data-invalid-fields` rendering, the
+  sidebar grammar, the switcher's absence of inline `onclick`, and the
+  literal-tag-prefix sweep all live there rather than in a design doc
+  alone.
 
 ## Categories
 - **Ownership-check every id.** `BaseController.lookupCategory` is the third of

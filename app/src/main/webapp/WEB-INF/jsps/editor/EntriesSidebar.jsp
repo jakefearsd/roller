@@ -17,12 +17,12 @@
 --%>
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<h3><spring:message code="weblogEntryQuery.sidebarTitle"/></h3>
-<hr/>
+<div class="sidebar-group">
+<p class="sidebar-label"><spring:message code="weblogEntryQuery.sidebarTitle"/></p>
 
 <p><spring:message code="weblogEntryQuery.sidebarDescription"/></p>
 
-<form action="${pageContext.request.contextPath}/roller-ui/authoring/entries.rol" method="get" class="form-vertical">
+<form action="${pageContext.request.contextPath}/roller-ui/authoring/entries.rol" method="get" class="form-stacked">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
 
     <%-- ========================================================= --%>
@@ -55,62 +55,58 @@
         <label for="entries_bean_startDateString" class="form-label">
             <spring:message code="weblogEntryQuery.label.startDate"/>
         </label>
-        <div class="input-group">
-
-            <input type="text" id="entries_bean_startDateString" name="bean.startDateString" value="${bean.startDateString}" placeholder="MM/DD/YY" readonly class="date-picker form-control"/>
-            <label for="entries_bean_startDateString" class="input-group-text">
-                <span class="bi bi-calendar" aria-hidden="true"></span>
-            </label>
-
-        </div>
+        <input type="date" id="entries_bean_startDateString" name="bean.startDateString" value="${bean.startDateString}" class="form-control"/>
     </div>
 
     <div class="mb-3">
         <label for="entries_bean_endDateString" class="form-label">
             <spring:message code="weblogEntryQuery.label.endDate"/>
         </label>
-        <div class="input-group">
-
-            <input type="text" id="entries_bean_endDateString" name="bean.endDateString" value="${bean.endDateString}" placeholder="MM/DD/YY" readonly class="date-picker form-control"/>
-            <label for="entries_bean_endDateString" class="input-group-text">
-                <span class="bi bi-calendar" aria-hidden="true"></span>
-            </label>
-
-        </div>
+        <input type="date" id="entries_bean_endDateString" name="bean.endDateString" value="${bean.endDateString}" class="form-control"/>
     </div>
 
     <br/>
 
     <%-- ========================================================= --%>
-    <%-- filter by status --%>
+    <%-- the status the chips chose --%>
 
-    <c:forEach items="${statusOptions}" var="opt">
-<div class="form-check"><label class="form-check-label"><input type="radio" class="form-check-input" name="bean.status" value="${opt.key}" ${opt.key == bean.status ? 'checked' : ''}/> ${opt.value}</label></div>
-</c:forEach>
+    <%-- Not a control -- the status filter's one control is the chip row on
+         the list itself (task B5), and a second control for the same filter
+         is how a page ends up showing DRAFT while the sidebar claims ALL.
+         This hidden field exists only so that submitting the sidebar (to
+         filter, or to change the sort) does not silently discard whichever
+         chip the author had chosen. Guarded exactly like Entries.jsp's own
+         bulk form: EntriesBean.status defaults to "ALL" and
+         EntriesController.execute treats only that literal as "no filter"
+         (PubStatus.valueOf(status) otherwise) -- an unconditional empty
+         bean.status= would override the "ALL" default and reach
+         PubStatus.valueOf("") -> uncaught IllegalArgumentException -> 500. --%>
+    <c:if test="${not empty bean.status}">
+        <input type="hidden" name="bean.status" value="${fn:escapeXml(bean.status)}"/>
+    </c:if>
 
     <%-- ========================================================= --%>
     <%-- sort by --%>
 
-    <c:forEach items="${sortByOptions}" var="opt">
-<div class="form-check"><label class="form-check-label"><input type="radio" class="form-check-input" name="bean.sortBy" value="${opt.key}" ${opt.key == bean.sortBy ? 'checked' : ''}/> ${opt.value}</label></div>
+    <%-- One select rather than a radio per option: sort is a single choice
+         among a closed set, and it applies the moment it is made. The submit
+         is wired by a delegated listener in roller.js keyed off
+         data-submit-on-change, never an inline onchange -- behaviour lives
+         in the script, the same rule data-confirm follows. --%>
+    <label for="entries_bean_sortBy"><spring:message code="weblogEntryQuery.label.sortBy"/></label>
+    <select id="entries_bean_sortBy" name="bean.sortBy" class="form-select" size="1" data-submit-on-change>
+<c:forEach items="${sortByOptions}" var="opt">
+<option value="${opt.key}" ${opt.key == bean.sortBy ? 'selected' : ''}>${opt.value}</option>
 </c:forEach>
+</select>
 
-    
+    <br/>
+
     <%-- ========================================================= --%>
     <%-- filter button --%>
 
-    <button type="submit" class="btn"><spring:message code="weblogEntryQuery.button.query"/></button>
+    <button type="submit" class="btn btn-secondary"><spring:message code="weblogEntryQuery.button.query"/></button>
 
 </form>
-
-<script>
-
-    $(document).ready(function () {
-        // 'mm/dd/y' matches EntriesBean's strict MM/dd/yy parse -- jQuery UI's
-        // two-digit year token is lowercase 'y', not 'yy' (four-digit).
-        $("#entries_bean_startDateString").datepicker({dateFormat: 'mm/dd/y'});
-        $("#entries_bean_endDateString").datepicker({dateFormat: 'mm/dd/y'});
-    });
-
-</script>
+</div>
 

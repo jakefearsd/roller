@@ -18,18 +18,18 @@
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
 
-<h3><spring:message code="mediaFileSidebar.actions"/></h3>
+<div class="sidebar-group">
+<p class="sidebar-label"><spring:message code="mediaFileSidebar.actions"/></p>
 
-<div style="clear:right">
+<c:url var="mediaFileAddURL" value="/roller-ui/authoring/mediaFileAdd.rol">
+    <c:param name="weblog" value="${actionWeblog.handle}"/>
+    <c:param name="directoryName" value="${directoryName}"/>
+</c:url>
+<a href='<c:out value="${mediaFileAddURL}" escapeXml="false"/>'
+        class="${actionName.equals('mediaFileAdd') ? 'sidebar-current-action' : ''}">
     <span class="bi bi-image" aria-hidden="true"></span>
-    <c:url var="mediaFileAddURL" value="/roller-ui/authoring/mediaFileAdd.rol">
-        <c:param name="weblog" value="${actionWeblog.handle}"/>
-        <c:param name="directoryName" value="${directoryName}"/>
-    </c:url>
-    <a href='<c:out value="${mediaFileAddURL}" escapeXml="false"/>'
-            <c:if test="${actionName.equals('mediaFileAdd')}"> style='font-weight:bold;'</c:if> >
-        <spring:message code="mediaFileSidebar.add"/>
-    </a>
+    <spring:message code="mediaFileSidebar.add"/>
+</a>
 </div>
 
 <c:if test="${empty pager}">
@@ -39,37 +39,40 @@
          library (see the childFiles/pager guard in MediaFileView.jsp), so this
          control cannot depend on it. --%>
 
+    <div class="sidebar-group">
+    <p class="sidebar-label">
+        <span class="bi bi-folder2-open" aria-hidden="true"></span>
+        <spring:message code="mediaFileView.addDirectory"/>
+    </p>
+
     <form id="createDirectoryForm" method="post"
           action="<c:url value='/roller-ui/authoring/mediaFileView!createNewDirectory.rol'/>">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
-    <div style="clear:right; margin-top: 1em">
-
-        <span class="bi bi-folder2-open" aria-hidden="true"></span>
-        <spring:message code="mediaFileView.addDirectory"/> <br />
 
         <label for="newDirectoryName">
             <spring:message code="mediaFileView.directoryName"/>
         </label>
-        <input type="text" id="newDirectoryName" name="newDirectoryName" size="8" maxlength="255"/>
+        <div class="input-group">
+            <input type="text" id="newDirectoryName" name="newDirectoryName" maxlength="255" class="form-control"/>
+            <button type="submit" id="newDirectoryButton" class="btn btn-secondary">
+                <spring:message code="mediaFileView.create"/>
+            </button>
+        </div>
 
-        <input type="button" id="newDirectoryButton" class="btn btn-primary" style="clear:left"
-               value='<spring:message code="mediaFileView.create"/>' onclick="onCreateDirectory()"/>
-
-    </div>
     <sec:csrfInput/>
     </form>
+    </div>
 </c:if>
 
-<hr/>
+<div class="sidebar-group">
+<p class="sidebar-label"><spring:message code="mediaFileView.search"/></p>
 
-<h3><spring:message code="mediaFileView.search"/></h3>
-
-<form id="mediaFileSearchForm" name="mediaFileSearchForm" action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileView!search.rol" method="post" class="form-vertical">
+<form id="mediaFileSearchForm" name="mediaFileSearchForm" action="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileView!search.rol" method="post" class="form-stacked">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <input type="hidden" name="mediaFileId" value=""/>
 
     <label for="beanName"><spring:message code="generic.name"/></label>
-    <input type="text" name="bean.name" value="${fn:escapeXml(bean.name)}" id="beanName" size="20" maxlength="255" class="form-control"/>
+    <input type="text" name="bean.name" value="${fn:escapeXml(bean.name)}" id="beanName" maxlength="255" class="form-control"/>
 
     <label for="beanType"><spring:message code="mediaFileView.type"/></label>
     <select name="bean.type" id="beanType" class="form-select">
@@ -78,55 +81,43 @@
 </c:forEach>
 </select>
 
-    <label for="sizeFilterTypeCombo"><spring:message code="mediaFileView.size"/></label>
-    <select name="bean.sizeFilterType" id="sizeFilterTypeCombo" class="form-select">
-<c:forEach items="${sizeFilterTypes}" var="opt">
-<option value="${opt.key}" ${opt.key == bean.sizeFilterType ? 'selected' : ''}>${opt.value}</option>
-</c:forEach>
-</select>
-
-    <input type="text" name="bean.size" value="${bean.size}" id="beanSize" size="3" maxlength="10" class="form-control"/>
-
-    <select name="bean.sizeUnit" class="form-select">
+    <%-- "Larger than" replaces a three-part size-comparison row (equals/at
+         least/at most/...) with the one comparison an author actually reaches
+         for -- finding the handful of oversized files in a directory. The
+         filter type is fixed server-side to "greater than"
+         (MediaFileViewController.getSizeFilterTypes()'s "mediaFileView.gt"
+         key) rather than offered as a control. --%>
+    <label for="beanSize"><spring:message code="mediaFileView.largerThan"/></label>
+    <div class="input-group">
+        <input type="number" min="0" name="bean.size" value="${bean.size}" id="beanSize" class="form-control"/>
+        <select name="bean.sizeUnit" class="form-select">
 <c:forEach items="${sizeUnits}" var="opt">
 <option value="${opt.key}" ${opt.key == bean.sizeUnit ? 'selected' : ''}>${opt.value}</option>
 </c:forEach>
 </select>
+    </div>
+    <input type="hidden" name="bean.sizeFilterType" value="mediaFileView.gt"/>
 
     <label for="beanTags"><spring:message code="mediaFileView.tags"/></label>
-    <input type="text" name="bean.tags" value="${bean.tags}" id="beanTags" size="20" maxlength="50" class="form-control"/>
+    <input type="text" name="bean.tags" value="${bean.tags}" id="beanTags" maxlength="50" class="form-control"/>
 
-    <button type="submit" id="searchButton" class="btn btn-primary" style="margin:5px 0;"><spring:message code="mediaFileView.search"/></button>
+    <button type="submit" id="searchButton" class="btn btn-primary"><spring:message code="mediaFileView.search"/></button>
 
     <c:if test="${not empty pager}">
-        <input id="resetButton" style="margin:5px 0;" type="button" class="btn"
-               name="reset" value='<spring:message code="mediaFileView.reset"/>'/>
+        <button id="resetButton" type="button" class="btn btn-secondary">
+            <spring:message code="mediaFileView.reset"/>
+        </button>
     </c:if>
 
 <sec:csrfInput/>
 </form>
-
+</div>
 
 
 <script>
 
-    function onCreateDirectory() {
-        document.getElementById('createDirectoryForm').submit();
-    }
-
     $(document).ready(function () {
         $("#newDirectoryName").on("keyup", maintainDirectoryButtonState);
-        // Enter in a one-field flow should do the one thing the flow is for.
-        // The button is disabled until the field has content, so this checks
-        // the same state rather than duplicating the rule.
-        $("#newDirectoryName").on("keydown", function (event) {
-            if (event.key === "Enter") {
-                event.preventDefault();
-                if (!$("#newDirectoryButton").prop("disabled")) {
-                    onCreateDirectory();
-                }
-            }
-        });
         $("#newDirectoryButton").prop("disabled", true);
     });
 

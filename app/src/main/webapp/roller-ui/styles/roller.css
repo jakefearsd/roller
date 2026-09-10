@@ -95,11 +95,21 @@ p {
    `.btn` carries the shared type/radius/padding for every button in the
    admin UI, no matter which Bootstrap color-variant class rides along.
    Visual treatment then narrows Bootstrap's whole rainbow of variants down
-   to the three the design actually uses: primary (`.btn-primary` AND
-   `.btn-success` -- the success class survives because browser ITs pin it
-   on submit buttons, but it renders identically to primary), destructive
-   (`.btn-danger`/`.btn-outline-danger`), and everything else -- including a
-   bare `.btn` with no variant class -- as the quiet secondary treatment.
+   to the three the design actually uses: primary (`.btn-primary`, one per
+   screen, the recommended action), destructive (`.btn-danger`/
+   `.btn-outline-danger`), and everything else -- including a bare `.btn`
+   with no variant class -- as the quiet secondary treatment.
+
+   `.btn-success` used to ride the primary bucket alongside `.btn-primary`
+   here, kept only because browser ITs pinned it on the Save button. Task B2
+   converted every `.btn-success` use to `.btn-primary`/`.btn-secondary` and
+   updated those ITs, so the alias is gone -- `.btn-success` is no longer a
+   button bucket in this admin UI. The one exception is Package A's
+   `EntryEdit.jsp` (owned by a parallel worktree, not touched here): its
+   Publish/Submit-for-review buttons still carry `.btn-success` and now
+   render in stock, unstyled Bootstrap green until the post-merge task M1
+   converts them, the same transitional gap task B1 already left on that
+   file's status badges.
 
    Bootstrap 5 themes every button state through `--bs-btn-*` custom
    properties -- `.btn:hover`, the `:active`/`.active`/`.show` chain (which
@@ -146,8 +156,7 @@ p {
    toward --ink flips the polarity with the theme for free, which a literal
    `black` -- a light-mode assumption wearing a token expression's clothes --
    cannot do. */
-.btn-primary,
-.btn-success {
+.btn-primary {
     --bs-btn-color: var(--surface);
     --bs-btn-bg: var(--accent);
     --bs-btn-border-color: var(--accent);
@@ -388,6 +397,24 @@ label,
     border-color: var(--line);
 }
 
+/* ---- Top bar: weblog switcher (task B10) ----
+   Only rendered when populateCommonModel found two or more weblogs for the
+   signed-in user; a one-weblog session's top bar carries none of this. */
+.weblog-switcher {
+    margin-left: 16px;
+}
+
+.weblog-switcher .dropdown-item .data {
+    margin-left: 8px;
+    font-size: 12px;
+    color: var(--ink-soft);
+}
+
+.weblog-switcher .dropdown-item.active {
+    background: var(--accent-quiet);
+    color: var(--ink);
+}
+
 /* ---- The rail: context header + tool groups ---- */
 
 .rail {
@@ -592,21 +619,19 @@ table.mm_table_actions td {
     margin-top: 0;
 }
 
-/* The same demotion, for the two places headings still arrived at their
+/* The same demotion, for the one place headings still arrive at their
    element's own size. roller.css deliberately has no global h1-h6 reset --
    .roller-page-title owns 20px and everything else was expected to opt in --
-   but "opt in" only ever happened inside .card-header, so every bare <h3>/<h4>
+   but "opt in" only ever happened inside .card-header, so a bare <h3>/<h4>
    elsewhere rendered at Bootstrap's fluid default: 24-28px, i.e. LARGER than
-   the page title it sits beneath.
-   1. The sidebar tiles (EntriesSidebar, MediaFileSidebar,
-      MainMenuSidebar, CategoriesSidebar, TemplatesSidebar, MembersSidebar) --
-      ten headings, and the worst offenders because they sit in the left column
-      directly beside #adminRail's 12px caps-labels and shout over them.
-   2. Modal titles -- BS5 emits h4.modal-title/h3 inside .modal-header, which is
-      not a .card-header, so all eleven admin dialogs opened at 24-28px.
-   Both are the type role, not new design: same six declarations as above. */
-.roller-column-left .card-body > h3,
-.roller-column-left .card-body > h4,
+   the page title it sits beneath. Modal titles are the one survivor -- BS5
+   emits h4.modal-title/h3 inside .modal-header, which is not a .card-header,
+   so all eleven admin dialogs opened at 24-28px. (Task B6: the sidebar tiles
+   -- EntriesSidebar, MediaFileSidebar, MainMenuSidebar, CategoriesSidebar,
+   TemplatesSidebar -- used to be the other half of this rule; they no longer
+   emit <h3> at all, having moved to .sidebar-label below, so the
+   .roller-column-left .card-body selector this rule used to carry for them
+   is gone too.) Same six declarations as .card-header/.section-head above. */
 .modal-header h3,
 .modal-header .modal-title {
     margin: 0 0 8px;
@@ -618,15 +643,50 @@ table.mm_table_actions td {
     color: var(--ink-soft);
 }
 
-/* The sidebar tiles separate their sections with <hr size="1" noshade>, whose
-   presentational attributes do nothing in HTML5 and whose default border is
-   not a token. One rule beats editing seven JSPs. */
-.roller-column-left .card-body hr {
-    height: 0;
-    margin: 12px 0;
-    border: 0;
+/* Task B7: one modal shape. The title above is the caps-label; the body text
+   is ordinary reading copy at the same size/color as everywhere else in the
+   admin UI (Bootstrap's own default is 1rem/16px at full --ink, which is not
+   one of this file's five sizes and does not match the rest of a modal's own
+   surrounding page). Footer button ORDER (cancel/dismiss first, the
+   primary-or-destructive action last) is a markup convention enforced by
+   JspConsistencyTest, not something CSS can fix -- Bootstrap's
+   .modal-footer packs flex children left-to-right in DOM order. */
+.modal-body {
+    font-size: 14.5px;
+    color: var(--ink);
+}
+
+/* Task B6: the sidebar tiles on the rail's own grammar -- a caps-label per
+   logical block instead of a Bootstrap card with h3/hr section markup. The
+   wrapper is <aside id="adminSidebar"> now (see tiles-tabbedpage.jsp /
+   tiles-mainmenupage.jsp), not .card/.card-body, so .sidebar-group draws its
+   own separator instead of relying on the old ".card-body hr" reset that
+   used to turn <hr size="1" noshade> into a token-colored line -- there is
+   no <hr> left anywhere in a sidebar tile for that rule to catch. */
+.sidebar {
+    padding: 12px 0 0;
+}
+
+.sidebar-group {
+    padding: 12px 16px;
     border-top: 1px solid var(--line);
-    opacity: 1;
+}
+
+.sidebar-label {
+    margin: 0 0 8px;
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+}
+
+/* MediaFileSidebar's "Add Media File" link used to bold itself with an
+   inline style="font-weight:bold" when it was the current action -- weight
+   600, not the browser's 700 "bold", is this app's one emphasis value. */
+.sidebar-current-action {
+    font-weight: 600;
 }
 
 /* Collapse-toggle chevron: BS3's Glyphicons Halflings font is gone, so this is a
@@ -1010,105 +1070,6 @@ table.mm_table_actions td {
     outline-offset: 2px;
 }
 
-/* ---- jQuery UI datepicker ----
-   head.jsp loads the full stock jquery-ui theme, which carries its own
-   white/grey/blue palette and no dark mode. Until this block the only rule
-   here was the z-index below, so the picker opened as a bright white calendar
-   over a near-black page -- the most visible light/dark break left in the
-   admin UI, and one the token-parity test could not see because the colors
-   live in a third-party file it does not read.
-   Everything below is the token set applied to jQuery UI's own class names;
-   no new design, and a no-op in light mode where the tokens equal what the
-   stock theme was already painting. !important is needed throughout: the
-   vendor stylesheet loads after this one and its selectors are equally
-   specific. */
-.ui-datepicker {
-    position: relative;
-    /* keep the picker in front of other elements */
-    z-index: 10000 !important;
-    background: var(--surface) !important;
-    border: 1px solid var(--line) !important;
-    border-radius: var(--radius) !important;
-    color: var(--ink) !important;
-    font-family: var(--font-ui) !important;
-    font-size: 14.5px !important;
-}
-
-.ui-datepicker .ui-datepicker-header {
-    background: var(--surface) !important;
-    border: 0 !important;
-    border-bottom: 1px solid var(--line) !important;
-    border-radius: 0 !important;
-    color: var(--ink) !important;
-}
-
-.ui-datepicker .ui-datepicker-title {
-    font-size: 12px !important;
-    font-weight: 600 !important;
-    letter-spacing: .08em !important;
-    text-transform: uppercase !important;
-    color: var(--ink-soft) !important;
-}
-
-/* The prev/next arrows are sprite-based in the stock theme; the sprite is a
-   dark PNG that vanishes on a dark surface. Hide it and use text carets. */
-.ui-datepicker .ui-datepicker-prev,
-.ui-datepicker .ui-datepicker-next {
-    background: none !important;
-    border: 0 !important;
-    cursor: pointer;
-}
-
-.ui-datepicker .ui-datepicker-prev .ui-icon,
-.ui-datepicker .ui-datepicker-next .ui-icon {
-    background: none !important;
-    text-indent: 0 !important;
-    overflow: visible !important;
-    color: var(--ink-soft);
-}
-
-.ui-datepicker .ui-datepicker-prev .ui-icon:before { content: "\2039"; }
-.ui-datepicker .ui-datepicker-next .ui-icon:before { content: "\203A"; }
-
-.ui-datepicker th {
-    font-size: 12px !important;
-    font-weight: 600 !important;
-    letter-spacing: .08em !important;
-    text-transform: uppercase !important;
-    color: var(--ink-soft) !important;
-}
-
-.ui-datepicker td a,
-.ui-datepicker td span {
-    background: transparent !important;
-    border: 1px solid transparent !important;
-    border-radius: var(--radius) !important;
-    color: var(--ink) !important;
-    text-align: center;
-}
-
-.ui-datepicker td a:hover {
-    background: var(--accent-quiet) !important;
-    color: var(--ink) !important;
-}
-
-.ui-datepicker td a.ui-state-active {
-    background: var(--accent) !important;
-    color: var(--surface) !important;
-}
-
-/* "today" is a highlight, not a selection: the accent's own quiet tint plus a
-   line, so it never competes with the selected day above. */
-.ui-datepicker td.ui-datepicker-today a {
-    background: var(--accent-quiet) !important;
-    border-color: var(--accent) !important;
-}
-
-.ui-datepicker td.ui-datepicker-unselectable span {
-    color: var(--ink-soft) !important;
-    opacity: .6;
-}
-
 /* ---- Settings with a rail ----
    Built to docs/design/forms/settings-with-rail.html: the editor's two-column
    shape applied to a long settings form. Nine display groups is more than
@@ -1171,6 +1132,115 @@ table.mm_table_actions td {
     }
 }
 
+/* ---- Main menu: one quiet row per weblog ----
+   Rows separated by a rule rather than boxed as cards: this is a list to pick
+   from, and eight cards read as eight competing objects. One primary action
+   sits in the strip; everything else beside it is a quiet link. */
+.weblog-row {
+    padding: 16px 0;
+    border-top: 1px solid var(--line);
+}
+
+.weblog-actions {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin-top: 8px;
+}
+
+/* ---- Theme chooser: a grid of cards ----
+   Replaces a one-line <select> beside a single ajax-fetched thumbnail. A
+   theme is a look, so every option shows its own preview picture and you
+   compare them side by side rather than one at a time.
+
+   Each card is a <label> wrapping a real, visible radio: the whole card is
+   the hit target, the browser does the grouping and the keyboard handling,
+   and the control that says which one is chosen is the one the form posts.
+   :has(input:checked) puts the accent frame on the chosen card. */
+.theme-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.theme-card {
+    display: block;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    cursor: pointer;
+}
+
+.theme-card:has(input:checked) {
+    border-color: var(--accent);
+    background: var(--accent-quiet);
+}
+
+/* The card is a label, so it is not focusable itself -- the ring has to come
+   from the radio inside it. */
+.theme-card:focus-within {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+
+.theme-card-thumb {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin-bottom: 8px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+}
+
+.theme-card-name {
+    display: block;
+    font-weight: 600;
+}
+
+.theme-card-radio {
+    margin-right: 6px;
+}
+
+.theme-card-desc {
+    display: block;
+    font-size: 12px;
+    color: var(--ink-soft);
+}
+
+/* ---- A native disclosure for the optional half of a form ----
+   <details>/<summary>, not a Bootstrap collapse: no JS, no aria wiring to get
+   wrong, and the browser keeps the open/closed state. The summary carries the
+   rail's caps-label class for its type, PLUS the same accent color, weight
+   and rotating chevron as .editor-drawer (EntryEdit's SEO drawer toggle) --
+   one disclosure look for the whole admin UI, not two. The native marker
+   triangle is suppressed in favor of that chevron. */
+.editor-details {
+    margin-bottom: 16px;
+}
+
+.editor-details > summary {
+    display: block;
+    cursor: pointer;
+    padding-bottom: 8px;
+    color: var(--accent);
+    font-weight: 600;
+    list-style: none;
+}
+
+.editor-details > summary::-webkit-details-marker {
+    display: none;
+}
+
+.editor-details > summary::after {
+    content: "\203A";
+    float: right;
+    transition: transform 0.2s ease-in-out;
+}
+
+.editor-details[open] > summary::after {
+    transform: rotate(90deg);
+}
+
 /* ---- Tables: table.rollertable ----
    Bootstrap 5 themes tables through --bs-table-* custom properties, the
    same mechanism .btn uses above: .table's own rules read
@@ -1216,10 +1286,40 @@ table.rollertable > tbody > tr:hover > * {
 /* Additive utility -- opt a date/count/slug cell into the mono/tabular
    data face without renaming or removing anything it already carries.
    JSPs that want it add class="data" alongside the cell's existing
-   attributes. */
-td.data {
+   attributes.
+
+   time.data is the same face for the element <rc:date> emits (task B5).
+   It has to be named separately rather than folded into a bare .data:
+   the tag renders a <time class="data"> INSIDE a <td class="data">, and
+   also inside a <span> in the status pill and the entry-meta line, none
+   of which the td.data selector reaches. */
+td.data,
+span.data,
+time.data {
     font-family: var(--font-data);
     font-variant-numeric: tabular-nums;
+}
+
+/* ---- Entries list rows (task B5) ----
+   The title is the row's primary target, so it carries the weight -- 600,
+   not a larger size: emphasis in this system is weight, never size. Under
+   it sits one quiet metadata line, the anchor in the mono data face plus a
+   secondary link to the published page for rows that have one. */
+.entry-title {
+    font-weight: 600;
+}
+
+.entry-meta {
+    font-size: 12px;
+    color: var(--ink-soft);
+}
+
+/* A link that must be reachable without competing with the title above it:
+   underlined so it still reads as a link at --ink-soft, which on its own is
+   too quiet to announce one. */
+.quiet-link {
+    color: var(--ink-soft);
+    text-decoration: underline;
 }
 
 /* ---- Empty states: invitations, not shrugs ----
@@ -1269,40 +1369,46 @@ td.data {
 
 /* entries page */
 
-/* Quiet Instrument: status pills/tints. Draft -> warn tint, Pending ->
-   accent-quiet, Scheduled -> line tint, matching the components-pills card.
-   Class names survive unchanged; only the colors move onto tokens. */
+/* ---- Status pills (components-pills card, task B1) ---- */
+.status-pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 99px; font-family: var(--font-ui); font-size: 12px; font-weight: 600; letter-spacing: .04em; color: var(--ink); border: 1px solid transparent; white-space: nowrap; }
+.status-pill .status-when { font-family: var(--font-data); font-weight: 450; font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+.status-pill.status-published { background: color-mix(in srgb, var(--good) 18%, var(--surface)); border-color: color-mix(in srgb, var(--good) 45%, var(--surface)); }
+.status-pill.status-draft { background: color-mix(in srgb, var(--warn) 18%, var(--surface)); border-color: color-mix(in srgb, var(--warn) 45%, var(--surface)); }
+.status-pill.status-pending { background: var(--accent-quiet); border-color: color-mix(in srgb, var(--accent) 40%, var(--surface)); }
+.status-pill.status-scheduled { background: var(--paper); border-color: var(--line); }
+.status-pill.status-trashed { background: color-mix(in srgb, var(--bad) 12%, var(--surface)); border-color: color-mix(in srgb, var(--bad) 35%, var(--surface)); }
+.status-pill.status-unsaved { background: var(--paper); border-color: var(--line); color: var(--ink-soft); }
 
-.draftEntryBox,
-.pendingEntryBox,
-.scheduledEntryBox {
-    display: inline-block;
-    border-radius: 4px;
-}
-
-.draftEntryBox {
-    background: color-mix(in srgb, var(--warn) 20%, var(--surface));
-    border: 1px solid color-mix(in srgb, var(--warn) 55%, var(--surface));
-}
-
-.pendingEntryBox {
-    background: var(--accent-quiet);
-    border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--surface));
-}
-
-.scheduledEntryBox {
-    background: var(--paper);
+/* ---- Selection bar (task B3) ----
+   One shared bar for every list that offers bulk actions (Entries,
+   Submissions, MediaFileView): hidden until roller.js's delegated checkbox
+   handler finds at least one row checked in the form it names via
+   data-selection-bar, then shows a caps-label count plus the action buttons.
+   Trash is deliberately excluded -- see CLAUDE.md's Trash section; it has no
+   bulk restore/delete handlers to drive one. */
+.selection-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    background: var(--surface);
     border: 1px solid var(--line);
+    border-radius: var(--radius);
 }
 
-td.pendingentry, tr.pendingentry {
-    background: var(--accent-quiet);
+.selection-bar[hidden] {
+    display: none;
 }
-td.draftentry, tr.draftentry {
-    background: color-mix(in srgb, var(--warn) 10%, var(--surface));
-}
-td.scheduledentry, tr.scheduledentry {
-    background: var(--paper);
+
+.selection-count {
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
 }
 
 /* categories */
@@ -1572,32 +1678,14 @@ div.image-controls input {
     background: color-mix(in srgb, var(--bad) 20%, var(--surface));
 }
 
-/* Quiet Instrument: status badges (weblogEdit.status on EntryEdit.jsp,
-   the page-list status column on Pages.jsp) keep Bootstrap's bg-* classes
-   -- restyled, not renamed -- to the same quiet tint treatment as the
-   draftEntryBox/pendingEntryBox family above rather than Bootstrap's stock
-   saturated badge colors. Bootstrap's .bg-* utilities set background-color
-   with !important, so overriding needs !important too; .badge.bg-* (two
-   classes) is more specific than Bootstrap's bare .bg-* so it still wins
-   the specificity tie-break within the !important bucket. */
-.badge.bg-success {
-    background-color: color-mix(in srgb, var(--good) 25%, var(--surface)) !important;
-    color: var(--ink) !important;
-}
-.badge.bg-info {
-    background-color: var(--accent-quiet) !important;
-    color: var(--ink) !important;
-}
-.badge.bg-warning {
-    background-color: color-mix(in srgb, var(--warn) 25%, var(--surface)) !important;
-    color: var(--ink) !important;
-}
-.badge.bg-danger {
-    background-color: color-mix(in srgb, var(--bad) 25%, var(--surface)) !important;
-    color: var(--ink) !important;
-}
-/* MainMenu's entry count was the one badge still shipping stock Bootstrap
-   grey next to four tokenized siblings. */
+/* MainMenu's entry count is the one remaining Bootstrap badge. The status
+   badges that used to sit alongside it are gone from this file (task B1):
+   Entries.jsp/Pages.jsp were converted to the .status-pill component above.
+   EntryEdit.jsp/PageEdit.jsp still emit the old badge markup -- they are
+   owned by the parallel editor-rebuild worktree and are converted by the
+   post-merge task M1 -- so their badges render in stock unstyled Bootstrap
+   colors until then; that is a known, accepted transitional gap, not a
+   regression to fix here. */
 .badge.bg-secondary {
     background-color: color-mix(in srgb, var(--line) 55%, var(--surface)) !important;
     color: var(--ink-soft) !important;

@@ -18,6 +18,7 @@
 package org.apache.roller.weblogger.ui.controllers.editor;
 
 import java.lang.reflect.Field;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -147,6 +148,17 @@ abstract class EditorControllerTestSupport {
         return errors == null ? Collections.emptyList() : errors;
     }
 
+    /**
+     * The DOM ids of the controls a controller marked invalid, in the order it
+     * named them -- {@code BaseController.addFieldError}'s half that
+     * {@code addError} does not have.
+     */
+    @SuppressWarnings("unchecked")
+    protected static List<String> invalidFields(Model model) {
+        Collection<String> fields = (Collection<String>) model.getAttribute("invalidFields");
+        return fields == null ? Collections.emptyList() : List.copyOf(fields);
+    }
+
     @SuppressWarnings("unchecked")
     protected static List<String> messages(Model model) {
         List<String> messages = (List<String>) model.getAttribute("messages");
@@ -163,6 +175,19 @@ abstract class EditorControllerTestSupport {
     protected static List<String> flashMessages(RedirectAttributes redirectAttributes) {
         List<String> messages = (List<String>) redirectAttributes.getFlashAttributes().get("messages");
         return messages == null ? Collections.emptyList() : messages;
+    }
+
+    /**
+     * The flash-attribute counterpart of {@link #invalidFields(Model)} -- for
+     * a controller whose error path redirects, the field markers a validation
+     * refused only reach the next request if they were carried across as a
+     * flash attribute the same way {@code errors}/{@code messages} are.
+     */
+    @SuppressWarnings("unchecked")
+    protected static List<String> flashInvalidFields(RedirectAttributes redirectAttributes) {
+        Collection<String> fields =
+                (Collection<String>) redirectAttributes.getFlashAttributes().get("invalidFields");
+        return fields == null ? Collections.emptyList() : List.copyOf(fields);
     }
 
     /**

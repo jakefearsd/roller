@@ -31,11 +31,11 @@
 <nav>
     <div class="d-flex justify-content-between">
         <c:if test="${pager.prevLink != null}">
-            <a href='${pager.prevLink}' class="btn btn-outline-secondary previous">
+            <a href="${fn:escapeXml(pager.prevLink)}" class="btn btn-outline-secondary previous">
                 <span aria-hidden="true">&larr;</span><spring:message code="pager.newer"/></a>
         </c:if>
         <c:if test="${pager.nextLink != null}">
-            <a href='${pager.nextLink}' class="btn btn-outline-secondary next ms-auto"><spring:message code="pager.older"/>
+            <a href="${fn:escapeXml(pager.nextLink)}" class="btn btn-outline-secondary next ms-auto"><spring:message code="pager.older"/>
                 <span aria-hidden="true">&rarr;</span></a>
         </c:if>
     </div>
@@ -51,17 +51,6 @@
      (unchanged id/name) because the bulk-delete confirmation modal further
      down references #entriesBulkForm via form="..."; only its contents are
      conditional. --%>
-<c:if test="${not empty pager.items}">
-<p style="text-align: center">
-    <span class="draftEntryBox">&nbsp;&nbsp;&nbsp;&nbsp;</span>
-    <spring:message code="weblogEntryQuery.draft"/>&nbsp;&nbsp;
-    <span class="pendingEntryBox">&nbsp;&nbsp;&nbsp;&nbsp;</span>
-    <spring:message code="weblogEntryQuery.pending"/>&nbsp;&nbsp;
-    <span class="scheduledEntryBox">&nbsp;&nbsp;&nbsp;&nbsp;</span>
-    <spring:message code="weblogEntryQuery.scheduled"/>&nbsp;&nbsp;
-</p>
-</c:if>
-
 <%-- One form around the whole table. The row checkboxes, the duplicate
      button and the bulk action bar all post through it, which is why the
      duplicate control is a submit button with its own formaction rather than
@@ -104,38 +93,78 @@
     <input type="hidden" name="bean.endDateString" value="${fn:escapeXml(bean.endDateString)}"/>
 </c:if>
 
-<%-- Status filter as link-chips: a GET per option, reusing the same
-     statusOptions the sidebar select is built from so the two can never
-     offer different sets. Possible only because Task 1 made the filter form
-     a GET -- before that the filter lived in a POST body and had no URL. --%>
+<%-- Status filter as link-chips, and the ONE status control on this screen --
+     the sidebar's radio set is gone, because two controls for one filter is
+     how a list ends up showing DRAFT while the sidebar claims ALL.
+
+     The hrefs come from the controller (statusChipUrls), not from a <c:url>
+     here. A chip has to carry the author's whole filter -- text, tags,
+     category, date range, sort -- with only the status swapped, and listing
+     those fields by hand in the JSP means the one that gets forgotten is
+     dropped silently on every chip click. The controller builds them from
+     the same filterParams the pager's base url and the bulk redirect use.
+
+     fn:escapeXml on the href is not decoration: URLUtilities.getQueryString
+     does NOT url-encode its values, so bean.text -- raw, reflected straight
+     off the query string -- reaches this attribute as typed. Without the
+     escape a crafted bean.text closes the attribute. --%>
 <nav class="entries-status-chips d-flex flex-wrap gap-2 mb-3" aria-label="<spring:message code='weblogEdit.status'/>">
     <c:forEach items="${statusOptions}" var="opt">
-        <c:url var="chipUrl" value="/roller-ui/authoring/entries.rol">
-            <c:param name="weblog" value="${actionWeblog.handle}"/>
-            <c:param name="bean.status" value="${opt.key}"/>
-            <c:if test="${not empty bean.categoryName}">
-                <c:param name="bean.categoryName" value="${bean.categoryName}"/>
-            </c:if>
-        </c:url>
         <%-- A blank bean.status means the same thing as ALL, so both mark
              the ALL chip -- otherwise the unfiltered default list shows no
              chip active at all. --%>
         <c:set var="chipActive" value="${opt.key == bean.status
                 or (opt.key == 'ALL' and empty bean.status)}"/>
         <a class="btn btn-sm ${chipActive ? 'btn-secondary' : 'btn-outline-secondary'}"
-           href="${chipUrl}" ${chipActive ? 'aria-current="page"' : ''}>${opt.value}</a>
+           href="${fn:escapeXml(statusChipUrls[opt.key])}" ${chipActive ? 'aria-current="page"' : ''}>${opt.value}</a>
     </c:forEach>
 </nav>
+
+<%-- The selection bar: hidden until roller.js's delegated checkbox handler
+     finds a checked row in #entriesBulkForm, then shows the count and these
+     three actions. Publish/submit and the tag-add control are secondary here
+     -- only one primary action lives on this screen at a time, and while the
+     bar is showing that is the empty-state's Add link, not a bulk action --
+     with delete last because it is the one destructive control. --%>
+<c:if test="${not empty pager.items}">
+    <div class="selection-bar" data-selection-bar="entriesBulkForm" hidden>
+        <span class="selection-count" data-template="<spring:message code='selection.count'/>"></span>
+
+        <button type="submit" class="btn btn-secondary"
+                formaction="${pageContext.request.contextPath}/roller-ui/authoring/entries!bulkPublish.rol">
+            <c:choose>
+                <c:when test="${userAnAuthor}">
+                    <spring:message code="weblogEntryQuery.bulkPublish"/>
+                </c:when>
+                <c:otherwise>
+                    <spring:message code="weblogEntryQuery.bulkSubmit"/>
+                </c:otherwise>
+            </c:choose>
+        </button>
+
+        <div class="input-group" style="width: 22em">
+            <input type="text" name="bulkTag" id="bulkTag" class="form-control"
+                   placeholder="<spring:message code="weblogEntryQuery.bulkTagPlaceholder"/>"/>
+            <button type="submit" class="btn btn-outline-secondary"
+                    formaction="${pageContext.request.contextPath}/roller-ui/authoring/entries!bulkTag.rol">
+                <spring:message code="weblogEntryQuery.bulkTagAdd"/>
+            </button>
+        </div>
+
+        <button type="button" class="btn btn-danger" id="bulkDeleteButton">
+            <spring:message code="weblogEntryQuery.bulkDelete"/>
+        </button>
+    </div>
+</c:if>
 
 <c:if test="${not empty pager.items}">
 <table class="rollertable table table-striped" width="100%">
 
 <tr>
     <th scope="col" class="rollertable" width="3%">
-        <input type="checkbox" id="selectAllEntries" class="form-check-input"
+        <input type="checkbox" id="selectAllEntries" class="form-check-input" data-select-all
                title="<spring:message code="weblogEntryQuery.selectAll"/>"/>
     </th>
-    <th scope="col" class="rollertable" width="3%"> </th>
     <th scope="col" class="rollertable" width="7%">
         <spring:message code="weblogEntryQuery.pubTime"/>
     </th>
@@ -156,81 +185,66 @@
 </tr>
 
 <c:forEach items="${pager.items}" var="post">
-    <c:choose>
-    <c:when test="${post.status.name() == 'DRAFT'}">
-        <tr class="draftentry">
-    </c:when>
-    <c:when test="${post.status.name() == 'PENDING'}">
-        <tr class="pendingentry">
-    </c:when>
-    <c:when test="${post.status.name() == 'SCHEDULED'}">
-        <tr class="scheduledentry">
-    </c:when>
-    <c:otherwise>
-        <tr>
-    </c:otherwise>
-    </c:choose>
+    <tr>
     <td>
         <input type="checkbox" class="form-check-input entry-select"
                name="selectedEntries" value="${post.id}"
                aria-label="${fn:escapeXml(post.title)}"/>
     </td>
 
-    <td>
+    <%-- <rc:date/> renders nothing at all for a null value and formats in
+         the WEBLOG's timezone, which is the clock an entry's pubtime has
+         always meant (see DateTag). The <c:if>s these cells used to carry
+         and the message-bundle date pattern they used to resolve are both
+         the tag's job now. --%>
+    <td class="data"><rc:date value="${post.pubTime}"/></td>
+
+    <td class="data"><rc:date value="${post.updateTime}"/></td>
+
+    <%-- The title is the row's primary target and it opens the EDITOR. This
+         is the authoring surface: clicking a post's name here means "open
+         this to work on it". The published page is still one click away as
+         the quiet secondary link below -- demoted, not lost -- and the
+         pencil column that existed only to reach the editor is gone, since
+         the title now does its whole job.
+
+         post.displayTitle is entry title text, which EntryBean.copyTo stored
+         HTML-escaped at save time; it is emitted bare here for the same
+         reason every theme emits $entry.title bare (escaping again renders
+         &amp;amp;). post.anchor is machine-derived from the title
+         (createAnchorBase strips every non-alphanumeric character) and so
+         cannot carry markup today -- it is escaped anyway, because that
+         property is an invariant of one method somewhere else, not of this
+         page. --%>
+    <td class="entry-cell">
         <c:url var="editUrl" value="/roller-ui/authoring/entryEdit.rol">
             <c:param name="weblog" value="${actionWeblog.handle}"/>
             <c:param name="bean.id" value="${post.id}"/>
         </c:url>
-        <a href="${editUrl}" aria-label="<spring:message code='generic.edit'/>: ${fn:escapeXml(post.title)}">
-            <span class="bi bi-pencil-square" aria-hidden="true"
-                  title="<spring:message code="generic.edit"/>">
-            </span>
-        </a>
+        <a class="entry-title" href="${editUrl}">${post.displayTitle}</a>
+        <div class="entry-meta">
+            <span class="data">${fn:escapeXml(post.anchor)}</span><c:if test="${post.status.name() == 'PUBLISHED'}"> &#183;
+            <a class="quiet-link" href="${fn:escapeXml(urls.entry(post))}" target="_blank" rel="noopener"><spring:message code="generic.view"/></a></c:if>
+        </div>
     </td>
 
-    <td class="data">
-        <c:if test="${post.pubTime != null}">
-            <spring:message code="weblogEntryQuery.date.toStringFormat" arguments="${post.pubTime}"/>
-        </c:if>
-    </td>
-
-    <td class="data">
-        <c:if test="${post.updateTime != null}">
-            <spring:message code="weblogEntryQuery.date.toStringFormat" arguments="${post.updateTime}"/>
-        </c:if>
-    </td>
-    
+    <%-- The status pill, not just a row tint: colour alone is not information
+         a screen reader or a colour-blind reader receives. Same component as
+         Pages.jsp. pillWhen must be explicitly cleared on the non-Scheduled
+         branch -- request scope survives across this forEach's iterations,
+         so a Scheduled row's pillWhen would otherwise leak onto every
+         following row that has no pubTime of its own to show. --%>
     <td>
+        <c:set var="pillStatus" value="${post.status.name()}" scope="request"/>
         <c:choose>
-        <c:when test="${post.status.name() == 'PUBLISHED'}">
-            <a href='${urls.entry(post)}'>
-                <str:truncateNicely upper="80">${post.displayTitle}</str:truncateNicely>
-            </a>
-        </c:when>
-        <c:otherwise>
-            <str:truncateNicely upper="80">${post.displayTitle}</str:truncateNicely>
-        </c:otherwise>
-        </c:choose>
-    </td>
-
-    <%-- A badge, not just the row tint: the tint is the only thing carrying
-         status today, and colour alone is not information a screen reader or
-         a colour-blind reader receives. Same badge pattern as Pages.jsp. --%>
-    <td>
-        <c:choose>
-        <c:when test="${post.status.name() == 'PUBLISHED'}">
-            <span class="badge bg-success"><spring:message code="weblogEdit.published"/></span>
-        </c:when>
-        <c:when test="${post.status.name() == 'PENDING'}">
-            <span class="badge bg-warning"><spring:message code="weblogEdit.pending"/></span>
-        </c:when>
         <c:when test="${post.status.name() == 'SCHEDULED'}">
-            <span class="badge bg-primary"><spring:message code="weblogEdit.scheduled"/></span>
+            <c:set var="pillWhen" value="${post.pubTime}" scope="request"/>
         </c:when>
         <c:otherwise>
-            <span class="badge bg-info"><spring:message code="weblogEdit.draft"/></span>
+            <c:remove var="pillWhen" scope="request"/>
         </c:otherwise>
         </c:choose>
+        <jsp:include page="/WEB-INF/jsps/editor/StatusPill.jsp"/>
     </td>
 
     <td>
@@ -275,40 +289,6 @@
 </table>
 </c:if>
 
-<%-- Bulk action bar. Each button carries its own formaction, so the server
-     endpoint is chosen by which button was pressed rather than by JavaScript
-     rewriting the form's action. Delete is the exception: it opens the
-     confirmation modal instead of submitting, because it is the only one of
-     the three that cannot be undone. --%>
-<c:if test="${not empty pager.items}">
-    <div class="d-flex flex-wrap gap-2 align-items-center mb-3" id="entriesBulkActions">
-        <button type="submit" class="btn btn-primary"
-                formaction="${pageContext.request.contextPath}/roller-ui/authoring/entries!bulkPublish.rol">
-            <c:choose>
-                <c:when test="${userAnAuthor}">
-                    <spring:message code="weblogEntryQuery.bulkPublish"/>
-                </c:when>
-                <c:otherwise>
-                    <spring:message code="weblogEntryQuery.bulkSubmit"/>
-                </c:otherwise>
-            </c:choose>
-        </button>
-
-        <div class="input-group" style="width: 22em">
-            <input type="text" name="bulkTag" id="bulkTag" class="form-control"
-                   placeholder="<spring:message code="weblogEntryQuery.bulkTagPlaceholder"/>"/>
-            <button type="submit" class="btn btn-outline-secondary"
-                    formaction="${pageContext.request.contextPath}/roller-ui/authoring/entries!bulkTag.rol">
-                <spring:message code="weblogEntryQuery.bulkTagAdd"/>
-            </button>
-        </div>
-
-        <button type="button" class="btn btn-danger" id="bulkDeleteButton">
-            <spring:message code="weblogEntryQuery.bulkDelete"/>
-        </button>
-    </div>
-</c:if>
-
 </form>
 
 
@@ -318,11 +298,11 @@
 <nav>
     <div class="d-flex justify-content-between">
         <c:if test="${pager.prevLink != null}">
-            <a href='${pager.prevLink}' class="btn btn-outline-secondary previous">
+            <a href="${fn:escapeXml(pager.prevLink)}" class="btn btn-outline-secondary previous">
                 <span aria-hidden="true">&larr;</span> <spring:message code="pager.newer"/></a>
         </c:if>
         <c:if test="${pager.nextLink != null}">
-            <a href='${pager.nextLink}' class="btn btn-outline-secondary next ms-auto"><spring:message code="pager.older"/>
+            <a href="${fn:escapeXml(pager.nextLink)}" class="btn btn-outline-secondary next ms-auto"><spring:message code="pager.older"/>
                 <span aria-hidden="true">&rarr;</span></a>
         </c:if>
     </div>
@@ -385,10 +365,10 @@
                 </div>
 
                 <div class="modal-footer">
-                    <button type="submit" class="btn"><spring:message code="generic.yes"/></button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         <spring:message code="generic.no"/>
                     </button>
+                    <button type="submit" class="btn btn-danger"><spring:message code="generic.yes"/></button>
                 </div>
 
             <sec:csrfInput/>
@@ -416,15 +396,15 @@
                 <p id="bulkDeleteCount" class="form-control-plaintext"></p>
             </div>
             <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <spring:message code="generic.no"/>
+                </button>
                 <%-- Submits the table's form, which is where the selection
                      lives; this button is outside it, hence the form= --%>
                 <button type="submit" class="btn btn-danger" id="bulkDeleteConfirm"
                         form="entriesBulkForm"
                         formaction="${pageContext.request.contextPath}/roller-ui/authoring/entries!bulkDelete.rol">
                     <spring:message code="generic.yes"/>
-                </button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <spring:message code="generic.no"/>
                 </button>
             </div>
         </div>

@@ -32,7 +32,6 @@ import org.apache.roller.weblogger.ui.rendering.pagers.Pager;
 import org.apache.roller.weblogger.ui.rendering.pagers.WeblogEntriesListPager;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogFeedRequest;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogRequest;
-import org.apache.roller.weblogger.util.URLUtilities;
 
 
 /**
@@ -157,13 +156,19 @@ public class FeedModel implements Model {
 
         Map<String, String> withFilters = new HashMap<>(params);
 
+        // RAW values: URLUtilities.getQueryString encodes what it is given, so
+        // encoding here too would double-encode -- a category "Tech News"
+        // would reach the next request as the literal "Tech+News". The tags
+        // parameter is space-separated for the same reason: Utilities
+        // .splitStringAsTags splits the DECODED value on spaces, and the '+'
+        // that used to be written here by hand is just form encoding for one.
         List<String> tags = feedRequest.getTags();
         if(tags != null && !tags.isEmpty()) {
-            withFilters.put("tags", URLUtilities.getEncodedTagsString(tags));
+            withFilters.put("tags", String.join(" ", tags));
         }
         String category = feedRequest.getWeblogCategoryName();
         if(category != null && !category.isBlank()) {
-            withFilters.put("cat", URLUtilities.encode(category));
+            withFilters.put("cat", category);
         }
         if(feedRequest.isExcerpts()) {
             withFilters.put("excerpts", "true");

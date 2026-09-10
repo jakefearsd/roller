@@ -182,8 +182,13 @@ class EditorJspMarkupHygieneTest {
                         "a page must show its own URL, rooted at the weblog"),
                 new Expected("PageEdit.jsp", "data-clipboard-text=",
                         "a published page's URL must be copyable"),
-                new Expected("Pages.jsp", "${urls.weblogAbsolute(actionWeblog)}page/${p.slug}",
-                        "a published page's slug must link to the live page"),
+                // Pages.jsp still carries the wrong "/page/<slug>" shape; the
+                // post-merge task M1 fixes the link and this needle together.
+                new Expected("Pages.jsp", "${urls.weblogAbsolute(actionWeblog)}page/${fn:escapeXml(p.slug)}",
+                        "a published page's slug must link to the live page, with the "
+                                + "author-controlled slug escaped in the href (a page slug is "
+                                + "restricted only against '/' and reserved names, not against "
+                                + "quote/angle-bracket characters)"),
                 new Expected("ThemeEdit.jsp", "themeEditor.viewYourBlog",
                         "a persistent view-the-blog link, not only the Preview button"),
                 new Expected("WeblogConfig.jsp", "id=\"weblogAbsoluteUrl\"",
@@ -214,7 +219,9 @@ class EditorJspMarkupHygieneTest {
      * Status was carried by the row tint alone -- {@code .draftentry},
      * {@code .pendingentry}, {@code .scheduledentry} -- which is colour-only
      * information a screen reader never receives and a colour-blind reader
-     * cannot separate. The badge column and the GET filter chips are both one
+     * cannot separate. The row tints are gone (task B1: one shared
+     * {@code StatusPill.jsp} include renders status as text everywhere), but
+     * the status-carries-text property and the GET filter chips are both one
      * block of markup that a later edit could drop without any other test
      * noticing.
      */
@@ -222,8 +229,8 @@ class EditorJspMarkupHygieneTest {
     void theEntriesListStatesStatusInTextAndOffersItAsAFilter() throws Exception {
         String src = Files.readString(EDITOR_JSP_DIR.resolve("Entries.jsp"));
         List<String> missing = new ArrayList<>();
-        if (!src.contains("badge bg-success")) {
-            missing.add("Entries.jsp: no status badge column (colour-only rows)");
+        if (!src.contains("/WEB-INF/jsps/editor/StatusPill.jsp")) {
+            missing.add("Entries.jsp: no status-pill include (colour-only rows)");
         }
         if (!src.contains("entries-status-chips")) {
             missing.add("Entries.jsp: no status filter chips");

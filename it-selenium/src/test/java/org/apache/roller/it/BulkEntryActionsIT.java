@@ -56,7 +56,10 @@ class BulkEntryActionsIT extends RollerIT {
 
         openPath(ENTRIES);
         select(draftId);
-        $("#entriesBulkActions button[formaction$='entries!bulkPublish.rol']").click();
+        // The bar only shows once a row is checked -- select() above is what
+        // makes it visible.
+        $(".selection-bar[data-selection-bar='entriesBulkForm']").shouldBe(visible);
+        $(".selection-bar button[formaction$='entries!bulkPublish.rol']").click();
 
         // The list is the write's own report: a published entry loses the
         // draft row styling and gains a link to its permalink.

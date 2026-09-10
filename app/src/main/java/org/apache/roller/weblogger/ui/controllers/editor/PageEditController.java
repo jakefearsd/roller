@@ -152,7 +152,7 @@ public class PageEditController extends BaseController {
         // javascript:/data:/file: value.
         if (StringUtils.isNotBlank(bean.getCanonicalUrl())
                 && !CANONICAL_URL_VALIDATOR.isValid(bean.getCanonicalUrl())) {
-            addError(model, "entryEdit.canonicalUrlInvalid", request);
+            addFieldError(model, "seo_canonicalUrl", "entryEdit.canonicalUrlInvalid", request);
             if (!isNew) {
                 model.addAttribute("page", page);
             }
@@ -174,9 +174,9 @@ public class PageEditController extends BaseController {
                 // field error the author can fix, not a 500.
                 String message = ex.getMessage() == null ? "" : ex.getMessage();
                 if (message.contains("reserved")) {
-                    addError(model, "pageEdit.error.slugReserved", request);
+                    addFieldError(model, "page_bean_slug", "pageEdit.error.slugReserved", request);
                 } else if (message.contains("slug")) {
-                    addError(model, "pageEdit.error.slugInvalid", request);
+                    addFieldError(model, "page_bean_slug", "pageEdit.error.slugInvalid", request);
                 } else {
                     log.error("Error saving page {}", bean.getId(), ex);
                     addError(model, "generic.error.check.logs", request);

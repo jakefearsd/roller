@@ -104,7 +104,8 @@ public class MediaFileViewController extends MediaFileBase {
                 if (!getActionWeblog(request).hasMediaFileDirectory(newDirectoryName)) {
                     MediaFileDirectory dir = manager.createMediaFileDirectory(getActionWeblog(request), newDirectoryName);
                     weblogger.flush();
-                    addMessage(model, "mediaFile.directoryCreate.success", newDirectoryName, request);
+                    addMessage(model, "mediaFile.directoryCreate.success",
+                            StringEscapeUtils.escapeHtml4(newDirectoryName), request);
                     directoryId = dir.getId();
                 } else {
                     addError(model, "mediaFile.directoryCreate.error.exists", StringEscapeUtils.escapeHtml4(newDirectoryName), request);

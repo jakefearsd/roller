@@ -23,7 +23,7 @@
 
 
         <form method="post" id="loginForm" class="form-signin"
-              action="<c:url value='/roller_j_security_check'/>" onsubmit="saveUsername(this)">
+              action="<c:url value='/roller_j_security_check'/>">
 
             <%-- .section-head, not <legend>: a legend outside a fieldset is
                  invalid anyway, and the browser's default sizing for it put a
@@ -85,7 +85,7 @@
     function saveUsername(theForm) {
         if (typeof setCookie !== "function") {
             // Same reasoning as above, and more pointed: this runs from the
-            // form's onsubmit, so throwing here would abort the sign-in.
+            // form's submit, so throwing here would abort the sign-in.
             return;
         }
         var expires = new Date();
@@ -93,4 +93,12 @@
         setCookie("username", theForm.j_username.value, expires);
         setCookie("favorite_authentication_method", "username");
     }
+
+    <%-- addEventListener, not an inline onsubmit="saveUsername(this)": this
+         page carries no confirmation of its own, but every form on this admin
+         UI now wires its submit behavior the same way rather than through an
+         inline attribute, so there is exactly one idiom to check for. --%>
+    document.getElementById("loginForm").addEventListener("submit", function () {
+        saveUsername(this);
+    });
 </script>

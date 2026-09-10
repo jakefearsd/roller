@@ -163,7 +163,7 @@ class CategoryIT extends RollerIT {
         deleteCategory(extra, null);
 
         openPath("/roller-ui/authoring/weblogConfig.rol?weblog=" + WEBLOG_HANDLE);
-        $("button[type='submit'].btn-success").should(visible).click();
+        $("button[type='submit'].btn-primary").should(visible).click();
 
         // A Selenide condition, not a snapshot assertion: it waits for the save
         // to land and captures the page if it never does.

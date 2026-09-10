@@ -236,7 +236,7 @@
         <button type="submit" class="btn btn-primary" id="save_button">
             <spring:message code="generic.save"/>
         </button>
-        <a href="<c:url value='${cancelAction}'/>" class="btn">
+        <a href="<c:url value='${cancelAction}'/>" class="btn btn-secondary">
             <spring:message code="generic.cancel"/>
         </a>
     </div>

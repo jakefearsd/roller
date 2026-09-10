@@ -114,7 +114,7 @@
     <%-- Save, Close and Resize text area buttons--%>
 
     <button type="submit" class="btn btn-secondary"><spring:message code="generic.save"/></button>
-    <input type="button" value='<spring:message code="generic.done"/>' class="button btn"
+    <input type="button" value='<spring:message code="generic.done"/>' class="btn btn-secondary"
            onclick="window.location='<c:url value="/roller-ui/authoring/templates.rol"><c:param name="weblog" value="${actionWeblog.handle}"/></c:url>'"/>
 
     <%-- ================================================================== --%>
@@ -128,11 +128,11 @@
 
             <div class="card-header">
 
-                <h4 class="card-title">
+                <h3 class="section-head">
                     <a class="collapsed" data-bs-toggle="collapse" data-bs-target="#collapseAdvanced" href="#">
                         <spring:message code="pageForm.advancedSettings"/>
                     </a>
-                </h4>
+                </h3>
 
             </div>
 
@@ -183,6 +183,8 @@
 
                 </div>
             </div>
+        </div>
+
         </div>
 
     </c:if>

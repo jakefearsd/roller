@@ -177,10 +177,10 @@
     </c:if>
 
 
-    <input type="submit" class="btn btn-success"
+    <input type="submit" class="btn btn-primary"
            value="<spring:message code="generic.save"/>" name="saveButton"/>
-    <input type="button" class="btn"
-           value="<spring:message code="generic.cancel"/>" onClick="window.parent.onEditCancelled();"/>
+    <button type="button" class="btn btn-secondary"
+            onClick="window.parent.onEditCancelled();"><spring:message code="generic.cancel"/></button>
 
 <sec:csrfInput/>
 </form>
@@ -192,7 +192,7 @@
 <c:if test="${bean.croppable}">
     <hr/>
     <%-- id kept: MediaCropIT identifies the crop section by #cropSectionTitle. --%>
-    <h5 id="cropSectionTitle" class="section-head"><spring:message code="mediaFileEdit.crop.title"/></h5>
+    <h3 id="cropSectionTitle" class="section-head"><spring:message code="mediaFileEdit.crop.title"/></h3>
     <p class="pagetip"><spring:message code="mediaFileEdit.crop.tip"/></p>
 
     <cropper-canvas id="cropCanvas" background style="width:100%; height:360px">
@@ -222,6 +222,7 @@
         <input type="hidden" name="cropWidth" id="cropWidth" value="0"/>
         <input type="hidden" name="cropHeight" id="cropHeight" value="0"/>
         <button type="submit" id="cropButton" class="btn btn-danger"
+                data-confirm="<spring:message code='mediaFileEdit.crop.confirm'/>"
                 data-busy-label="<spring:message code='mediaFileEdit.crop.applying'/>">
             <spring:message code="mediaFileEdit.crop.apply"/>
         </button>
@@ -311,13 +312,13 @@
                 };
             }
 
+            // Confirmation is handled upstream now, by data-confirm on
+            // #cropButton (see roller.js): a click that fails to confirm never
+            // reaches this submit handler at all. This still guards against
+            // submitting with no valid selection drawn.
             document.getElementById('cropForm').addEventListener('submit', function (event) {
                 var rect = cropRectInNaturalPixels();
                 if (rect === null || !(rect.width > 0) || !(rect.height > 0)) {
-                    event.preventDefault();
-                    return;
-                }
-                if (!confirm('<spring:message code="mediaFileEdit.crop.confirm" javaScriptEscape="true"/>')) {
                     event.preventDefault();
                     return;
                 }

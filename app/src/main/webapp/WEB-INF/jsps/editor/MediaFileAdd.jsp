@@ -27,27 +27,10 @@
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
     <input type="hidden" name="directoryName" value="${directoryName}"/>
 
-    <div class="row mb-3">
-        <label class="col-sm-3 col-form-label" for="mfadd_bean_description"><spring:message code="generic.description"/></label>
-        <div class="col-sm-9">
-            <textarea id="mfadd_bean_description" name="bean.description" rows="3" maxlength="255" class="form-control">${fn:escapeXml(bean.description)}</textarea>
-        </div>
-    </div>
-
-    <div class="row mb-3">
-        <label class="col-sm-3 col-form-label" for="mfadd_bean_copyrightText"><spring:message code="mediaFileAdd.copyright"/></label>
-        <div class="col-sm-9">
-            <textarea id="mfadd_bean_copyrightText" name="bean.copyrightText" rows="3" maxlength="1023" class="form-control">${fn:escapeXml(bean.copyrightText)}</textarea>
-        </div>
-    </div>
-
-    <div class="row mb-3">
-        <label class="col-sm-3 col-form-label" for="mfadd_bean_tagsAsString"><spring:message code="mediaFileAdd.tags"/></label>
-        <div class="col-sm-9">
-            <input id="mfadd_bean_tagsAsString" type="text" name="bean.tagsAsString" value="${fn:escapeXml(bean.tagsAsString)}" maxlength="255" class="form-control"/>
-        </div>
-    </div>
-
+    <%-- The folder select stays ABOVE the drop zone. It is not optional the
+         way the three text fields below are -- it decides where the batch
+         lands, and there is no undo for dropping thirty files into the wrong
+         directory. --%>
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label" for="mfadd_bean_directoryId"><spring:message code="mediaFileAdd.directory"/></label>
         <div class="col-sm-9">
@@ -59,11 +42,16 @@
         </div>
     </div>
 
+    <%-- The files come next, because they are what the author opened this page
+         to hand over. Description, copyright and tags used to sit above this --
+         three optional fields in the way of the one required act, and applied
+         identically to every file in a batch, which is rarely what anyone
+         means past the first file. --%>
     <div class="card">
         <div class="card-header">
-            <h4 class="card-title">
+            <h3 class="section-head">
                 <spring:message code="mediaFileAdd.fileLocation"/>
-            </h4>
+            </h3>
         </div>
         <div class="card-body">
             <div id="mediaDropZone" class="media-dropzone"
@@ -76,13 +64,44 @@
         </div>
     </div>
 
+    <%-- A native <details>, not a Bootstrap collapse: no JS, no aria wiring to
+         get wrong, and the browser's own disclosure state. Whatever is typed
+         here is applied to every file in the batch. Starts open on a
+         re-render that carries typed-but-unsubmitted text, so a validation
+         refusal never hides what the author already typed. --%>
+    <details class="editor-details" ${not empty bean.description or not empty bean.tagsAsString or not empty bean.copyrightText ? 'open' : ''}>
+        <summary class="rail-group-label"><spring:message code="generic.details"/></summary>
+
+        <div class="row mb-3">
+            <label class="col-sm-3 col-form-label" for="mfadd_bean_description"><spring:message code="generic.description"/></label>
+            <div class="col-sm-9">
+                <textarea id="mfadd_bean_description" name="bean.description" rows="3" maxlength="255" class="form-control">${fn:escapeXml(bean.description)}</textarea>
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <label class="col-sm-3 col-form-label" for="mfadd_bean_copyrightText"><spring:message code="mediaFileAdd.copyright"/></label>
+            <div class="col-sm-9">
+                <textarea id="mfadd_bean_copyrightText" name="bean.copyrightText" rows="3" maxlength="1023" class="form-control">${fn:escapeXml(bean.copyrightText)}</textarea>
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <label class="col-sm-3 col-form-label" for="mfadd_bean_tagsAsString"><spring:message code="mediaFileAdd.tags"/></label>
+            <div class="col-sm-9">
+                <input id="mfadd_bean_tagsAsString" type="text" name="bean.tagsAsString" value="${fn:escapeXml(bean.tagsAsString)}" maxlength="255" class="form-control"/>
+            </div>
+        </div>
+
+    </details>
+
     <button type="submit" id="uploadButton" class="btn btn-secondary"
             data-busy-label="<spring:message code='mediaFileAdd.uploading'/>" formaction="${pageContext.request.contextPath}/roller-ui/authoring/mediaFileAdd!save.rol"><spring:message code="mediaFileAdd.upload"/></button>
     <c:url var="mediaFileCancelURL" value="/roller-ui/authoring/mediaFileView.rol">
         <c:param name="weblog" value="${actionWeblog.handle}"/>
         <c:param name="directoryId" value="${bean.directoryId}"/>
     </c:url>
-    <a class="btn" href="${mediaFileCancelURL}"><spring:message code="generic.cancel"/></a>
+    <a class="btn btn-secondary" href="${mediaFileCancelURL}"><spring:message code="generic.cancel"/></a>
 
 <sec:csrfInput/>
 </form>

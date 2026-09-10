@@ -62,8 +62,8 @@ public class WebjarReferenceTest {
 
     /**
      * Captures everything after "/webjars/" up to the closing quote or
-     * paren, e.g. "jquery-ui/1.14.2/jquery-ui.min.js". Trailing path
-     * segments may contain slashes (summernote serves from a dist/
+     * paren, e.g. "clipboard.js/2.0.11/clipboard.min.js". Trailing path
+     * segments may contain slashes (easymde serves from a dist/
      * subdirectory). ')' is excluded too so an unquoted CSS {@code url(...)}
      * does not swallow its own closing paren into the resource path.
      */
