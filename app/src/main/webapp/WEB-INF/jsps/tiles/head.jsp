@@ -54,3 +54,10 @@ mismatch 404s the asset on every page that includes this file.
 
 <script src="<c:url value="/theme/scripts/roller.js"/>"></script>
 
+<%-- Editor bundle (Task A1): built by frontend-maven-plugin + esbuild into
+     target/classes/static/roller-ui/scripts/roller-editor.js. Loaded on
+     every admin page for now; Task A3 will move this into the same
+     EntryEdit.jsp/PageEdit.jsp-gated <c:if> that EasyMDE uses above, and
+     remove EasyMDE/Font Awesome once the editor is real. --%>
+<script src="<c:url value='/roller-ui/scripts/roller-editor.js'/>"></script>
+
