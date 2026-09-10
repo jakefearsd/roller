@@ -125,7 +125,7 @@
         <div class="modal-content">
 
             <div class="modal-header">
-                <h4 id="mediafile-edit-lightbox-title" class="modal-title"><spring:message code="weblogEdit.insertMediaFile"/></h4>
+                <p id="mediafile-edit-lightbox-title" class="modal-title"><spring:message code="weblogEdit.insertMediaFile"/></p>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<spring:message code='generic.close'/>"></button>
             </div>
 
