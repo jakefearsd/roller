@@ -42,20 +42,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * component, three button buckets, one selection bar, one confirm idiom,
  * no jQuery UI, no sidebar h3+hr. Each method names the task that made it
  * true; a red method means the vocabulary drifted, not that a page broke.
+ *
+ * <p>Every scan here covers EVERY JSP. Several of them used to skip an
+ * {@code A_OWNED} set -- {@code EntryEdit.jsp}, {@code EntryEditor.jsp},
+ * {@code PageEdit.jsp} -- while the CodeMirror rebuild owned those files in
+ * a parallel worktree and this vocabulary could not be applied to them.
+ * Task M1 applied it and deleted the set. There is deliberately no
+ * replacement mechanism: an exemption that outlives the collaboration it
+ * was written for is a scan that has quietly stopped scanning, and this one
+ * survived two waves' worth of edits to the files it was excusing.
  */
 class JspConsistencyTest {
 
     static final Path JSPS = Path.of("src/main/webapp/WEB-INF/jsps");
 
     static final Path ROLLER_CSS = Path.of("src/main/webapp/roller-ui/styles/roller.css");
-
-    /**
-     * Package A (the editor rebuild) owns these files in a parallel worktree
-     * and this task must not touch them -- see task-B1's brief. Post-merge
-     * task M1 applies the status-pill vocabulary to the editor screens; until
-     * then they are exempt from this scan.
-     */
-    private static final Set<String> A_OWNED = Set.of("EntryEdit.jsp", "EntryEditor.jsp", "PageEdit.jsp");
 
     static Stream<Path> jsps() throws IOException {
         return Files.walk(JSPS).filter(p -> p.toString().endsWith(".jsp"));
@@ -65,7 +66,6 @@ class JspConsistencyTest {
     void statusIsAlwaysAStatusPill() throws IOException {
         List<Path> editorJsps = jsps()
                 .filter(p -> p.toString().contains("/editor/"))
-                .filter(p -> !A_OWNED.contains(p.getFileName().toString()))
                 .toList();
         assertTrue(editorJsps.size() > 5,
                 "Found too few editor JSPs -- the scan is not looking where it thinks it is.");
@@ -92,20 +92,16 @@ class JspConsistencyTest {
      * (btn-danger), or secondary (everything else, including a bare .btn with
      * no variant class riding along). Bootstrap's stock .btn-success is not a
      * fourth bucket; every former use is either the screen's one primary
-     * action (-> btn-primary) or not (-> btn-secondary). A_OWNED is skipped
-     * for the same reason statusIsAlwaysAStatusPill skips it -- see that
-     * method's comment.
+     * action (-> btn-primary) or not (-> btn-secondary).
      */
     @Test
     void buttonsUseThreeBucketsOnly() throws IOException {
-        List<Path> nonAOwned = jsps()
-                .filter(p -> !A_OWNED.contains(p.getFileName().toString()))
-                .toList();
-        assertTrue(nonAOwned.size() > 20,
+        List<Path> allJsps = jsps().toList();
+        assertTrue(allJsps.size() > 20,
                 "Found too few JSPs -- the scan is not looking where it thinks it is.");
 
         Pattern bareBtn = Pattern.compile("class=\"btn\"[^>]*>");
-        for (Path jsp : nonAOwned) {
+        for (Path jsp : allJsps) {
             String src = Files.readString(jsp, StandardCharsets.UTF_8);
             assertFalse(src.contains("btn-success"), jsp + ": btn-success -> btn-primary");
             assertFalse(bareBtn.matcher(src).find(),
@@ -207,9 +203,7 @@ class JspConsistencyTest {
      * machine-readable {@code datetime} attribute. {@code <rc:date>} formats
      * in the action weblog's zone, which is the clock every pubtime on this
      * application is already expressed in, and wraps the result in a
-     * {@code <time>}. A_OWNED is skipped for the same reason the scans above
-     * skip it: post-merge task M1 converts EntryEdit's {@code .editor-when}
-     * spans.
+     * {@code <time>}.
      *
      * <p>The bundle half is the same rule stated where it can actually be
      * enforced. While {@code weblogEntryQuery.date.toStringFormat} still
@@ -223,13 +217,11 @@ class JspConsistencyTest {
      */
     @Test
     void noAdminTimestampIsFormattedWithFmtFormatDate() throws IOException {
-        List<Path> nonAOwned = jsps()
-                .filter(p -> !A_OWNED.contains(p.getFileName().toString()))
-                .toList();
-        assertTrue(nonAOwned.size() > 20,
+        List<Path> allJsps = jsps().toList();
+        assertTrue(allJsps.size() > 20,
                 "Found too few JSPs -- the scan is not looking where it thinks it is.");
 
-        for (Path jsp : nonAOwned) {
+        for (Path jsp : allJsps) {
             String src = Files.readString(jsp, StandardCharsets.UTF_8);
             assertFalse(src.contains("fmt:formatDate"),
                     jsp + ": format timestamps with <rc:date>, not fmt:formatDate");
@@ -306,11 +298,11 @@ class JspConsistencyTest {
      * Task B7: one modal shape, one confirm idiom.
      *
      * <ul>
-     *   <li>no {@code confirm(} in any JSP outside {@code A_OWNED} -- every
+     *   <li>no {@code confirm(} in any JSP -- every
      *       destructive action is confirmed through {@code data-confirm}
      *       (see roller.js), never a native {@code window.confirm()} called
      *       from a JSP's own inline script;</li>
-     *   <li>no {@code onsubmit=} attribute anywhere outside {@code A_OWNED}
+     *   <li>no {@code onsubmit=} attribute anywhere
      *       -- a form's behavior on submit is wired with
      *       {@code addEventListener}, not an inline handler, for the same
      *       reason confirm() moved out: an inline handler is a second place
@@ -332,10 +324,8 @@ class JspConsistencyTest {
      */
     @Test
     void oneConfirmIdiomAndOneModalShape() throws IOException {
-        List<Path> nonAOwned = jsps()
-                .filter(p -> !A_OWNED.contains(p.getFileName().toString()))
-                .toList();
-        assertTrue(nonAOwned.size() > 20,
+        List<Path> allJsps = jsps().toList();
+        assertTrue(allJsps.size() > 20,
                 "Found too few JSPs -- the scan is not looking where it thinks it is.");
 
         List<String> confirmViolations = new ArrayList<>();
@@ -349,7 +339,7 @@ class JspConsistencyTest {
                 "class=\"modal-footer\"[^>]*>(.*?)</div>", Pattern.DOTALL);
         Set<String> headingTags = Set.of("h1", "h2", "h3", "h4", "h5", "h6");
 
-        for (Path jsp : nonAOwned) {
+        for (Path jsp : allJsps) {
             String name = jsp.getFileName().toString();
             String src = withoutJspComments(Files.readString(jsp, StandardCharsets.UTF_8));
 

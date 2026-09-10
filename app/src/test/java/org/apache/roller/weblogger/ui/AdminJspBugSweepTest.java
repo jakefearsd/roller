@@ -25,7 +25,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -90,14 +89,6 @@ class AdminJspBugSweepTest {
     // --- B11 bullet 4: no heading-level skips (h3 straight to h4/h5) ---
 
     /**
-     * Package A (the editor rebuild) owns these files in a parallel worktree
-     * -- see task-B10 brief / {@code JspConsistencyTest.A_OWNED}. Skipped for
-     * the same reason that scan skips them: a post-merge task applies this
-     * heading-level fix to the editor screens once A lands.
-     */
-    private static final Set<String> A_OWNED = Set.of("EntryEdit.jsp", "EntryEditor.jsp", "PageEdit.jsp");
-
-    /**
      * Every card/section heading in the admin UI used {@code h4}, or in one
      * place {@code h5}, immediately inside a page whose own title is an
      * {@code h2} (the tiles layout's {@code roller-page-title}) with no
@@ -113,14 +104,12 @@ class AdminJspBugSweepTest {
      */
     @Test
     void noHeadingLevelIsSkippedToH4OrH5() throws IOException {
-        List<Path> nonAOwned = jsps()
-                .filter(p -> !A_OWNED.contains(p.getFileName().toString()))
-                .toList();
-        assertTrue(nonAOwned.size() > 20,
+        List<Path> allJsps = jsps().toList();
+        assertTrue(allJsps.size() > 20,
                 "Found too few JSPs -- the scan is not looking where it thinks it is.");
 
         List<String> violations = new ArrayList<>();
-        for (Path jsp : nonAOwned) {
+        for (Path jsp : allJsps) {
             String src = withoutJspComments(Files.readString(jsp, StandardCharsets.UTF_8));
             if (src.contains("<h4") || src.contains("<h5")) {
                 violations.add(jsp.toString());
@@ -128,7 +117,7 @@ class AdminJspBugSweepTest {
         }
 
         assertTrue(violations.isEmpty(),
-                "non-editor-rebuild JSPs must not skip a heading level to h4/h5: " + violations);
+                "no JSP may skip a heading level to h4/h5: " + violations);
     }
 
     // --- B11 bullet 5: dead <str:truncateNicely> markup (no str taglib) ---
