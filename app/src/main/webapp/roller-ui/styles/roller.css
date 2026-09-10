@@ -1285,15 +1285,36 @@ table.mm_table_actions td {
 
 /* ---- A native disclosure for the optional half of a form ----
    <details>/<summary>, not a Bootstrap collapse: no JS, no aria wiring to get
-   wrong, and the browser keeps the open/closed state. The summary wears the
-   rail's caps-label so it reads as a section marker rather than a control. */
+   wrong, and the browser keeps the open/closed state. The summary carries the
+   rail's caps-label class for its type, PLUS the same accent color, weight
+   and rotating chevron as .editor-drawer (EntryEdit's SEO drawer toggle) --
+   one disclosure look for the whole admin UI, not two. The native marker
+   triangle is suppressed in favor of that chevron. */
 .editor-details {
     margin-bottom: 16px;
 }
 
 .editor-details > summary {
+    display: block;
     cursor: pointer;
     padding-bottom: 8px;
+    color: var(--accent);
+    font-weight: 600;
+    list-style: none;
+}
+
+.editor-details > summary::-webkit-details-marker {
+    display: none;
+}
+
+.editor-details > summary::after {
+    content: "\203A";
+    float: right;
+    transition: transform 0.2s ease-in-out;
+}
+
+.editor-details[open] > summary::after {
+    transform: rotate(90deg);
 }
 
 /* ---- Tables: table.rollertable ----

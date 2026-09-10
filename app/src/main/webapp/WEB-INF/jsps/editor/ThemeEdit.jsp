@@ -113,14 +113,30 @@
              grouping; the change listener is delegated, not inline. --%>
         <p class="lead" id="themeChooserLabel"><spring:message code="themeEditor.selectTheme"/></p>
 
+        <%-- The current theme id may name no card at all: a blank
+             selectedThemeId (the weblog is on a custom theme), OR a non-blank
+             one that matches nothing in ${themes} (a retired/removed shared
+             theme id still on the row). Either way the fallback is the first
+             card -- computed once, up front, rather than folded into the
+             per-card condition, because "found anywhere in the list" is not
+             expressible from inside the same forEach that is looking for it. --%>
+        <c:set var="selectedThemeFound" value="false"/>
+        <c:forEach items="${themes}" var="opt">
+            <c:if test="${opt.id == selectedThemeId}">
+                <c:set var="selectedThemeFound" value="true"/>
+            </c:if>
+        </c:forEach>
+
         <div class="theme-cards" role="radiogroup" aria-labelledby="themeChooserLabel">
-            <%-- The first card is checked when the weblog names no shared
-                 theme (i.e. it is on a custom one). That is not cosmetic: the
-                 <select> this replaced always posted a value, because a
-                 browser selects the first option when none is marked selected,
-                 and the custom-to-shared path relies on it -- with no radio
-                 checked the form posts no selectedThemeId at all and the save
-                 answers "theme not found". --%>
+            <%-- The first card is checked when the weblog's current theme
+                 isn't found among the rendered cards (blank selectedThemeId
+                 on a custom theme, or a shared id that no longer exists).
+                 That is not cosmetic: the <select> this replaced always
+                 posted a value, because a browser selects the first option
+                 when none is marked selected, and the custom-to-shared path
+                 relies on it -- with no radio checked the form posts no
+                 selectedThemeId at all and the save answers "theme not
+                 found". --%>
             <c:forEach items="${themes}" var="opt" varStatus="themeStatus">
                 <label class="theme-card">
                     <c:if test="${not empty opt.previewImage}">
@@ -130,7 +146,7 @@
                     <span class="theme-card-name">
                         <input class="theme-card-radio" type="radio" name="selectedThemeId"
                                value="${fn:escapeXml(opt.id)}"
-                               <c:if test="${opt.id == selectedThemeId or (empty selectedThemeId and themeStatus.first)}">checked</c:if>/>
+                               <c:if test="${opt.id == selectedThemeId or (not selectedThemeFound and themeStatus.first)}">checked</c:if>/>
                         ${fn:escapeXml(opt.name)}
                     </span>
                     <span class="theme-card-desc">${fn:escapeXml(opt.description)}</span>

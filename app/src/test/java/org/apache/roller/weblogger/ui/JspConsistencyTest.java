@@ -706,6 +706,74 @@ class JspConsistencyTest {
     }
 
     /**
+     * B9's `<details>` disclosure on MediaFileAdd.jsp had two loose ends,
+     * folded in here per B12's deferred-minors decision. First, its summary
+     * used a bare {@code cursor:pointer} rule rather than the same chevron
+     * treatment {@code .editor-drawer} already gives its own disclosure
+     * toggles ({@code EntryEdit.jsp}'s SEO drawer) -- two disclosure widgets
+     * with two different looks reads as two components, not one idiom.
+     * Second, the details started collapsed on every render, including a
+     * re-render after a validation refusal that carries typed description,
+     * copyright or tags -- collapsing typed-but-unsubmitted text out of view
+     * is the same mistake the field-error work exists to prevent for
+     * top-level fields, just one level down.
+     */
+    @Test
+    void mediaFileAddDetailsMatchesTheDrawerChevronAndReopensWithContent() throws IOException {
+        String markup = withoutJspComments(
+                Files.readString(JSPS.resolve("editor/MediaFileAdd.jsp"), StandardCharsets.UTF_8));
+
+        assertTrue(markup.contains(
+                "<details class=\"editor-details\" "
+                        + "${not empty bean.description or not empty bean.tagsAsString "
+                        + "or not empty bean.copyrightText ? 'open' : ''}>"),
+                "the details must reopen when a re-render carries description, tags or copyright");
+
+        String css = Files.readString(ROLLER_CSS, StandardCharsets.UTF_8);
+        int drawerBlockStart = css.indexOf(".editor-drawer {");
+        int drawerBlockEnd = css.indexOf("}", drawerBlockStart);
+        String drawerBlock = css.substring(drawerBlockStart, drawerBlockEnd);
+        int detailsBlockStart = css.indexOf(".editor-details > summary {");
+        int detailsBlockEnd = css.indexOf("}", detailsBlockStart);
+        String detailsBlock = css.substring(detailsBlockStart, detailsBlockEnd);
+
+        assertTrue(detailsBlock.contains("var(--accent)"),
+                ".editor-details > summary must wear .editor-drawer's accent color");
+        assertTrue(detailsBlock.contains("font-weight: 600"),
+                ".editor-details > summary must wear .editor-drawer's weight");
+        assertTrue(drawerBlock.contains("var(--accent)") && drawerBlock.contains("font-weight: 600"),
+                "sanity: .editor-drawer itself must still carry the properties being reused");
+
+        int chevronStart = css.indexOf(".editor-details > summary::");
+        assertTrue(chevronStart >= 0, ".editor-details > summary must have its own rotating chevron, "
+                + "the same shape as .editor-drawer::after / .editor-drawer:not(.collapsed)::after");
+    }
+
+    /**
+     * B9's "first card checked" fallback only covered a blank
+     * {@code selectedThemeId} (a weblog on a custom theme). A weblog whose
+     * {@code editorTheme} names a shared theme that no longer exists (a
+     * retired id, or a directory removed by hand) sends a NON-blank
+     * {@code selectedThemeId} that matches no card, so the old condition
+     * {@code opt.id == selectedThemeId or (empty selectedThemeId and
+     * themeStatus.first)} checks nothing at all -- the browser posts no
+     * {@code selectedThemeId}, and save answers "theme not found". The
+     * fallback must trigger whenever the weblog's current theme is not
+     * found among the rendered cards, not only when it is blank.
+     */
+    @Test
+    void themeCardFallsBackToTheFirstCardWhenTheCurrentThemeIsNotInTheList() throws IOException {
+        String markup = withoutJspComments(
+                Files.readString(JSPS.resolve("editor/ThemeEdit.jsp"), StandardCharsets.UTF_8));
+
+        assertFalse(markup.contains("empty selectedThemeId and themeStatus.first"),
+                "the old fallback only handled a blank selectedThemeId, not one naming a missing theme");
+        assertTrue(markup.contains("selectedThemeFound"),
+                "the checked condition must fall back to the first card whenever the weblog's "
+                        + "current theme id is not found among the rendered cards");
+    }
+
+    /**
      * JSP comments are not part of the rendered page, so a scan asserting
      * that some pattern is ABSENT must not be defeated by prose that merely
      * mentions it (or, worse, pass for the wrong reason on prose that

@@ -141,6 +141,23 @@ class EditorJspLabelBindingTest {
      * standing in for a control the other branch renders (again ThemeEdit,
      * which ships {@code themeType=shared} when there is nothing to choose
      * between) is the correct shape, not a defect.
+     *
+     * <p>Two blind spots this narrowing accepted, recorded rather than fixed
+     * because closing either would reintroduce the original false positive:
+     * <ul>
+     * <li>Keying a radio/checkbox on {@code name=} plus {@code value=} means
+     * two checkboxes that are really "the same control" across branches --
+     * meant to share one {@code id=} -- but whose {@code value=} diverges (a
+     * typo, or one branch dropping the attribute so it defaults to
+     * {@code "on"}) are read as two unrelated controls instead of one with a
+     * dangling label. The check cannot tell "different value, same control"
+     * from "different value, different control".
+     * <li>Skipping every {@code type="hidden"} control means a {@code for=}
+     * that happens to target a hidden input's id -- unusual, but nothing
+     * stops a JSP from doing it -- is invisible to this scan even if that id
+     * differs between branches. Hidden inputs are not meant to be labelled,
+     * which is why this is accepted rather than closed.
+     * </ul>
      */
     @Test
     void aControlDeclaredInSeveralBranchesKeepsTheSameIdInEachOfThem() throws Exception {

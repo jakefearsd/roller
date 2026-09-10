@@ -66,8 +66,10 @@
 
     <%-- A native <details>, not a Bootstrap collapse: no JS, no aria wiring to
          get wrong, and the browser's own disclosure state. Whatever is typed
-         here is applied to every file in the batch. --%>
-    <details class="editor-details">
+         here is applied to every file in the batch. Starts open on a
+         re-render that carries typed-but-unsubmitted text, so a validation
+         refusal never hides what the author already typed. --%>
+    <details class="editor-details" ${not empty bean.description or not empty bean.tagsAsString or not empty bean.copyrightText ? 'open' : ''}>
         <summary class="rail-group-label"><spring:message code="generic.details"/></summary>
 
         <div class="row mb-3">
