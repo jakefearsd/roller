@@ -709,21 +709,19 @@ table.mm_table_actions td {
     margin-top: 0;
 }
 
-/* The same demotion, for the two places headings still arrived at their
+/* The same demotion, for the one place headings still arrive at their
    element's own size. roller.css deliberately has no global h1-h6 reset --
    .roller-page-title owns 20px and everything else was expected to opt in --
-   but "opt in" only ever happened inside .card-header, so every bare <h3>/<h4>
+   but "opt in" only ever happened inside .card-header, so a bare <h3>/<h4>
    elsewhere rendered at Bootstrap's fluid default: 24-28px, i.e. LARGER than
-   the page title it sits beneath.
-   1. The sidebar tiles (EntriesSidebar, MediaFileSidebar,
-      MainMenuSidebar, CategoriesSidebar, TemplatesSidebar, MembersSidebar) --
-      ten headings, and the worst offenders because they sit in the left column
-      directly beside #adminRail's 12px caps-labels and shout over them.
-   2. Modal titles -- BS5 emits h4.modal-title/h3 inside .modal-header, which is
-      not a .card-header, so all eleven admin dialogs opened at 24-28px.
-   Both are the type role, not new design: same six declarations as above. */
-.roller-column-left .card-body > h3,
-.roller-column-left .card-body > h4,
+   the page title it sits beneath. Modal titles are the one survivor -- BS5
+   emits h4.modal-title/h3 inside .modal-header, which is not a .card-header,
+   so all eleven admin dialogs opened at 24-28px. (Task B6: the sidebar tiles
+   -- EntriesSidebar, MediaFileSidebar, MainMenuSidebar, CategoriesSidebar,
+   TemplatesSidebar -- used to be the other half of this rule; they no longer
+   emit <h3> at all, having moved to .sidebar-label below, so the
+   .roller-column-left .card-body selector this rule used to carry for them
+   is gone too.) Same six declarations as .card-header/.section-head above. */
 .modal-header h3,
 .modal-header .modal-title {
     margin: 0 0 8px;
@@ -735,15 +733,37 @@ table.mm_table_actions td {
     color: var(--ink-soft);
 }
 
-/* The sidebar tiles separate their sections with <hr size="1" noshade>, whose
-   presentational attributes do nothing in HTML5 and whose default border is
-   not a token. One rule beats editing seven JSPs. */
-.roller-column-left .card-body hr {
-    height: 0;
-    margin: 12px 0;
-    border: 0;
+/* Task B6: the sidebar tiles on the rail's own grammar -- a caps-label per
+   logical block instead of a Bootstrap card with h3/hr section markup. The
+   wrapper is <aside id="adminSidebar"> now (see tiles-tabbedpage.jsp /
+   tiles-mainmenupage.jsp), not .card/.card-body, so .sidebar-group draws its
+   own separator instead of relying on the old ".card-body hr" reset that
+   used to turn <hr size="1" noshade> into a token-colored line -- there is
+   no <hr> left anywhere in a sidebar tile for that rule to catch. */
+.sidebar {
+    padding: 12px 0 0;
+}
+
+.sidebar-group {
+    padding: 12px 16px;
     border-top: 1px solid var(--line);
-    opacity: 1;
+}
+
+.sidebar-label {
+    margin: 0 0 8px;
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+}
+
+/* MediaFileSidebar's "Add Media File" link used to bold itself with an
+   inline style="font-weight:bold" when it was the current action -- weight
+   600, not the browser's 700 "bold", is this app's one emphasis value. */
+.sidebar-current-action {
+    font-weight: 600;
 }
 
 /* Collapse-toggle chevron: BS3's Glyphicons Halflings font is gone, so this is a

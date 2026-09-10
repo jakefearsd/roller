@@ -22,25 +22,30 @@
      scheme; none of the four has a CSS rule any more. --%>
 <%-- Edit profile --%>
 
-<h3><span class="bi bi-person" aria-hidden="true"></span>
-<a href="<c:url value='/roller-ui/profile.rol'/>"><spring:message code="yourWebsites.editProfile" /></a></h3>
+<div class="sidebar-group">
+<p class="sidebar-label"><span class="bi bi-person" aria-hidden="true"></span>
+<a href="<c:url value='/roller-ui/profile.rol'/>"><spring:message code="yourWebsites.editProfile" /></a></p>
 <p><spring:message code="yourWebsites.editProfile.desc" /></p>
+</div>
 
 <%-- Create weblog --%>
 
 <c:if test="${rc:getBooleanProp('site.allowUserWeblogCreation') && (rc:getBooleanProp('groupblogging.enabled') || empty existingPermissions)}">
-    <h3><span class="bi bi-plus-lg" aria-hidden="true"></span>
-    <a href="<c:url value='/roller-ui/createWeblog.rol'/>"><spring:message code="yourWebsites.createWeblog" /></a></h3>
+    <div class="sidebar-group">
+    <p class="sidebar-label"><span class="bi bi-plus-lg" aria-hidden="true"></span>
+    <a href="<c:url value='/roller-ui/createWeblog.rol'/>"><spring:message code="yourWebsites.createWeblog" /></a></p>
     <p><spring:message code="yourWebsites.createWeblog.desc" /></p>
+    </div>
 </c:if>
 
 <c:if test="${userIsAdmin}">
 
     <%-- Roller settings --%>
 
-    <h3><span class="bi bi-wrench" aria-hidden="true"></span>
-    <a href="<c:url value='/roller-ui/admin/globalConfig.rol'/>"><spring:message code="yourWebsites.globalAdmin" /></a></h3>
+    <div class="sidebar-group">
+    <p class="sidebar-label"><span class="bi bi-wrench" aria-hidden="true"></span>
+    <a href="<c:url value='/roller-ui/admin/globalConfig.rol'/>"><spring:message code="yourWebsites.globalAdmin" /></a></p>
     <p><spring:message code="yourWebsites.globalAdmin.desc" /></p>
+    </div>
 
 </c:if>
-

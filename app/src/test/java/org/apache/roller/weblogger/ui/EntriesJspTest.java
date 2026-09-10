@@ -179,6 +179,32 @@ class EntriesJspTest {
     }
 
     /**
+     * Folded in from B5's round-1 fix (task-B5-report.md, "Held back"):
+     * {@code EntriesBean.status} defaults to {@code "ALL"} and
+     * {@code EntriesController.execute} does
+     * {@code "ALL".equals(status) ? null : PubStatus.valueOf(status)} -- so an
+     * UNGUARDED hidden {@code bean.status} input posts {@code bean.status=}
+     * (empty) whenever the incoming request had a blank status, overriding
+     * the "ALL" default and reaching {@code PubStatus.valueOf("")}, an
+     * uncaught {@code IllegalArgumentException} (a 500, not a degraded list).
+     * {@code Entries.jsp}'s own bulk form already guards the same field with
+     * {@code <c:if test="${not empty bean.status}">}; the sidebar's copy must
+     * carry the identical guard.
+     */
+    @Test
+    void theHiddenStatusFieldIsGuardedAgainstAnEmptyValue() throws IOException {
+        String sidebar = read(SIDEBAR);
+
+        Matcher guarded = Pattern.compile(
+                "<c:if\\s+test=\"\\$\\{not empty bean\\.status}\">\\s*"
+                        + "<input type=\"hidden\" name=\"bean\\.status\"").matcher(sidebar);
+        assertTrue(guarded.find(),
+                "EntriesSidebar.jsp posts bean.status unconditionally -- an empty incoming status "
+                        + "reaches PubStatus.valueOf(\"\") and 500s; wrap the hidden input in "
+                        + "<c:if test=\"${not empty bean.status}\"> the way Entries.jsp's bulk form does");
+    }
+
+    /**
      * Sort is a select that submits on change, and the submit is wired by a
      * delegated listener rather than an inline {@code onchange} -- same
      * reasoning as {@code data-confirm} (see roller.js): behaviour belongs in

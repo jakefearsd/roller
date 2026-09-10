@@ -17,12 +17,12 @@
 --%>
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<h3><spring:message code="weblogEntryQuery.sidebarTitle"/></h3>
-<hr/>
+<div class="sidebar-group">
+<p class="sidebar-label"><spring:message code="weblogEntryQuery.sidebarTitle"/></p>
 
 <p><spring:message code="weblogEntryQuery.sidebarDescription"/></p>
 
-<form action="${pageContext.request.contextPath}/roller-ui/authoring/entries.rol" method="get" class="form-vertical">
+<form action="${pageContext.request.contextPath}/roller-ui/authoring/entries.rol" method="get" class="form-stacked">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
 
     <%-- ========================================================= --%>
@@ -75,8 +75,15 @@
          is how a page ends up showing DRAFT while the sidebar claims ALL.
          This hidden field exists only so that submitting the sidebar (to
          filter, or to change the sort) does not silently discard whichever
-         chip the author had chosen. --%>
-    <input type="hidden" name="bean.status" value="${fn:escapeXml(bean.status)}"/>
+         chip the author had chosen. Guarded exactly like Entries.jsp's own
+         bulk form: EntriesBean.status defaults to "ALL" and
+         EntriesController.execute treats only that literal as "no filter"
+         (PubStatus.valueOf(status) otherwise) -- an unconditional empty
+         bean.status= would override the "ALL" default and reach
+         PubStatus.valueOf("") -> uncaught IllegalArgumentException -> 500. --%>
+    <c:if test="${not empty bean.status}">
+        <input type="hidden" name="bean.status" value="${fn:escapeXml(bean.status)}"/>
+    </c:if>
 
     <%-- ========================================================= --%>
     <%-- sort by --%>
@@ -101,4 +108,5 @@
     <button type="submit" class="btn btn-secondary"><spring:message code="weblogEntryQuery.button.query"/></button>
 
 </form>
+</div>
 

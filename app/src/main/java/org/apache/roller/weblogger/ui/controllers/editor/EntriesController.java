@@ -106,7 +106,15 @@ public class EntriesController extends BaseController {
             wesc.setEndDate(bean.getEndDate());
             wesc.setCatName(bean.getCategoryName());
             wesc.setTags(bean.getTags());
-            wesc.setStatus("ALL".equals(status) ? null : WeblogEntry.PubStatus.valueOf(status));
+            // A blank status means the same thing as "ALL" (task B5/B6's
+            // EntriesSidebar.jsp guards its hidden bean.status input against
+            // posting one, but that is a JSP-side belt; a query string built
+            // by hand, or a form whose guard regresses, still reaches here --
+            // and PubStatus.valueOf("") is an uncaught IllegalArgumentException,
+            // outside the catch below, i.e. a 500 rather than an unfiltered
+            // list).
+            wesc.setStatus(StringUtils.isBlank(status) || "ALL".equals(status)
+                    ? null : WeblogEntry.PubStatus.valueOf(status));
             wesc.setText(bean.getText());
             wesc.setSortBy(bean.getSortBy());
             wesc.setOffset(bean.getPage() * COUNT);

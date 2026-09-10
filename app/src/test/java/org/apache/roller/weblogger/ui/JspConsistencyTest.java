@@ -225,6 +225,52 @@ class JspConsistencyTest {
         }
     }
 
+    /**
+     * Task B6: the five sidebar tiles (EntriesSidebar, MediaFileSidebar,
+     * CategoriesSidebar, TemplatesSidebar, MainMenuSidebar) speak the rail's
+     * own grammar instead of a Bootstrap card with h3/hr section markup: a
+     * caps-label ({@code p.sidebar-label}) per logical block, each wrapped in
+     * a {@code div.sidebar-group}, no {@code <h3>} and no {@code <hr>}
+     * anywhere in a sidebar tile. The two layouts that render a sidebar
+     * (tiles-tabbedpage.jsp, tiles-mainmenupage.jsp) wrap the include in
+     * {@code <aside id="adminSidebar">} rather than a {@code .card}/
+     * {@code .card-body} pair -- checked only across the LEFT column, since
+     * the main content column keeps its own {@code .card-body} untouched.
+     *
+     * <p>{@code buttonsUseThreeBucketsOnly} above only forbids btn-success
+     * and a bare {@code class="btn"}; it does not count primaries per file,
+     * so MediaFileSidebar.jsp's Search button (a second {@code btn-primary}
+     * alongside MediaFileView.jsp's "Add a photo") needs no exemption there.
+     */
+    @Test
+    void sidebarsUseTheRailGrammar() throws IOException {
+        List<Path> sidebarJsps = jsps()
+                .filter(p -> p.getFileName().toString().endsWith("Sidebar.jsp"))
+                .toList();
+        assertEquals(5, sidebarJsps.size(),
+                "Expected exactly the five sidebar tiles -- the scan is not looking where it thinks it is.");
+
+        for (Path jsp : sidebarJsps) {
+            String src = Files.readString(jsp, StandardCharsets.UTF_8);
+            assertFalse(src.contains("<h3"), jsp + " still has an <h3> -- use <p class=\"sidebar-label\">");
+            assertFalse(src.contains("<hr"), jsp + " still has an <hr> -- .sidebar-group's border-top replaces it");
+            assertTrue(src.contains("sidebar-label"), jsp + " has no sidebar-label caps-label");
+        }
+
+        for (String layout : List.of("tiles/tiles-tabbedpage.jsp", "tiles/tiles-mainmenupage.jsp")) {
+            String src = Files.readString(JSPS.resolve(layout), StandardCharsets.UTF_8);
+            assertTrue(src.contains("id=\"adminSidebar\""), layout + " lacks the <aside id=\"adminSidebar\"> wrapper");
+
+            int leftStart = src.indexOf("roller-column-left");
+            int leftEnd = src.indexOf("roller-column-right");
+            assertTrue(leftStart >= 0 && leftEnd > leftStart,
+                    layout + ": could not isolate the left column -- the scan is not looking where it thinks it is.");
+            String leftColumn = src.substring(leftStart, leftEnd);
+            assertFalse(leftColumn.contains("card-body"),
+                    layout + ": the sidebar is still wrapped in .card-body");
+        }
+    }
+
     private static int countOccurrences(String haystack, String needle) {
         int count = 0;
         int idx = 0;

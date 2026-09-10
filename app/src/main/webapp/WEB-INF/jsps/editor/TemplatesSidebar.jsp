@@ -17,10 +17,10 @@
 --%>
 <%@ include file="/WEB-INF/jsps/taglibs-spring.jsp" %>
 
-<h3><spring:message code="pagesForm.addNewPage"/></h3>
-<hr/>
+<div class="sidebar-group">
+<p class="sidebar-label"><spring:message code="pagesForm.addNewPage"/></p>
 
-<form id="templateAdd" action="${pageContext.request.contextPath}/roller-ui/authoring/templates!add.rol" method="post">
+<form id="templateAdd" action="${pageContext.request.contextPath}/roller-ui/authoring/templates!add.rol" method="post" class="form-stacked">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
 
     <label for="newTmplName"><spring:message code="generic.name"/></label>
@@ -39,4 +39,5 @@
 
 <sec:csrfInput/>
 </form>
+</div>
 

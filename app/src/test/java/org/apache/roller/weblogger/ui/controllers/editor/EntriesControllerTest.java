@@ -132,6 +132,32 @@ class EntriesControllerTest extends EditorControllerTestSupport {
         assertNull(captor.getValue().getStatus(), "\"ALL\" must not be passed through as a literal enum value");
     }
 
+    /**
+     * Folded in from B5's round-1 fix (task-B5-report.md, "Held back"):
+     * {@code EntriesBean.status} defaults to {@code "ALL"}, but a request
+     * that posts {@code bean.status=} (empty, not absent) binds an empty
+     * string over that default. Before this fix, only the literal "ALL" was
+     * treated as "no filter" and {@code PubStatus.valueOf("")} threw an
+     * uncaught {@code IllegalArgumentException} -- outside the
+     * {@code catch (WebloggerException)} below, i.e. a 500. A blank status
+     * must mean the same thing as "ALL". This is a second line of defence
+     * behind EntriesSidebar.jsp's own {@code <c:if test="${not empty
+     * bean.status}">} guard on its hidden field, for any other caller
+     * (a hand-built query string, the API) that reaches this controller with
+     * an explicitly empty status.
+     */
+    @Test
+    void aBlankStatusIsTreatedTheSameAsAllRatherThanThrowing() throws Exception {
+        bean.setStatus("");
+
+        controller.execute(request, model, bean);
+
+        ArgumentCaptor<WeblogEntrySearchCriteria> captor =
+                ArgumentCaptor.forClass(WeblogEntrySearchCriteria.class);
+        org.mockito.Mockito.verify(weblogger.getWeblogEntryManager()).getWeblogEntries(captor.capture());
+        assertNull(captor.getValue().getStatus(), "a blank status must not be passed through to PubStatus.valueOf");
+    }
+
     @Test
     void aSpecificStatusIsPassedThroughAsItsPubStatusEnumValue() throws Exception {
         bean.setStatus("DRAFT");
