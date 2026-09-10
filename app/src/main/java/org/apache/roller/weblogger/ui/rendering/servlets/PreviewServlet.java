@@ -20,9 +20,12 @@ package org.apache.roller.weblogger.ui.rendering.servlets;
 
 import org.apache.roller.util.RollerConstants;
 import org.apache.roller.weblogger.pojos.Weblog;
+import org.apache.roller.weblogger.pojos.StaticThemeTemplate;
 import org.apache.roller.weblogger.pojos.Theme;
 import org.apache.roller.weblogger.pojos.WeblogTheme;
 import org.apache.roller.weblogger.pojos.Template;
+import org.apache.roller.weblogger.pojos.TemplateRendition.TemplateLanguage;
+import org.apache.roller.weblogger.pojos.ThemeTemplate;
 import org.apache.roller.weblogger.pojos.ThemeTemplate.ComponentType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -145,7 +148,11 @@ public class PreviewServlet extends HttpServlet {
         // weblog's own locale here -- the old showAllLangs=false behaviour --
         // no longer has anything to trigger it.
 
-        Template page = selectTemplate(previewRequest, weblog, tmpWebsite);
+        // WeblogPreviewRequest keeps no reference to the request it was parsed
+        // from, so the one flag the shell needs is read here and passed down
+        // rather than reached for inside selectTemplate.
+        Template page = selectTemplate(previewRequest, weblog, tmpWebsite,
+                "true".equals(request.getParameter("shell")));
         if (page == null) {
             // Either the tags rung refused outright (a tags preview without a
             // tags template must not fall through to the front page) or nothing
@@ -227,15 +234,23 @@ public class PreviewServlet extends HttpServlet {
     /**
      * The template this preview renders with, or null for a 404.
      *
-     * <p>A ladder, in order: a page named on the url, then the tags index, then
-     * the permalink template, then the theme's default. One rung does not fall
-     * through -- a tags-index request against a theme with no tags template
-     * returns null rather than dropping to the default, because rendering the
-     * front page for a /tags preview would tell an author their tags page works
-     * when the theme has no such page at all.
+     * <p>A ladder, in order: the editor's shell, then a page named on the url,
+     * then the tags index, then the permalink template, then the theme's
+     * default. One rung does not fall through -- a tags-index request against a
+     * theme with no tags template returns null rather than dropping to the
+     * default, because rendering the front page for a /tags preview would tell
+     * an author their tags page works when the theme has no such page at all.
+     *
+     * @param shell whether the request asked for the editor's live-preview
+     *              shell ({@code ?shell=true}); false is every other caller and
+     *              leaves the ladder below exactly as it was.
      */
     private Template selectTemplate(WeblogPreviewRequest previewRequest, Weblog weblog,
-                                    Weblog tmpWebsite) {
+                                    Weblog tmpWebsite, boolean shell) {
+
+        if (shell) {
+            return previewShell(tmpWebsite);
+        }
 
         Template page = null;
 
@@ -260,6 +275,38 @@ public class PreviewServlet extends HttpServlet {
             }
         }
         return page;
+    }
+
+    /**
+     * The theme's live-preview shell: stylesheet, asset macros and one empty
+     * article, which the editor fills over {@code postMessage} with the
+     * fragment {@code entryEdit!preview.rol} rendered.
+     *
+     * <p>The same two-rung shape as {@code PageServlet}'s {@code _page}
+     * lookup, for the same reason. A theme may ship its own {@code _preview}
+     * -- only the theme knows the classes its reading column is styled
+     * through -- and one that has never heard of the editor falls back to the
+     * shared shell, so every theme previews in its own stylesheet whether or
+     * not it was written for this.
+     *
+     * <p>Never null: a shell request is a request the editor has already
+     * committed to framing, so an empty surface in the weblog's stylesheet
+     * beats a 404 in an iframe.
+     */
+    private Template previewShell(Weblog tmpWebsite) {
+        ThemeTemplate shell = null;
+        try {
+            shell = weblogger.getThemeManager().getTheme(tmpWebsite).getTemplateByName("_preview");
+        } catch (Exception e) {
+            // Not simply "no _preview override" -- getTemplateByName returns
+            // null for that. An exception is a real lookup failure, so fall
+            // back to the shared shell (the author still gets a preview) but
+            // leave a trace for whoever wonders why it looks generic.
+            log.warn("Error looking up '_preview' template for weblog {}",
+                    tmpWebsite.getHandle(), e);
+        }
+        return shell != null ? shell
+                : new StaticThemeTemplate("templates/weblog/preview.vm", TemplateLanguage.VELOCITY);
     }
 
     /**

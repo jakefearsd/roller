@@ -1,0 +1,47 @@
+#**
+The editor's live-preview shell for Portfolio.
+
+Not a page: no pf-header, no nav, no pager, no hero -- the shell is the
+theme's reading column on the theme's dark ground, so an author sees their
+prose and their [gallery] grids the way they will publish while they type.
+The editor fills #previewArticle over postMessage (#showPreviewShellScript).
+
+The wrappers below are exactly what permalink.vm puts around an entry's
+rendered text -- main.pf-main.pf-main-entry, div.pf-entry-body (the 46rem
+centred reading column) and div.pf-entry-content -- with the article element
+carrying the content class itself, since there is only ever one entry here.
+pf-entry-body is a real wrapper rather than a second class on the article:
+without its max-width the prose would run the full bleed the front-page grid
+uses.
+*#
+<!doctype html>
+<html lang="$model.weblog.getLanguageTag()">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    ## permalink.vm's policy with one directive changed: frame-ancestors
+    ## 'self' rather than 'none', because this document is MEANT to be framed
+    ## by the editor on the same origin. Everything else is byte-identical --
+    ## a preview must not render under a policy the published page lacks.
+    ## No font-src, exactly as this theme's other pages: portfolio uses
+    ## system fonts only.
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src * data:; frame-src https://www.youtube-nocookie.com https://player.vimeo.com; base-uri 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'self'">
+    <title>Preview</title>
+    <link rel="stylesheet" href="$model.weblog.stylesheet">
+    ## #showAudienceAssets is deliberately absent: a [contact] or [subscribe]
+    ## form in a preview would be a live, posting form on unsaved text.
+    #showGalleryGridStyles()
+    #showGalleryAssets()
+    #showMapAssets()
+    #showEmbedAssets()
+    #showPreviewShellScript()
+</head>
+<!-- preview shell -->
+<body class="pf">
+<main class="pf-main pf-main-entry">
+    <div class="pf-entry-body">
+        <article id="previewArticle" class="pf-entry-content"></article>
+    </div>
+</main>
+</body>
+</html>

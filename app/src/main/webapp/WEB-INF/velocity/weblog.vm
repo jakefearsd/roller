@@ -916,6 +916,44 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 #**
+The receiving half of the editor's live preview.
+
+The shell templates (a theme's own _preview, or the shared
+WEB-INF/velocity/templates/weblog/preview.vm) render the theme's stylesheet
+and asset macros around one empty #previewArticle; the editor, in the parent
+document, posts the server-rendered fragment in and this swaps it.
+
+Three things here are load-bearing. The origin check is what stops any other
+frame or window scripting the preview surface -- the editor and the shell are
+same-origin by construction, so an event from anywhere else is not ours.
+window.rollerPreviewInit is the seam A5 defines: swapping innerHTML leaves
+the new nodes uninitialised, so the galleries, maps and embeds in the
+fragment need the asset scripts run over them again, and only the editor
+bundle knows how. And the ready message is what lets the editor stop
+guessing when the frame is live rather than posting into a document that has
+not parsed yet.
+*#
+#macro(showPreviewShellScript)
+<script>
+window.addEventListener('message', function (event) {
+  if (event.origin !== window.location.origin) { return; }
+  var data = event.data || {};
+  if (data.type !== 'roller-preview') { return; }
+  var article = document.getElementById('previewArticle');
+  if (!article) { return; }
+  article.innerHTML = data.html;
+  if (window.rollerPreviewInit) { window.rollerPreviewInit(article); }
+  if (typeof data.scroll === 'number') {
+    var max = document.documentElement.scrollHeight - window.innerHeight;
+    window.scrollTo(0, Math.max(0, max) * data.scroll);
+  }
+});
+window.parent.postMessage({ type: 'roller-preview-ready' }, window.location.origin);
+</script>
+#end
+
+
+#**
 Shows weblog entries pager via default day template
 *#
 #macro(showWeblogEntriesPager $pager)

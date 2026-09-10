@@ -80,6 +80,30 @@ class ThemeAccessibilityTest {
         return p.getParent().getFileName() + "/" + p.getFileName();
     }
 
+    /**
+     * A theme's {@code _preview} shell, which is a frame body rather than a
+     * page and is exempt from the skip-link rule below.
+     *
+     * <p>The shell is what the entry editor loads into its preview iframe:
+     * the theme's stylesheet and asset macros wrapped around one empty
+     * article, with no header, no nav and no pager. A skip link exists to let
+     * a keyboard reader jump *past* that chrome; here there is nothing in
+     * front of the content to skip, so the link would only add one more tab
+     * stop ahead of the article -- the opposite of what the rule buys. Same
+     * reasoning as the chrome-free {@code .tiles-barepage} layout on the
+     * admin side: a document nobody reads as a page should not carry a page's
+     * furniture.
+     *
+     * <p>Deliberately not keyed on the filename alone. A template only earns
+     * the exemption by actually being a shell -- carrying the article the
+     * editor fills -- so a future {@code preview.vm} that grows into a real
+     * page is held to the rule like every other template.
+     */
+    private static boolean isPreviewShell(Path template, String src) {
+        return "preview.vm".equals(template.getFileName().toString())
+                && src.contains("id=\"previewArticle\"");
+    }
+
     // --------------------------------------------------------------- lang
 
     /**
@@ -117,13 +141,16 @@ class ThemeAccessibilityTest {
      * the first entry, on every single page. The skip link is the standard
      * escape, and it only works if it is the first focusable thing in the
      * document and points at an id that exists.
+     *
+     * <p>The one exemption is the editor's preview shell, which has no chrome
+     * to skip -- see {@link #isPreviewShell}.
      */
     @Test
     void everyThemePageThatOpensABodyOffersASkipLinkToItsMain() throws IOException {
         List<String> offenders = new ArrayList<>();
         for (Path template : templates()) {
             String src = read(template);
-            if (!src.contains("<body")) {
+            if (!src.contains("<body") || isPreviewShell(template, src)) {
                 continue;
             }
             if (!src.contains("href=\"#main\"")) {

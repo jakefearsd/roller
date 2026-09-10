@@ -81,15 +81,42 @@ class ThemePolishTest {
     }
 
     /**
+     * A theme's {@code _preview} shell, which is a frame body rather than a
+     * page and is exempt from the favicon rule below.
+     *
+     * <p>Both halves of that rule's reasoning are about a *tab*: the icon a
+     * reader sees, and the {@code /favicon.ico} a browser asks for when none
+     * is declared. Neither applies to a document that only ever loads inside
+     * the entry editor's preview iframe -- no browser paints a frame's icon,
+     * and none probes for one either. Declaring it anyway would be markup
+     * shipped on every preview render for something nothing can display.
+     *
+     * <p>Deliberately not keyed on the filename alone: a template earns the
+     * exemption only by actually being a shell (carrying the article the
+     * editor fills), so a future {@code preview.vm} that grows into a real
+     * page is held to the rule like every other template.
+     */
+    private static boolean isPreviewShell(Path template, String src) {
+        return "preview.vm".equals(template.getFileName().toString())
+                && src.contains("id=\"previewArticle\"");
+    }
+
+    /**
      * Only frontpage linked a favicon, so every weblog on the other three
      * themes served the browser's default document icon -- and, on each first
      * visit, a 404 for {@code /favicon.ico} it never asked for.
+     *
+     * <p>The one exemption is the editor's preview shell, which is never a
+     * tab -- see {@link #isPreviewShell}.
      */
     @Test
     void everyThemeHeadLinksTheSiteFavicon() throws IOException {
         List<String> offenders = new ArrayList<>();
         for (Path template : headTemplates()) {
             String src = read(template);
+            if (isPreviewShell(template, src)) {
+                continue;
+            }
             if (!src.contains("rel=\"icon\"")) {
                 offenders.add(name(template) + ": no favicon link");
             }

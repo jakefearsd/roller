@@ -100,4 +100,16 @@
             <templateLanguage>velocity</templateLanguage>
         </rendition>
     </template>
+
+    <template action="custom">
+        <name>_preview</name>
+        <description>_preview</description>
+        <navbar>false</navbar>
+        <hidden>true</hidden>
+        <contentType>text/html</contentType>
+        <rendition>
+            <contentsFile>preview.vm</contentsFile>
+            <templateLanguage>velocity</templateLanguage>
+        </rendition>
+    </template>
 </weblogtheme>

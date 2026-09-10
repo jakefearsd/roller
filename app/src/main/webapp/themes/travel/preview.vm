@@ -1,0 +1,44 @@
+#**
+The editor's live-preview shell for Travel Guide.
+
+Not a page: no tg-header, no nav, no pager -- the shell is the theme's
+reading column and nothing else, so an author sees their prose (and the
+[map]/[faq]/[cta] blocks this theme styles) the way they will publish while
+they type. The editor fills #previewArticle over postMessage
+(#showPreviewShellScript).
+
+The wrappers below are exactly what permalink.vm puts around an entry's
+rendered text -- main.tg-main.tg-main-entry (the 58rem entry measure) and
+div.tg-entry-content (--tg-measure, and the heading/blockquote treatment) --
+with the article element carrying the content class itself, since there is
+only ever one entry here.
+*#
+<!doctype html>
+<html lang="$model.weblog.getLanguageTag()">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    ## permalink.vm's policy with one directive changed: frame-ancestors
+    ## 'self' rather than 'none', because this document is MEANT to be framed
+    ## by the editor on the same origin. Everything else is byte-identical --
+    ## a preview must not render under a policy the published page lacks.
+    ## No font-src, exactly as this theme's other pages: travel uses system
+    ## fonts only.
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src * data:; frame-src https://www.youtube-nocookie.com https://player.vimeo.com; base-uri 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'self'">
+    <title>Preview</title>
+    <link rel="stylesheet" href="$model.weblog.stylesheet">
+    ## #showAudienceAssets is deliberately absent: a [contact] or [subscribe]
+    ## form in a preview would be a live, posting form on unsaved text.
+    #showGalleryGridStyles()
+    #showGalleryAssets()
+    #showMapAssets()
+    #showEmbedAssets()
+    #showPreviewShellScript()
+</head>
+<!-- preview shell -->
+<body class="tg">
+<main class="tg-main tg-main-entry">
+    <article id="previewArticle" class="tg-entry-content"></article>
+</main>
+</body>
+</html>

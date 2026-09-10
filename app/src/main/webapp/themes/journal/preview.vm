@@ -1,0 +1,43 @@
+#**
+The editor's live-preview shell for Quiet Journal.
+
+Not a page: no qj-head, no nav, no pager -- the shell is the theme's reading
+column and nothing else, so an author sees their prose set the way it will
+publish while they type. The editor fills #previewArticle over postMessage
+(#showPreviewShellScript).
+
+The wrappers below are exactly what permalink.vm puts around an entry's
+rendered text -- main.qj-main.qj-main-entry (the 40rem entry measure),
+article.qj-reading (its padding), div.qj-prose (Plex Serif, the 58ch measure
+and the pull-quote blockquote treatment) -- with the article element carrying
+the prose class itself, since there is only ever one entry here.
+*#
+<!doctype html>
+<html lang="$model.weblog.getLanguageTag()">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    ## permalink.vm's policy with one directive changed: frame-ancestors
+    ## 'self' rather than 'none', because this document is MEANT to be framed
+    ## by the editor on the same origin. Everything else is byte-identical --
+    ## a preview must not render under a policy the published page lacks.
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src * data:; frame-src https://www.youtube-nocookie.com https://player.vimeo.com; font-src 'self'; base-uri 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'self'">
+    <title>Preview</title>
+    <link rel="stylesheet" href="$model.weblog.stylesheet">
+    ## #showAudienceAssets is deliberately absent: a [contact] or [subscribe]
+    ## form in a preview would be a live, posting form on unsaved text.
+    #showGalleryGridStyles()
+    #showGalleryAssets()
+    #showMapAssets()
+    #showEmbedAssets()
+    #showPreviewShellScript()
+</head>
+<!-- preview shell -->
+<body class="qj">
+<main class="qj-main qj-main-entry">
+    <div class="qj-reading">
+        <article id="previewArticle" class="qj-prose"></article>
+    </div>
+</main>
+</body>
+</html>
