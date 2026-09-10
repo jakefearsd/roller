@@ -625,6 +625,59 @@ class JspConsistencyTest {
         }
     }
 
+    // --- B9c: the main menu lists weblogs as quiet rows ---
+
+    /**
+     * Task B9c: the first screen an author lands on listed each weblog as a
+     * Bootstrap card carrying a raw absolute URL on its own line and a
+     * {@code .btn-group} of four equally-loud buttons -- a toolbar, on a
+     * screen whose job is to get you into one weblog. It is a quiet row now:
+     * the name links to the weblog (so the URL line has nothing left to say),
+     * the handle and entry count wear the mono data face, and the actions are
+     * one primary "New entry" beside plain {@code .quiet-link}s.
+     *
+     * <p>{@code h3.mm_weblog_name} survives the restyle deliberately:
+     * {@code Routes.java} identifies {@code menu.rol} by that selector, so
+     * renaming it here without moving the marker in the same commit fails
+     * {@code RouteSweepIT}.
+     *
+     * <p>Two {@code btn btn-primary} occurrences, not one: the empty state
+     * above the loop ("you have no blog yet") has its own, and the two branches
+     * are mutually exclusive at render time even though both are in the source.
+     */
+    @Test
+    void mainMenuListsWeblogsAsQuietRows() throws IOException {
+        String markup = withoutJspComments(
+                Files.readString(JSPS.resolve("core/MainMenu.jsp"), StandardCharsets.UTF_8));
+
+        assertTrue(markup.contains("class=\"weblog-row\""),
+                "each weblog must be a .weblog-row");
+        assertTrue(markup.contains("<h3 class=\"mm_weblog_name section-head\">"),
+                "h3.mm_weblog_name is Routes.java's marker for menu.rol -- keep it");
+        assertTrue(markup.contains("class=\"weblog-actions\""),
+                "the row's actions belong in a .weblog-actions strip");
+        assertTrue(markup.contains("class=\"quiet-link\""),
+                "everything but New entry is a quiet link, not a button");
+
+        assertFalse(markup.contains("btn-group"),
+                "the four-button toolbar is gone -- one primary plus quiet links");
+        assertFalse(markup.contains("yourWeblogBox"),
+                "the row is not a Bootstrap card any more");
+        assertFalse(markup.contains("btn btn-secondary"),
+                "a secondary button in the row is the toolbar coming back");
+
+        assertEquals(2, countOccurrences(markup, "btn btn-primary"),
+                "exactly two primaries in the source: the empty state's and the "
+                        + "row's New entry, which never render together");
+        assertEquals(1, countOccurrences(markup, "urls.weblogAbsolute(perms.weblog)"),
+                "the raw URL line is gone; the weblog name is the only link to it");
+
+        String css = Files.readString(ROLLER_CSS, StandardCharsets.UTF_8);
+        for (String rule : List.of(".weblog-row", ".weblog-actions")) {
+            assertTrue(css.contains(rule), "roller.css lacks " + rule);
+        }
+    }
+
     /**
      * JSP comments are not part of the rendered page, so a scan asserting
      * that some pattern is ABSENT must not be defeated by prose that merely

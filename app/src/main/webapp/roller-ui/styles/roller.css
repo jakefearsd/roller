@@ -1190,6 +1190,22 @@ table.mm_table_actions td {
     }
 }
 
+/* ---- Main menu: one quiet row per weblog ----
+   Rows separated by a rule rather than boxed as cards: this is a list to pick
+   from, and eight cards read as eight competing objects. One primary action
+   sits in the strip; everything else beside it is a quiet link. */
+.weblog-row {
+    padding: 16px 0;
+    border-top: 1px solid var(--line);
+}
+
+.weblog-actions {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin-top: 8px;
+}
+
 /* ---- Theme chooser: a grid of cards ----
    Replaces a one-line <select> beside a single ajax-fetched thumbnail. A
    theme is a look, so every option shows its own preview picture and you
@@ -1315,6 +1331,7 @@ table.rollertable > tbody > tr:hover > * {
    also inside a <span> in the status pill and the entry-meta line, none
    of which the td.data selector reaches. */
 td.data,
+span.data,
 time.data {
     font-family: var(--font-data);
     font-variant-numeric: tabular-nums;
