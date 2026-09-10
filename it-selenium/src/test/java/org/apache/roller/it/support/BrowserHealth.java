@@ -24,11 +24,11 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WrapsDriver;
 import org.openqa.selenium.devtools.DevTools;
 import org.openqa.selenium.devtools.HasDevTools;
-import org.openqa.selenium.devtools.v150.network.Network;
-import org.openqa.selenium.devtools.v150.network.model.Cookie;
-import org.openqa.selenium.devtools.v150.page.Page;
-import org.openqa.selenium.devtools.v150.page.model.Frame;
-import org.openqa.selenium.devtools.v150.storage.Storage;
+import org.openqa.selenium.devtools.v153.network.Network;
+import org.openqa.selenium.devtools.v153.network.model.Cookie;
+import org.openqa.selenium.devtools.v153.page.Page;
+import org.openqa.selenium.devtools.v153.page.model.Frame;
+import org.openqa.selenium.devtools.v153.storage.Storage;
 
 import java.net.URI;
 import java.time.Duration;
@@ -455,9 +455,65 @@ public final class BrowserHealth {
      * has rather than one per fix-and-rerun cycle.
      */
     public void assertHealthy() {
-        report(Stream.of(brokenResourceReport(), failedRequestReport(), consoleReport())
+        report(Stream.of(blindnessReport(), brokenResourceReport(), failedRequestReport(),
+                        consoleReport())
                 .flatMap(List::stream)
                 .toList());
+    }
+
+    /**
+     * Fails when this recorder saw NOTHING while the browser was demonstrably on
+     * a real page -- i.e. when the monitor itself has gone blind.
+     *
+     * <p>Every other check here reports by finding something wrong in what it
+     * recorded, so all of them pass vacuously when nothing is recorded at all:
+     * {@code brokenResourceReport} over an empty list is an empty report, which
+     * reads exactly like a clean page. A monitor that has stopped seeing traffic
+     * therefore turns the whole suite green rather than red, on 126 tests at
+     * once, and nothing in the output says so.
+     *
+     * <p>That is not a hypothetical failure mode, it is the one this class is
+     * most exposed to. The listeners are registered through a Chrome DevTools
+     * Protocol binding pinned to one CDP major ({@code devtools.v153}); Chrome
+     * ships a new major every few weeks, and Selenium answers a mismatch by
+     * falling back to the nearest binding it has and logging a line nobody
+     * reads. The fallback works until it doesn't, and the failure is silence.
+     *
+     * <p>The discriminator has to come from OUTSIDE CDP or it is circular --
+     * {@link #page} is itself set by a CDP event, so a blind recorder also
+     * believes it is still on {@code about:blank}. {@code getCurrentUrl()} goes
+     * over the WebDriver protocol instead, which is a separate channel: if
+     * WebDriver says the browser is on an http(s) page and CDP recorded no
+     * response for it, the two disagree and the recorder is the one that is
+     * wrong. A test that never navigates (several drive the endpoints over
+     * plain HTTP instead) parks on {@code about:blank} and is correctly
+     * exempt.
+     */
+    private List<String> blindnessReport() {
+        if (!responses.isEmpty()) {
+            return List.of();
+        }
+        String url;
+        try {
+            url = WebDriverRunner.getAndCheckWebDriver().getCurrentUrl();
+        } catch (RuntimeException cannotAsk) {
+            // No opinion is the right answer here: if the browser cannot even be
+            // asked where it is, this check has nothing to compare against, and
+            // whatever went wrong will surface as the test's own failure.
+            return List.of();
+        }
+        if (url == null || !(url.startsWith("http://") || url.startsWith("https://"))) {
+            return List.of();
+        }
+        return List.of(
+                "The browser is on " + url + " but this recorder saw no network traffic at all.",
+                "  That is a broken MONITOR, not a clean page: with nothing recorded, every",
+                "  other check here passes vacuously and the whole suite goes green blind.",
+                "  Most likely the CDP bindings no longer match the browser -- Selenium falls",
+                "  back to its nearest version silently (look for \"Unable to find an exact match",
+                "  for CDP version\" in the output). Fix: pin selenium-devtools-vNNN in",
+                "  it-selenium/pom.xml to the version this Chrome speaks and update the imports",
+                "  in BrowserHealth.");
     }
 
     /**

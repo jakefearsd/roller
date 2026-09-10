@@ -44,7 +44,7 @@ limitations under the License.
     <properties>
         <!-- Versions match the sibling jspwiki/wikantik Selenide suite. -->
         <selenide.version>7.17.0</selenide.version>
-        <selenium.version>4.47.0</selenium.version>
+        <selenium.version>4.49.0</selenium.version>
         <!-- Raised past selenide-core's transitive 5.6.2, which leaks a pooled
              connection whenever a response carries an unsupported
              Content-Encoding (CVE-2026-64607, pool-exhaustion DoS). This suite
@@ -186,13 +186,26 @@ limitations under the License.
         </dependency>
 
         <!-- Browser-health checks read sub-resource status codes over the Chrome
-             DevTools Protocol; Selenium 4's W3C API does not expose them. Selenium
-             bundles the v150 bindings transitively, but pin them so a Selenium bump
-             that drops v150 fails the build instead of failing at runtime. CDP
-             bindings tolerate a couple of Chrome majors of drift. -->
+             DevTools Protocol; Selenium 4's W3C API does not expose them. Pin the
+             bindings rather than taking them transitively, so a Selenium bump that
+             drops this version fails the build instead of failing at runtime.
+             That is not theoretical: 4.49.0 drops v150, which 4.47.0 shipped.
+
+             KEEP THIS AT THE NEWEST VERSION THE PINNED SELENIUM SHIPS. CDP
+             bindings tolerate a couple of Chrome majors of drift, and Selenium
+             falls back to the nearest it has, but the fallback is silent and a
+             blind Network domain makes every BrowserHealth check pass vacuously
+             rather than fail. Under 4.47.0 this said v150 while that same Selenium
+             already shipped v151 and the local Chrome spoke 152: two majors
+             of drift that nothing reported beyond a log line. 4.49.0 ships
+             v151/v152/v153, and v153 is both the newest it has and what the
+             Chrome on this machine speaks. Chrome moved 152 to 153 during the
+             afternoon this pin was written, which is the cadence to expect.
+             BrowserHealth's own blindness check is the backstop for when Chrome
+             moves past it again. -->
         <dependency>
             <groupId>org.seleniumhq.selenium</groupId>
-            <artifactId>selenium-devtools-v150</artifactId>
+            <artifactId>selenium-devtools-v153</artifactId>
             <version>${selenium.version}</version>
             <scope>test</scope>
         </dependency>
