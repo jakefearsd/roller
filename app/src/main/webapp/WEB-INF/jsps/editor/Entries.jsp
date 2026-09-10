@@ -104,10 +104,16 @@
      dropped silently on every chip click. The controller builds them from
      the same filterParams the pager's base url and the bulk redirect use.
 
-     fn:escapeXml on the href is not decoration: URLUtilities.getQueryString
-     does NOT url-encode its values, so bean.text -- raw, reflected straight
-     off the query string -- reaches this attribute as typed. Without the
-     escape a crafted bean.text closes the attribute. --%>
+     fn:escapeXml on the href is not decoration: it is markup-injection
+     defence for the attribute context this value is printed into.
+     URLUtilities.getQueryString already url-encodes both the key and the
+     value of every parameter it composes (see its javadoc, and CLAUDE.md's
+     Admin UI note) -- a value like bean.text cannot break out of the query
+     string on its own -- but the finished URL still lands inside an
+     href="..." attribute, and fn:escapeXml is what keeps that attribute well
+     formed regardless. The two encodings answer different questions:
+     url-encoding protects the query string, fn:escapeXml protects the HTML
+     attribute around it. --%>
 <nav class="entries-status-chips d-flex flex-wrap gap-2 mb-3" aria-label="<spring:message code='weblogEdit.status'/>">
     <c:forEach items="${statusOptions}" var="opt">
         <%-- A blank bean.status means the same thing as ALL, so both mark
