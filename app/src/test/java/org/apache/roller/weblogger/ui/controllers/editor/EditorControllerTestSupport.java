@@ -178,6 +178,19 @@ abstract class EditorControllerTestSupport {
     }
 
     /**
+     * The flash-attribute counterpart of {@link #invalidFields(Model)} -- for
+     * a controller whose error path redirects, the field markers a validation
+     * refused only reach the next request if they were carried across as a
+     * flash attribute the same way {@code errors}/{@code messages} are.
+     */
+    @SuppressWarnings("unchecked")
+    protected static List<String> flashInvalidFields(RedirectAttributes redirectAttributes) {
+        Collection<String> fields =
+                (Collection<String>) redirectAttributes.getFlashAttributes().get("invalidFields");
+        return fields == null ? Collections.emptyList() : List.copyOf(fields);
+    }
+
+    /**
      * Stub a runtime (database-backed) configuration property.
      *
      * <p>{@code WebloggerRuntimeConfig} reads these through
