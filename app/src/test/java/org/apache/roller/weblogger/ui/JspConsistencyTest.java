@@ -539,6 +539,92 @@ class JspConsistencyTest {
                 "boolean properties render as a .form-check with the label beside the box");
     }
 
+    // --- B9b: media add leads with the drop zone; the theme chooser is cards ---
+
+    /**
+     * Task B9b: the upload form asks for the files first. Description,
+     * copyright and tags used to sit above the drop zone -- three optional
+     * fields between an author and the only thing they came to the page to do,
+     * applied identically to every file in a batch. They are in a collapsed
+     * {@code <details>} below it now.
+     *
+     * <p>The folder {@code <select>} stays ABOVE the drop zone: it is not
+     * optional the way the three text fields are (it decides where the batch
+     * lands) and there is no undo for dropping thirty files into the wrong
+     * directory.
+     *
+     * <p>The three ids the drop-zone script and every media IT drive
+     * ({@code mediaDropZone}, {@code uploadedFiles}, {@code uploadButton}) are
+     * asserted here too, because reordering markup is exactly the edit that
+     * loses one by accident.
+     */
+    @Test
+    void mediaAddLeadsWithTheDropZone() throws IOException {
+        String markup = withoutJspComments(
+                Files.readString(JSPS.resolve("editor/MediaFileAdd.jsp"), StandardCharsets.UTF_8));
+
+        int folder = markup.indexOf("id=\"mfadd_bean_directoryId\"");
+        int dropZone = markup.indexOf("id=\"mediaDropZone\"");
+        int details = markup.indexOf("<details class=\"editor-details\"");
+        int description = markup.indexOf("id=\"mfadd_bean_description\"");
+
+        assertTrue(folder >= 0 && dropZone >= 0 && details >= 0 && description >= 0,
+                "MediaFileAdd.jsp is missing one of folder/drop zone/details/description "
+                        + "-- the scan is not looking where it thinks it is");
+        assertTrue(folder < dropZone,
+                "the folder select must stay above the drop zone: it decides where the "
+                        + "batch lands and there is no undo");
+        assertTrue(dropZone < details,
+                "the drop zone must come before the optional Details drawer");
+        assertTrue(details < description,
+                "description/copyright/tags belong inside the Details drawer");
+
+        for (String id : List.of("mediaDropZone", "uploadedFiles", "uploadButton", "mediaChosenFiles")) {
+            assertTrue(markup.contains("id=\"" + id + "\""),
+                    "MediaFileAdd.jsp lost id=\"" + id + "\", which its own script "
+                            + "and every media IT drive");
+        }
+    }
+
+    /**
+     * Task B9b: picking a theme is a grid of cards, each showing the theme's
+     * own preview image, not a one-line {@code <select>} beside a thumbnail
+     * fetched over ajax. Every card is a {@code <label>} wrapping a radio, so
+     * the whole card is the hit target and the browser does the grouping.
+     *
+     * <p>The chooser's {@code change} handler is delegated rather than an
+     * inline {@code onchange}, for the reason
+     * {@link #globalConfigHasTheSettingsRail} gives: an inline handler is a
+     * second place generated text reaches raw JavaScript. The old
+     * {@code #themeSelector} select and the {@code #themeThumbnail} it drove
+     * must both be gone -- leaving either means two chooser mechanisms on one
+     * page, only one of which the state machine listens to.
+     */
+    @Test
+    void themeChooserIsACardGrid() throws IOException {
+        String markup = withoutJspComments(
+                Files.readString(JSPS.resolve("editor/ThemeEdit.jsp"), StandardCharsets.UTF_8));
+
+        assertTrue(markup.contains("class=\"theme-cards\""),
+                "ThemeEdit.jsp must render the .theme-cards grid");
+        assertTrue(markup.contains("<label class=\"theme-card\">"),
+                "every theme is a <label class=\"theme-card\"> wrapping its radio");
+        assertTrue(markup.contains("type=\"radio\" name=\"selectedThemeId\""),
+                "the cards must post the same selectedThemeId the controller reads");
+        assertFalse(markup.contains("id=\"themeSelector\""),
+                "the old <select id=\"themeSelector\"> must be gone, not merely hidden");
+        assertFalse(markup.contains("id=\"themeThumbnail\""),
+                "the ajax-driven thumbnail is replaced by each card's own preview image");
+        assertFalse(markup.contains("onchange="),
+                "wire the chooser with a delegated change listener, not an inline onchange");
+
+        String css = Files.readString(ROLLER_CSS, StandardCharsets.UTF_8);
+        for (String rule : List.of(".theme-cards", ".theme-card", ".theme-card-thumb",
+                ".theme-card-name", ".theme-card-desc")) {
+            assertTrue(css.contains(rule), "roller.css lacks " + rule);
+        }
+    }
+
     /**
      * JSP comments are not part of the rendered page, so a scan asserting
      * that some pattern is ABSENT must not be defeated by prose that merely

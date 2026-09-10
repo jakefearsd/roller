@@ -26,7 +26,19 @@
 <form action="${pageContext.request.contextPath}/roller-ui/authoring/themeEdit!save.rol" method="post" class="form-vertical guard-submit">
 <input type="hidden" name="weblog" value="${actionWeblog.handle}"/>
 
-    <%-- Two choices side-by-side: choose Shared or Custom Theme --%>
+    <%-- Two choices side-by-side: choose Shared or Custom Theme.
+
+         Offered only when there is a choice to make. With
+         themes.customtheme.allowed off and the weblog on a shared theme,
+         customThemeAllowed is false and the "custom" half is refused by
+         ThemeEditController.save whatever the page shows -- so the row was a
+         lone radio, already selected, next to nothing. The whole row is
+         omitted, and a hidden themeType carries the only answer there is:
+         save() does nothing at all when themeType is absent, so this is not
+         optional decoration. A weblog already ON a custom theme keeps the
+         control, matching the controller's grandfathering rule. --%>
+    <c:choose>
+    <c:when test="${customThemeAllowed}">
 
     <div class="row row-display-flex">
 
@@ -38,7 +50,7 @@
                          against a 20px page title. --%>
                     <h3 class="section-head">
                         <input id="sharedRadio" type="radio" name="themeType" value="shared"
-                            <c:if test="${!customTheme}">checked</c:if> onclick="proposeThemeTypeChange($(this))"/>&nbsp;
+                            <c:if test="${!customTheme}">checked</c:if>/>&nbsp;
                         <label for="sharedRadio"><spring:message code="themeEditor.sharedTheme"/></label>
                     </h3>
                     <spring:message code="themeEditor.sharedThemeDescription"/>
@@ -46,27 +58,26 @@
             </div>
         </div>
 
-        <%-- Offered only when the installation allows custom themes. The
-             controller refuses the switch either way; this stops the page
-             advertising a choice that would be rejected. A weblog already on a
-             custom theme keeps the control, matching the controller's
-             grandfathering rule. --%>
-        <c:if test="${customThemeAllowed}">
         <div class="col-6">
             <div class="card">
                 <div class="card-body" id="customChooser">
                     <h3 class="section-head">
                         <input id="customRadio" type="radio" name="themeType" value="custom"
-                            <c:if test="${customTheme}">checked</c:if> onclick="proposeThemeTypeChange($(this))"/>&nbsp;
+                            <c:if test="${customTheme}">checked</c:if>/>&nbsp;
                         <label for="customRadio"><spring:message code="themeEditor.customTheme"/></label>
                     </h3>
                     <spring:message code="themeEditor.customThemeDescription"/>
                 </div>
             </div>
         </div>
-        </c:if>
 
     </div>
+
+    </c:when>
+    <c:otherwise>
+        <input type="hidden" name="themeType" value="shared"/>
+    </c:otherwise>
+    </c:choose>
 
     <%-- ================================================= --%>
 
@@ -93,17 +104,39 @@
 
     <div id="themeChooser" style="display:none;">
 
-        <%-- theme selector with preview image --%>
-        <p class="lead"><label for="themeSelector"><spring:message code="themeEditor.selectTheme"/></label></p>
-        <p>
-            <select name="selectedThemeId" id="themeSelector" class="form-control" style="width:20em" size="1" onchange="proposeSharedThemeChange(this[selectedIndex].value)">
-<c:forEach items="${themes}" var="opt">
-<option value="${opt.id}" ${opt.id == selectedThemeId ? 'selected' : ''}>${opt.name}</option>
-</c:forEach>
-</select>
-        </p>
-        <p><spring:message code="themeEditor.thisTheme"/> <p id="themeDescription"></p>
-        <p><img id="themeThumbnail" src="" class="img-fluid img-thumbnail" style="max-width: 30em" /></p>
+        <%-- A grid of cards, each showing the theme's own preview image, in
+             place of a one-line <select> beside a single thumbnail fetched
+             over ajax on every change -- which is also how a description
+             carrying a quote used to leave the preview frozen (see
+             ThemeDataServlet). Every card is a <label> wrapping its radio, so
+             the whole card is the hit target and the browser does the
+             grouping; the change listener is delegated, not inline. --%>
+        <p class="lead" id="themeChooserLabel"><spring:message code="themeEditor.selectTheme"/></p>
+
+        <div class="theme-cards" role="radiogroup" aria-labelledby="themeChooserLabel">
+            <%-- The first card is checked when the weblog names no shared
+                 theme (i.e. it is on a custom one). That is not cosmetic: the
+                 <select> this replaced always posted a value, because a
+                 browser selects the first option when none is marked selected,
+                 and the custom-to-shared path relies on it -- with no radio
+                 checked the form posts no selectedThemeId at all and the save
+                 answers "theme not found". --%>
+            <c:forEach items="${themes}" var="opt" varStatus="themeStatus">
+                <label class="theme-card">
+                    <c:if test="${not empty opt.previewImage}">
+                        <img class="theme-card-thumb" alt=""
+                             src="${siteURL}/themes/${fn:escapeXml(opt.id)}/${fn:escapeXml(opt.previewImage.path)}"/>
+                    </c:if>
+                    <span class="theme-card-name">
+                        <input class="theme-card-radio" type="radio" name="selectedThemeId"
+                               value="${fn:escapeXml(opt.id)}"
+                               <c:if test="${opt.id == selectedThemeId or (empty selectedThemeId and themeStatus.first)}">checked</c:if>/>
+                        ${fn:escapeXml(opt.name)}
+                    </span>
+                    <span class="theme-card-desc">${fn:escapeXml(opt.description)}</span>
+                </label>
+            </c:forEach>
+        </div>
 
     </div>
 
@@ -133,7 +166,7 @@
         <%-- Preview and Update buttons --%>
         <p> <spring:message code="themeEditor.previewDescription"/> </p>
         <button type="button" name="themePreview" class="btn btn-secondary"
-            onclick="fullPreview($('#themeSelector').get(0))"><spring:message code="themeEditor.preview"/></button>
+            onclick="fullPreview()"><spring:message code="themeEditor.preview"/></button>
 
         <button type="submit" class="btn btn-secondary"
                 data-busy-label="<spring:message code='themeEditor.saving'/>"><spring:message code="themeEditor.save"/></button>
@@ -183,7 +216,7 @@
         <%-- Preview and Update buttons --%>
         <p> <spring:message code="themeEditor.previewDescription"/> </p>
         <button type="button" name="themePreview" class="btn btn-secondary"
-            onclick="fullPreview($('#themeSelector').get(0))"><spring:message code="themeEditor.preview"/></button>
+            onclick="fullPreview()"><spring:message code="themeEditor.preview"/></button>
 
         <button type="submit" class="btn btn-secondary"
                 data-busy-label="<spring:message code='themeEditor.saving'/>"><spring:message code="themeEditor.save"/></button>
@@ -202,41 +235,61 @@
     var originalThemeId = "${themeId}"
     var originalType = ""
 
+    <%-- updateView takes the type as a STRING now, not the jQuery radio it
+         used to be handed. With themes.customtheme.allowed off there are no
+         type radios on the page at all (see the markup above), so a function
+         that reads selected[0].value has nothing to read; a plain string is
+         also simply what every caller already had. The #sharedChooser /
+         #customChooser class toggles below run against an empty jQuery set in
+         that case, which is a no-op. --%>
     $.when( $.ready ).then(function() {
 
         <c:choose>
 <c:when test="${customTheme}">
         originalType = "custom"
-        updateView($('#customRadio'));
-        previewImage('${themes[0].id}');
+        updateView("custom");
         </c:when>
 <c:otherwise>
         originalType = "shared"
-        updateView($('#sharedRadio'));
-        previewImage('${themeId}');
+        updateView("shared");
         </c:otherwise>
-</c:choose>});
+</c:choose>
+        <%-- Delegated, not an inline onchange on 50 controls: an inline
+             handler is a second place generated text reaches raw JavaScript
+             (see roller.js's data-confirm note), and the cards are generated
+             from ${themes}. The type radios are wired the same way for the
+             same reason. --%>
+        $('.theme-cards').on('change', "input[name='selectedThemeId']", function () {
+            proposeSharedThemeChange(this.value);
+        });
+        $("input[name='themeType']").on('change', function () {
+            proposeThemeTypeChange(this.value);
+        });
+    });
 
-    function proposeThemeTypeChange(selected) {
+    function proposeThemeTypeChange(type) {
 
-        if (selected[0].value === 'shared') {
+        if (type === 'shared') {
             proposedChangeType = "shared"
-
-            themeSelector = $('#themeSelector')[0]
-            index = themeSelector.selectedIndex;
-            previewImage(themeSelector.options[index].value)
+            proposedThemeId = selectedThemeId()
 
         } else {
             proposedThemeId = originalThemeId
             proposedChangeType = "custom"
         }
-        updateView(selected)
+        updateView(type)
     }
 
     function proposeSharedThemeChange(themeId) {
         proposedThemeId = themeId;
-        previewImage(themeId)
-        updateView($('#sharedRadio'))
+        updateView("shared")
+    }
+
+    <%-- The id of the checked theme card, or "" when nothing is checked (a
+         weblog on a custom theme has no shared theme selected). --%>
+    function selectedThemeId() {
+        var checked = document.querySelector(".theme-cards input[name='selectedThemeId']:checked");
+        return checked ? checked.value : "";
     }
 
     function cancelChanges() {
@@ -249,14 +302,14 @@
         if ( originalType === "custom" ) {
             $("#sharedRadio").prop("checked", false);
             $("#customRadio").prop("checked", true);
-            updateView($("#customRadio"));
+            updateView("custom");
 
         } else {
             $("#sharedRadio").prop("checked", true);
             $("#customRadio").prop("checked", false);
-            updateView($("#sharedRadio"));
-            $("#themeSelector").val(originalThemeId).change();
-            previewImage(originalThemeId)
+            $(".theme-cards input[name='selectedThemeId'][value='" + originalThemeId + "']")
+                .prop("checked", true);
+            updateView("shared");
         }
 
     }
@@ -270,31 +323,22 @@
         $('#sharedChangeToCustom').hide();
     }
 
-    function previewImage(themeId) {
-        $.ajax({
-            url: "<c:url value='themedata'/>",
-            data: {theme: themeId}, success: function (data) {
-                $('#themeDescription').html(data.description);
-                thumbnail = $('#themeThumbnail');
-                thumbnail.attr('src', '${siteURL}' + data.previewPath);
-            }
-        });
-    }
-
-    function fullPreview(selector) {
-        selected = selector.selectedIndex;
+    function fullPreview() {
+        var themeId = selectedThemeId();
+        if (!themeId) {
+            return;
+        }
         window.open('<c:url value="/roller-ui/authoring/preview/${actionWeblog.handle}"/>?theme='
-            + selector.options[selected].value);
+            + encodeURIComponent(themeId));
     }
 
-    <%-- Shows exactly one of the six state blocks for the given radio
-         selection. hideAll() runs first on every call -- unconditionally --
-         so this never has to rely on the *previous* call having hidden the
-         right things; that was the bug (see the comment above the state
-         blocks in the markup): some transitions showed the new block without
-         hiding the old one, leaving more than one Update Theme button
-         visible at once. --%>
-    function updateView(selected) {
+    <%-- Shows exactly one of the six state blocks for the given theme type.
+         hideAll() runs first on every call -- unconditionally -- so this never
+         has to rely on the *previous* call having hidden the right things;
+         that was the bug (see the comment above the state blocks in the
+         markup): some transitions showed the new block without hiding the old
+         one, leaving more than one Update Theme button visible at once. --%>
+    function updateView(type) {
 
         changed =
                (proposedThemeId    !== "" && proposedThemeId    !== originalThemeId)
@@ -302,7 +346,7 @@
 
         hideAll();
 
-        if (selected[0].value === 'shared') {
+        if (type === 'shared') {
 
             $('#sharedChooser').addClass("chooser-selected")
             $('#customChooser').removeClass("chooser-selected")

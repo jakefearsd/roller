@@ -1190,6 +1190,78 @@ table.mm_table_actions td {
     }
 }
 
+/* ---- Theme chooser: a grid of cards ----
+   Replaces a one-line <select> beside a single ajax-fetched thumbnail. A
+   theme is a look, so every option shows its own preview picture and you
+   compare them side by side rather than one at a time.
+
+   Each card is a <label> wrapping a real, visible radio: the whole card is
+   the hit target, the browser does the grouping and the keyboard handling,
+   and the control that says which one is chosen is the one the form posts.
+   :has(input:checked) puts the accent frame on the chosen card. */
+.theme-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.theme-card {
+    display: block;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    cursor: pointer;
+}
+
+.theme-card:has(input:checked) {
+    border-color: var(--accent);
+    background: var(--accent-quiet);
+}
+
+/* The card is a label, so it is not focusable itself -- the ring has to come
+   from the radio inside it. */
+.theme-card:focus-within {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+
+.theme-card-thumb {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin-bottom: 8px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+}
+
+.theme-card-name {
+    display: block;
+    font-weight: 600;
+}
+
+.theme-card-radio {
+    margin-right: 6px;
+}
+
+.theme-card-desc {
+    display: block;
+    font-size: 12px;
+    color: var(--ink-soft);
+}
+
+/* ---- A native disclosure for the optional half of a form ----
+   <details>/<summary>, not a Bootstrap collapse: no JS, no aria wiring to get
+   wrong, and the browser keeps the open/closed state. The summary wears the
+   rail's caps-label so it reads as a section marker rather than a control. */
+.editor-details {
+    margin-bottom: 16px;
+}
+
+.editor-details > summary {
+    cursor: pointer;
+    padding-bottom: 8px;
+}
+
 /* ---- Tables: table.rollertable ----
    Bootstrap 5 themes tables through --bs-table-* custom properties, the
    same mechanism .btn uses above: .table's own rules read

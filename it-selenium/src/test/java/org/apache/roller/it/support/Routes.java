@@ -290,8 +290,12 @@ public final class Routes {
             new Route("/roller-ui/authoring/templates.rol", Role.EDITOR, WEBLOG,
                     "form[action$='/roller-ui/authoring/templates!remove.rol']"),
 
+            // The theme card grid (task B9b). It sits inside #themeChooser,
+            // which the page's JS reveals -- but this asserts the elements
+            // EXIST, not that they are visible, so the marker holds whichever
+            // state block the state machine lands on.
             new Route("/roller-ui/authoring/themeEdit.rol", Role.EDITOR, WEBLOG,
-                    "form[action$='/roller-ui/authoring/themeEdit!save.rol']"),
+                    ".theme-cards"),
 
             new Route("/roller-ui/authoring/weblogConfig.rol", Role.EDITOR, WEBLOG,
                     "form[action$='/roller-ui/authoring/weblogConfig!save.rol']"),
