@@ -222,7 +222,13 @@ does not skip the build itself, since generation happens earlier in the
 lifecycle. Timings (`mvn -pl app -DskipTests clean generate-resources`):
 cold (first-ever run, downloading Node + the plugin jar + `npm ci`) ~8s;
 warm (Node and `node_modules` already present) ~1.6s — negligible against
-the existing `verify` budget.
+the existing `verify` budget. **"Only the first run needs the network" holds
+for a persistent checkout, not for a clean Docker image build**: the
+Dockerfile's builder stage starts from a fresh `maven` image every time, with
+no `app/frontend/node/` or `node_modules/` carried over, so `docker build`
+always pays the cold cost and always needs network access to `nodejs.org`
+and `registry.npmjs.org` — see docker_deployment.md's "Test a release
+locally before deploying it".
 
 ### Testing Commands
 ```bash

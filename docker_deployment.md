@@ -804,6 +804,17 @@ local testing that is byte-identical to production. Building locally
 nearly everything, but CI runs its own build, so those bytes are merely
 equivalent rather than identical.
 
+Building the image needs outbound network access, and not only for the
+Maven/apt steps already implied by "a build": the builder stage's
+`generate-resources` phase runs `frontend-maven-plugin`, which fetches Node
+`v22.23.2` from `nodejs.org` and then the editor bundle's npm packages from
+`registry.npmjs.org`, fresh, every time, because the builder stage starts
+from a clean `maven:3.9-eclipse-temurin-25` image with no cached
+`app/frontend/node/` or `node_modules/` on it. An air-gapped `docker build`
+fails at that step. (This is the image-build case specifically; see
+"Frontend build" in CLAUDE.md for how a persistent checkout avoids re-paying
+that cost on every local `mvn` run.)
+
 ## Upgrades
 
 Re-download `docker-compose.prod.yml` and `deploy.sh` from the new release

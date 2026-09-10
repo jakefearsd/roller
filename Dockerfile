@@ -49,6 +49,13 @@ COPY pom.xml ./
 COPY app app
 COPY bin/db/migrations bin/db/migrations
 
+# This step needs outbound network access beyond the obvious Maven/apt
+# fetches: app/pom.xml's generate-resources phase runs frontend-maven-plugin,
+# which downloads Node v22.23.2 from nodejs.org and then the editor bundle's
+# npm packages from registry.npmjs.org (see CLAUDE.md's "Frontend build" and
+# docker_deployment.md's "Test a release locally before deploying it"). This
+# stage starts clean every time -- no cached app/frontend/node/ or
+# node_modules/ carries over -- so an air-gapped build fails here.
 RUN mvn -ntp -pl app -DskipTests package
 
 # ---- Stage 2: runtime -------------------------------------------------------
