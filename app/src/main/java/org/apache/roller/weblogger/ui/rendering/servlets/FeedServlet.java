@@ -96,7 +96,7 @@ public class FeedServlet extends HttpServlet {
     // internally before it is returned; there is nothing left to close here.
     @SuppressWarnings("PMD.CloseResource")
     @Override
-    public void doGet(HttpServletRequest request, HttpServletResponse response)
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
         log.debug("Entering");

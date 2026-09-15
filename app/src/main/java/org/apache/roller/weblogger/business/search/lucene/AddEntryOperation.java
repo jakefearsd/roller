@@ -63,7 +63,7 @@ public class AddEntryOperation extends WriteToIndexOperation {
     // different method (via the field alias) satisfies this local variable.
     @SuppressWarnings("PMD.CloseResource")
     @Override
-    public void doRun() {
+    protected void doRun() {
         // roller is dereferenced unconditionally below (getWeblogEntryManager,
         // then release() in the finally); the guard belongs here, before
         // either happens, not after -- there is nothing this operation can do

@@ -32,7 +32,7 @@ class EditorBundlePomTest {
                 "parent pluginManagement must declare frontend-maven-plugin");
         Matcher node = Pattern.compile("<nodeVersion>v(\\d+)\\.(\\d+)\\.(\\d+)</nodeVersion>").matcher(parent);
         assertTrue(node.find(), "nodeVersion must be pinned to an exact vX.Y.Z");
-        assertEquals("22", node.group(1), "Node 22 LTS");
+        assertEquals("24", node.group(1), "Node 24 LTS");
 
         String app = Files.readString(APP_POM);
         int install = app.indexOf("<goal>install-node-and-npm</goal>");

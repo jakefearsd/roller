@@ -66,6 +66,9 @@ public final class RollerVelocity {
     private static final Logger log = LoggerFactory.getLogger(RollerVelocity.class);
 
     private static volatile VelocityEngine velocityEngine;
+    // Private lock, not the class's own: the class is public and its intrinsic
+    // lock reachable by anyone (SpotBugs USO_UNSAFE_STATIC_METHOD_SYNCHRONIZATION).
+    private static final Object INIT_LOCK = new Object();
 
 
     /**
@@ -78,14 +81,16 @@ public final class RollerVelocity {
      *         unreadable; nothing is installed in that case, so a later call
      *         may still succeed.
      */
-    public static synchronized void initialize(ServletContext servletContext, Weblogger weblogger)
+    public static void initialize(ServletContext servletContext, Weblogger weblogger)
             throws WebloggerException {
-        if (velocityEngine != null) {
-            log.debug("Velocity Rendering Engine already initialised; ignoring repeat call");
-            return;
+        synchronized (INIT_LOCK) {
+            if (velocityEngine != null) {
+                log.debug("Velocity Rendering Engine already initialised; ignoring repeat call");
+                return;
+            }
+            log.info("Initializing Velocity Rendering Engine");
+            velocityEngine = buildEngine(servletContext, weblogger);
         }
-        log.info("Initializing Velocity Rendering Engine");
-        velocityEngine = buildEngine(servletContext, weblogger);
     }
 
     /** True once {@link #initialize} has succeeded in this JVM. */

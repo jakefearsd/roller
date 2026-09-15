@@ -34,35 +34,35 @@
     font-family: "IBM Plex Serif";
     font-style: normal;
     font-weight: 400;
-    src: url("$url.site/webjars/ibm__plex-serif/0.0.3-alpha.0/fonts/complete/woff2/IBMPlexSerif-Regular.woff2") format("woff2");
+    src: url("$url.site/webjars/ibm__plex-serif/2.0.0/fonts/complete/woff2/IBMPlexSerif-Regular.woff2") format("woff2");
 }
 
 @font-face {
     font-family: "IBM Plex Serif";
     font-style: normal;
     font-weight: 600;
-    src: url("$url.site/webjars/ibm__plex-serif/0.0.3-alpha.0/fonts/complete/woff2/IBMPlexSerif-SemiBold.woff2") format("woff2");
+    src: url("$url.site/webjars/ibm__plex-serif/2.0.0/fonts/complete/woff2/IBMPlexSerif-SemiBold.woff2") format("woff2");
 }
 
 @font-face {
     font-family: "IBM Plex Sans";
     font-style: normal;
     font-weight: 450;
-    src: url("$url.site/webjars/ibm__plex-sans/0.0.3-alpha.0/fonts/complete/woff2/IBMPlexSans-Text.woff2") format("woff2");
+    src: url("$url.site/webjars/ibm__plex-sans/1.1.0/fonts/complete/woff2/IBMPlexSans-Text.woff2") format("woff2");
 }
 
 @font-face {
     font-family: "IBM Plex Sans";
     font-style: normal;
     font-weight: 600;
-    src: url("$url.site/webjars/ibm__plex-sans/0.0.3-alpha.0/fonts/complete/woff2/IBMPlexSans-SemiBold.woff2") format("woff2");
+    src: url("$url.site/webjars/ibm__plex-sans/1.1.0/fonts/complete/woff2/IBMPlexSans-SemiBold.woff2") format("woff2");
 }
 
 @font-face {
     font-family: "IBM Plex Mono";
     font-style: normal;
     font-weight: 400;
-    src: url("$url.site/webjars/ibm__plex-mono/0.0.3-alpha.0/fonts/complete/woff2/IBMPlexMono-Regular.woff2") format("woff2");
+    src: url("$url.site/webjars/ibm__plex-mono/2.5.0/fonts/complete/woff2/IBMPlexMono-Regular.woff2") format("woff2");
 }
 
 :root {

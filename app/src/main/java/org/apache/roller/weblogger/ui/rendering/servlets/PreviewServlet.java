@@ -93,7 +93,7 @@ public class PreviewServlet extends HttpServlet {
     // left for this method to close.
     @SuppressWarnings("PMD.CloseResource")
     @Override
-    public void doGet(HttpServletRequest request, HttpServletResponse response)
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
         log.debug("Entering");

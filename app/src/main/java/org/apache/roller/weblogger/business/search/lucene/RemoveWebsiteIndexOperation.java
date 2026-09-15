@@ -74,7 +74,7 @@ public class RemoveWebsiteIndexOperation extends WriteToIndexOperation {
     // different method (via the field alias) satisfies this local variable.
     @SuppressWarnings("PMD.CloseResource")
     @Override
-    public void doRun() {
+    protected void doRun() {
         Date start = new Date();
 
         // since this operation can be run on a separate thread we must treat

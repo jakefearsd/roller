@@ -62,6 +62,7 @@ public class SpringWebloggerProvider implements WebloggerProvider, DisposableBea
     private ApplicationContext context;
 
     private volatile Weblogger weblogger;
+    private final Object bootstrapLock = new Object();
 
     /**
      * Instantiate a provider around an already-built application context
@@ -112,7 +113,16 @@ public class SpringWebloggerProvider implements WebloggerProvider, DisposableBea
      * for the caller to log.
      */
     @Override
-    public synchronized void bootstrap() throws BootstrapException {
+    public void bootstrap() throws BootstrapException {
+        // A private lock rather than synchronized(this): standalone() hands the
+        // instance out, so its intrinsic lock is reachable by any caller
+        // (SpotBugs USO_UNSAFE_METHOD_SYNCHRONIZATION).
+        synchronized (bootstrapLock) {
+            bootstrapLocked();
+        }
+    }
+
+    private void bootstrapLocked() throws BootstrapException {
         if (weblogger != null) {
             return;
         }

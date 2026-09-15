@@ -84,7 +84,7 @@ public class ResourceServlet extends HttpServlet {
     // closed in the finally block further down.
     @SuppressWarnings("PMD.CloseResource")
     @Override
-    public void doGet(HttpServletRequest request, HttpServletResponse response)
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
         Weblog weblog;

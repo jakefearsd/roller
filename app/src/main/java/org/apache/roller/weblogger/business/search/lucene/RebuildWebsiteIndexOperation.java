@@ -78,7 +78,7 @@ public class RebuildWebsiteIndexOperation extends WriteToIndexOperation {
     // different method (via the field alias) satisfies this local variable.
     @SuppressWarnings("PMD.CloseResource")
     @Override
-    public void doRun() {
+    protected void doRun() {
 
         Date start = new Date();
 

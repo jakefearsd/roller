@@ -151,7 +151,7 @@ java -jar app/target/roller.war --server.port=8083 \
 ### Frontend build
 
 - Maven builds the editor's CodeMirror bundle: `frontend-maven-plugin`
-  fetches a pinned Node `v22.23.2` into `app/frontend/node/`, then `npm ci`
+  fetches a pinned Node `v24.21.0` into `app/frontend/node/`, then `npm ci`
   + esbuild at `generate-resources` (before every compile); never run `npm`
   by hand.
 - Output `app/src/main/webapp/roller-ui/scripts/roller-editor.js`
@@ -161,6 +161,11 @@ java -jar app/target/roller.war --server.port=8083 \
   that path both `maven-war-plugin` and `spring-boot:run` serve.
 - `-DskipTests` skips the bundle's `npm test` (`test` phase, `skipTests`
   property), not the build.
+- **After bumping `nodeVersion`, `rm -rf app/frontend/node` on any existing
+  checkout.** The plugin unpacks the new tarball over the old one without
+  clearing it, leaving npm's own `node_modules` mixed across versions;
+  the symptom is `npm ci` dying with "Class extends value undefined is not
+  a constructor". CI and the Docker build start empty and never see it.
 - `mvn -pl app -DskipTests clean generate-resources`: cold ~8s, warm ~1.6s
   — negligible against `verify`.
 - `docker build` starts from a fresh `maven` image (no `app/frontend/node/`
@@ -258,8 +263,8 @@ that (it printed `CPD @200` against a gate of 110 for eighteen days).
 The wave took the tree from 362 PMD / 134 SpotBugs / 4 CPD violations to
 zero; the temporary `pmd.max.violations` / `spotbugs.max.violations`
 ceilings and `maxAllowedViolations` wiring were deleted once it held there.
-**The PMD count is measured against PMD 7.26.0, and the pin is
-load-bearing.** The maven-pmd-plugin's bundled 7.17 measured **307** on the
+**The PMD count is measured against the pinned PMD version (7.27.0 since
+2026-09-14; the wave was measured on 7.26.0), and the pin is load-bearing.** The maven-pmd-plugin's bundled 7.17 measured **307** on the
 same source and ruleset against **362** under 7.26.0: `CloseResource` alone
 goes 13 -> 42 as the detector improved, and five rules did not exist in 7.17
 (`OverrideBothEqualsAndHashCodeOnComparable`, `LambdaCanBeMethodReference`,
@@ -302,6 +307,15 @@ classes sharing one reason is a family, which belongs in the config file.
 with parameterized SLF4J, violating it is systematically not a defect. Full
 accounting: the Follow-up section of
 `docs/superpowers/specs/2026-08-18-static-analysis-quality-gates-design.md`.
+
+SpotBugs 4.10.4 (2026-09-14) added two detectors that found 19 sites; both
+were fixed in code rather than excluded: `IAOM_DO_NOT_INCREASE_METHOD_ACCESSIBILITY`
+(sixteen `doGet`/`doPost`/`doRun` overrides declared `public` over a
+`protected` parent, now `protected` — test callers sit in the same package)
+and `USO_UNSAFE_*_METHOD_SYNCHRONIZATION` (three `synchronized` methods on
+publicly reachable objects, now private lock objects). A tool bump that
+adds detectors is expected to find things; fix them or justify a site-level
+suppression, never widen `exclude.xml` for a version bump.
 
 **On SLF4J's varargs form a `Throwable` must stay the LAST argument, and no
 `{}` may consume it.** `log.error("x {}", a, e)` preserves the stack trace;
@@ -387,9 +401,20 @@ Cost: PMD+CPD+SpotBugs add ~10 seconds to a warm `verify` (inside the
 Two candidate stories, no evidence either way: Spring Security answers 403
 for both a stale CSRF token and access-denied, and concurrent classes call
 `loginAs`/`logout`, which invalidates the session. Deliberately unexplained
-(the `ModDateHeaderUtil` precedent). If it recurs, trace it, don't rerun — it
-is the shape of a real regression — starting with what else was in flight on
-the other three threads.
+(the `ModDateHeaderUtil` precedent). **Recurred 2026-09-14** on the first
+parallel run after the dependency wave (Boot 4.1.1 / Security 7.1.1): same
+test, same POST, 136/137; `ErrorCasesIT` alone passed 8/8 and the next full
+parallel run passed 137/137. The app log said nothing because every path
+that answers 403 here (`CsrfFilter`, `ExceptionTranslationFilter`, the
+interceptor's DENIED branches) logs only at DEBUG, so `start-app.sh` now
+runs the IT app with those loggers at DEBUG and writes Roller's file log
+per run to `it-selenium/target/it-work/roller-<run id>/roller.log` — read
+that, not the stdout log, on the next occurrence. Then trace it, don't
+rerun: it is the shape of a real regression. Capture what else was in
+flight on the other three threads from the failsafe report timestamps
+BEFORE running anything else — an isolated rerun overwrites
+`it-selenium/target/failsafe-reports`, which is how the 2026-09-14 overlap
+evidence was lost.
 
 ### The IT harness cleans up by identity, not by pidfile
 
@@ -554,8 +579,9 @@ getUserManager() / getWeblogManager() / getWeblogEntryManager() / getThemeManage
 ### Theme System
 - **Shared themes** live under `/themes/`: `portfolio` (dark photo grid),
   `travel` (light travel guide cards) and `journal` (the default: `qj-*`
-  vocabulary, light+dark, self-hosted IBM Plex — `ibm__plex-serif`
-  0.0.3-alpha.0 joins the Sans/Mono webjars in `app/pom.xml`). A theme
+  vocabulary, light+dark, self-hosted IBM Plex — `ibm__plex-serif` joins
+  the Sans/Mono webjars in `app/pom.xml`; the CSS `url()`s carry the webjar
+  version, so a bump edits three stylesheets and `WebjarReferenceTest`). A theme
   with its own webfont must add `font-src 'self'` to its CSP on top of
   `CSP_STANDARD`, or the browser refuses every `@font-face`;
   `JournalThemeRenderingTest` pins the string byte-for-byte.

@@ -128,7 +128,7 @@ public class PageServlet extends HttpServlet {
     // justification, on servedFromCache below.)
     @SuppressWarnings("PMD.CloseResource")
     @Override
-    public void doGet(HttpServletRequest request, HttpServletResponse response)
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
         log.debug("Entering");
@@ -554,7 +554,7 @@ public class PageServlet extends HttpServlet {
      * the servlet path.
      */
     @Override
-    public void doPost(HttpServletRequest request, HttpServletResponse response)
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
         // make sure caching is disabled

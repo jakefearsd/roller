@@ -75,7 +75,7 @@ public class ThemeDataServlet extends HttpServlet {
     }
 
     @Override
-    public void doGet(
+    protected void doGet(
             HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 

@@ -43,7 +43,7 @@ limitations under the License.
 
     <properties>
         <!-- Versions match the sibling jspwiki/wikantik Selenide suite. -->
-        <selenide.version>7.17.0</selenide.version>
+        <selenide.version>7.18.1</selenide.version>
         <selenium.version>4.49.0</selenium.version>
         <!-- Raised past selenide-core's transitive 5.6.2, which leaks a pooled
              connection whenever a response carries an unsupported
@@ -63,11 +63,11 @@ limitations under the License.
              spring-boot.version, re-check what junit-jupiter version its BOM
              now resolves to and update this pin to match:
                mvn -ntp -pl app dependency:tree -Dincludes=org.junit.jupiter:junit-jupiter-api
-             (currently resolves to 6.0.3, matching the pin below). -->
-        <junit-jupiter.version>6.0.3</junit-jupiter.version>
+             (currently resolves to 6.1.3 via app's junit-bom import, matching the pin below). -->
+        <junit-jupiter.version>6.1.3</junit-jupiter.version>
         <docker.plugin.version>0.49.0</docker.plugin.version>
-        <build-helper.version>3.6.1</build-helper.version>
-        <exec.plugin.version>3.6.3</exec.plugin.version>
+        <build-helper.version>3.6.2</build-helper.version>
+        <exec.plugin.version>3.6.4</exec.plugin.version>
         <!-- app-stop only; see the plugin comment below for why it cannot share the
              exec-maven-plugin declaration used for app-start and the pg-* steps. -->
         <antrun.plugin.version>3.2.0</antrun.plugin.version>

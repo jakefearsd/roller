@@ -131,7 +131,7 @@ public class WebjarReferenceTest {
 
     /**
      * Every {@code /webjars/...} reference found in {@code content}, e.g.
-     * {@code "ibm__plex-sans/0.0.3-alpha.0/fonts/.../IBMPlexSans-Text.woff2"}.
+     * {@code "ibm__plex-sans/1.1.0/fonts/.../IBMPlexSans-Text.woff2"}.
      */
     private static List<String> webjarReferences(String content) {
         Matcher matcher = WEBJAR_URL.matcher(content);
@@ -173,7 +173,7 @@ public class WebjarReferenceTest {
 
         // control: the real, correct reference from roller-tokens.css must still resolve,
         // proving the failure above is about the broken version and not the matching/lookup itself.
-        String goodReference = "ibm__plex-sans/0.0.3-alpha.0/fonts/complete/woff2/IBMPlexSans-Text.woff2";
+        String goodReference = "ibm__plex-sans/1.1.0/fonts/complete/woff2/IBMPlexSans-Text.woff2";
         assertTrue(resolvesOnClasspath(goodReference),
                 "Sanity control reference no longer resolves -- fixture is out of date");
     }

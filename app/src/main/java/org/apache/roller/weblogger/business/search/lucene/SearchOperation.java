@@ -100,7 +100,7 @@ public class SearchOperation extends ReadFromIndexOperation {
     // the reader" comment at the end of this method.
     @SuppressWarnings("PMD.CloseResource")
     @Override
-    public void doRun() {
+    protected void doRun() {
         final int docLimit = 500;
         searchresults = null;
         searcher = null;

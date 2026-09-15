@@ -52,6 +52,9 @@ public final class WebloggerRuntimeConfig {
     // (NonThreadSafeSingleton).
     private static volatile RuntimeConfigDefs configDefs = null;
     private static final Object CONFIG_DEFS_LOCK = new Object();
+    // Same reasoning for the compare-and-clear in detach(PropertiesManager):
+    // a private lock, not the class's own (USO_UNSAFE_STATIC_METHOD_SYNCHRONIZATION).
+    private static final Object ATTACH_LOCK = new Object();
     
     // special case for our context urls
     private static String relativeContextURL = null;
@@ -108,12 +111,14 @@ public final class WebloggerRuntimeConfig {
      */
     @SuppressWarnings("PMD.CompareObjectsWithEquals") // identity IS the contract: only the very
     // instance that was attached may clear it; equals() on a manager (or a mock of one) says less
-    public static synchronized boolean detach(PropertiesManager expected) {
-        if (expected != null && propertiesManager == expected) {
-            propertiesManager = null;
-            return true;
+    public static boolean detach(PropertiesManager expected) {
+        synchronized (ATTACH_LOCK) {
+            if (expected != null && propertiesManager == expected) {
+                propertiesManager = null;
+                return true;
+            }
+            return false;
         }
-        return false;
     }
 
 

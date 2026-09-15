@@ -77,7 +77,7 @@ public class UserDataServlet extends HttpServlet {
             justification = "A malformed \"offset\"/\"length\" query parameter is routine, not "
                     + "an error -- parsing simply keeps the declared default and there is "
                     + "nothing to act on.")
-    public void doGet(HttpServletRequest request, HttpServletResponse response)
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
         boolean admin = false;

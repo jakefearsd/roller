@@ -67,7 +67,7 @@ public class RemoveEntryOperation extends WriteToIndexOperation {
     // different method (via the field alias) satisfies this local variable.
     @SuppressWarnings("PMD.CloseResource")
     @Override
-    public void doRun() {
+    protected void doRun() {
 
         // since this operation can be run on a separate thread we must treat
         // the weblog object passed in as a detached object which is proned to
