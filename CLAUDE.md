@@ -486,7 +486,12 @@ and the test harness.
 
 Roller is a multi-user blog server built with:
 - **Runtime**: Spring Boot 4.1 executable WAR (`java -jar app/target/roller.war`
-  or an external servlet container), embedded Tomcat 11, Java 25.
+  or an external servlet container), embedded Tomcat 11, **Java 25 — an LTS
+  release, and a decision (2026-09-15) to stay on it until Java 29 (LTS,
+  September 2027)**. Never bump to a six-month feature release (26/27/28).
+  Seven pins move together when 29 arrives: the enforcer range `[25,26)`,
+  the compiler `<release>`, PMD's `<targetJdk>`, all three workflows'
+  `java-version`, and both `temurin` images in `Dockerfile`.
   Servlets/filters are Java config (`ServletRegistrationConfig`, transcribed
   from the retired `web.xml`); no `web.xml` in the artifact.
 - **Web Framework**: Spring MVC, `@Controller` classes, `*.rol` mappings

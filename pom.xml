@@ -241,7 +241,17 @@ limitations under the License.
         </pluginManagement>
 
         <plugins>
-            <!-- Pins the JDK the build actually RUNS on. maven-compiler-plugin's
+            <!-- Java 25 is a DECISION, not drift: it is an LTS release (the
+                 two-year cadence: 17, 21, 25; next is 29 in September 2027), and
+                 this project stays on it until 29 rather than chasing the
+                 six-month feature releases (26, 27, 28), which fall out of
+                 support the day the next one ships. Do not propose or apply a
+                 bump to a non-LTS Java. When 29 arrives, the seven pins to move
+                 together are: this range, <release> above, PMD's <targetJdk>,
+                 the java-version in all three .github/workflows, and both
+                 temurin base images in Dockerfile.
+
+                 Pins the JDK the build actually RUNS on. maven-compiler-plugin's
                  <release>25</release> only fixes the language level and bytecode
                  target: a JDK 26 or 30 toolchain compiles release-25 sources
                  happily and then runs the whole test suite on a JVM nobody
