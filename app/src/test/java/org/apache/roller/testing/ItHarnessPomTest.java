@@ -62,7 +62,8 @@ class ItHarnessPomTest {
     }
 
     /**
-     * postgres:16 declares {@code VOLUME /var/lib/postgresql/data}, so every
+     * postgres:18 declares {@code VOLUME /var/lib/postgresql} (16 and earlier
+     * declared {@code /var/lib/postgresql/data}), so every
      * run gets an anonymous volume. docker-maven-plugin's removeVolumes
      * defaults to false, which made this the one leak that did not need an
      * abort: a completely successful run orphaned a volume too.

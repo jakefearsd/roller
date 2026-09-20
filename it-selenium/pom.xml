@@ -76,7 +76,7 @@ limitations under the License.
         <it.db.user>roller</it.db.user>
         <it.db.password>roller</it.db.password>
         <it.db.container-alias>roller-it-postgres</it.db.container-alias>
-        <it.postgres.image>postgres:16</it.postgres.image>
+        <it.postgres.image>postgres:18</it.postgres.image>
 
         <!-- The bare context segment the app under test is deployed under.
              EMPTY = the root, which is what application.properties now ships
@@ -406,7 +406,8 @@ limitations under the License.
                         <phase>post-integration-test</phase>
                         <goals><goal>stop</goal></goals>
                         <configuration>
-                            <!-- postgres:16 declares VOLUME /var/lib/postgresql/data, so
+                            <!-- postgres:18 declares VOLUME /var/lib/postgresql (16 and
+                                 earlier declared /var/lib/postgresql/data), so
                                  Docker creates an anonymous volume for every IT run.
                                  removeVolumes defaults to false, which means a
                                  *successful* run also orphaned one: the only leak here

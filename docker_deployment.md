@@ -750,6 +750,30 @@ docker compose -f docker-compose.prod.yml start app
 `docker compose -f docker-compose.prod.yml cp backup:/backups/rollerdb-<timestamp>.dump .`
 if restoring from a different machine than the one that made it.)
 
+**The client that restores must be at least as new as the client that
+dumped.** `pg_restore` refuses an archive written by a newer `pg_dump`, with
+`unsupported version (1.16) in file header` and nothing else. The command
+above restores with the client *inside the postgres container*, which is the
+server's own major — correct as long as the dump came from a client no newer
+than the server. The dumps are taken by the app image's client, so if a base
+image bump ever moves that client ahead of the server (it has happened: the
+base moved to Ubuntu 26.04 and took the client from 16 to 18), restore with
+the app image instead, which always has the client that wrote the file:
+
+```bash
+docker compose -f docker-compose.prod.yml run --rm --entrypoint bash backup -c '
+    set -euo pipefail
+    export PGHOST=postgres
+    export PGUSER="${POSTGRES_USER}"
+    export PGPASSWORD="${POSTGRES_PASSWORD}"
+    pg_restore -d "${POSTGRES_DB}" --clean --if-exists /backups/rollerdb-<timestamp>.dump
+'
+```
+
+`PostgresMajorPinTest` keeps the image's declared client floor
+(`PG_CLIENT_MIN_MAJOR` in the `Dockerfile`) at or above the server major the
+compose file runs, so the ordinary path stays the one above.
+
 **Media/search-index/uploads volumes** (stack must be fully down — the
 archive extracts to `/data/...` paths matching the volume mount points):
 
@@ -768,7 +792,7 @@ docker run --rm \
     -v roller_roller-search-index:/data/search-index \
     -v roller_roller-uploads:/data/uploads \
     -v roller_roller-backups:/backups \
-    postgres:16@sha256:e17e86066e5ef83e0952a9347f5c792b7ece00972e2aa787a6986f471b3dd3d5 \
+    postgres:18@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280 \
     tar xzf /backups/volumes-<timestamp>.tar.gz -C /
 docker compose -f docker-compose.prod.yml up -d
 ```
@@ -867,6 +891,35 @@ rather than leaving the stack in a half-upgraded state without telling you.
 
 Always have a recent, verified backup before upgrading across a schema
 change (see [Backup and restore](#backup-and-restore)).
+
+### Upgrading PostgreSQL across a major version
+
+The server is pinned by digest, so a major upgrade is a deliberate edit to
+the compose file, never something a `deploy.sh` run does on its own. Two
+things move with it, and `PostgresMajorPinTest` fails the build if they
+disagree: the mount path (18 and later keep the cluster in
+`/var/lib/postgresql/<major>/docker` and declare the parent as the volume,
+so the parent is what gets mounted) and the app image's client floor
+(`PG_CLIENT_MIN_MAJOR` in the `Dockerfile`, because that image also runs the
+nightly `pg_dump`).
+
+The data does not upgrade in place just because a newer image starts: a
+cluster written by the old major is refused by the new image's entrypoint,
+which is the safe outcome rather than a silent re-initialisation. Pick one:
+
+- **Dump and restore**, the simplest and the right choice at this size. Take
+  a fresh backup, plus a `pg_dumpall --globals-only` for the roles, which the
+  nightly backup does not cover. Stop everything but postgres, restore into a
+  new empty volume under the new image, then bring the stack up. Re-run the
+  `grafana_ro` password step from the Grafana section afterwards if the roles
+  were not restored.
+- **`pg_upgrade --link`**, fast on a large database. It needs both majors'
+  binaries, so it runs from a purpose-built image rather than this stack, but
+  it does not have to copy data between volumes: one volume already holds
+  each major in its own directory.
+
+Rehearse either against a scratch copy of the stack first, and keep the old
+volume until the new cluster has served real traffic.
 
 ### Upgrading a deployment made before the image-only layout
 

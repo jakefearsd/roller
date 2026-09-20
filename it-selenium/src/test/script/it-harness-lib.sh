@@ -307,8 +307,8 @@ it_describe_pid() {
 }
 
 # it_remove_container <name> -- idempotent, and always with -v: the IT postgres
-# container is anonymous-volume-backed (postgres:16 declares VOLUME
-# /var/lib/postgresql/data), so removing it without -v orphans a volume per run.
+# container is anonymous-volume-backed (postgres:18 declares VOLUME
+# /var/lib/postgresql), so removing it without -v orphans a volume per run.
 it_remove_container() {
     local name="${1:-}"
     [ -n "$name" ] || return 0

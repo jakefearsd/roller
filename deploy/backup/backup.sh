@@ -59,7 +59,7 @@
 #     -v roller_roller-search-index:/data/search-index \
 #     -v roller_roller-uploads:/data/uploads \
 #     -v roller_roller-backups:/backups \
-#     postgres:16@sha256:e17e86066e5ef83e0952a9347f5c792b7ece00972e2aa787a6986f471b3dd3d5 \
+#     postgres:18@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280 \
 #     tar xzf /backups/volumes-<timestamp>.tar.gz -C /
 #   docker compose -f docker-compose.prod.yml up -d
 set -euo pipefail

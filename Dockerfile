@@ -76,15 +76,25 @@ FROM eclipse-temurin:25-jre@sha256:6e9581a150f9ad80d9154f6c9dc4e5df0d4f5eb545e78
 # the backup runner, because those are exactly the roles needing the WAR or a
 # PostgreSQL client. The version assertion is load-bearing: pg_dump refuses a
 # server newer than itself, so a base-image change that dropped the client
-# below 16 would break backups silently at 03:00 rather than at build time.
+# below the server's major would break backups silently at 03:00 rather than
+# at build time. It has already moved once without a signal: the base image
+# became Ubuntu 26.04, taking the client from 16 to 18.
 RUN apt-get update && apt-get install -y --no-install-recommends curl webp postgresql-client \
     && rm -rf /var/lib/apt/lists/*
+
+# DECLARED rather than buried in a regular expression's bounds, so
+# PostgresMajorPinTest can check it against the major the compose files
+# actually run. Raise this and the server image together.
+ARG PG_CLIENT_MIN_MAJOR=18
 
 # Separate RUN on purpose. Chaining this onto the install with `&& ... || exit`
 # makes a failed apt-get report the pg_dump version message instead of its own,
 # which sends you looking in the wrong place.
-RUN pg_dump --version | grep -Eq 'PostgreSQL\) (1[6-9]|[2-9][0-9])' \
-    || { echo "pg_dump must be 16 or newer: the stack runs PostgreSQL 16 and pg_dump refuses a server newer than itself" >&2; exit 1; }
+RUN major="$(pg_dump --version | sed -E 's/.*PostgreSQL\) ([0-9]+).*/\1/')"; \
+    if [ "${major:-0}" -lt "${PG_CLIENT_MIN_MAJOR}" ]; then \
+        echo "pg_dump is ${major:-unknown}: the stack runs PostgreSQL ${PG_CLIENT_MIN_MAJOR} and pg_dump refuses a server newer than itself" >&2; \
+        exit 1; \
+    fi
 
 RUN groupadd --system roller && useradd --system --gid roller --home-dir /app --shell /usr/sbin/nologin roller
 

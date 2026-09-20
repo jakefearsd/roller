@@ -27,9 +27,12 @@
 services:
 
   postgres:
-    # Pinned by digest (postgres:16 at time of pin). Testcontainers uses the
+    # Pinned by digest (postgres:18 at time of pin). Testcontainers uses the
     # same major version — see RollerPostgresContainer.
-    image: postgres:16@sha256:e17e86066e5ef83e0952a9347f5c792b7ece00972e2aa787a6986f471b3dd3d5
+    #
+    # Production (docker-compose.prod.yml) is still on 16: moving it is a data
+    # migration with its own cutover, not an image bump.
+    image: postgres:18@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280
     ports:
       # 5433 on the host: 5432 is commonly taken by a locally-installed
       # PostgreSQL. Override with DEV_DB_PORT if 5433 is busy too. Deliberately
@@ -46,7 +49,16 @@ services:
     volumes:
       # Named volume, not a bind mount: dev content survives restarts and
       # `docker compose down`. Use `docker compose down -v` to wipe it.
-      - roller-pgdata:/var/lib/postgresql/data
+      #
+      # Mounted at /var/lib/postgresql, NOT /var/lib/postgresql/data: 18 moved
+      # its data directory to a version-specific subdirectory (18/docker) and
+      # declares the parent as its VOLUME. An old-layout cluster found at the
+      # legacy path makes the entrypoint refuse to start, on purpose.
+      #
+      # The volume is also renamed, so the 16 cluster in roller-pgdata is left
+      # untouched as the rollback. Remove it once 18 has proven itself:
+      #   docker volume rm roller_roller-pgdata
+      - roller-pgdata18:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U roller -d rollerdb"]
       interval: 5s
@@ -54,4 +66,4 @@ services:
       retries: 20
 
 volumes:
-  roller-pgdata:
+  roller-pgdata18:

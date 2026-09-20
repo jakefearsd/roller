@@ -451,8 +451,8 @@ Five mechanisms in `it-selenium/src/test/script/`:
 
 Per run: container `roller-it-postgres-<run id>` (no fixed-name 409 needing
 `docker rm`); `pg-stop` passes `<removeVolumes>true</removeVolumes>` (the
-default leaked an anonymous volume even on success: `postgres:16` declares
-`VOLUME /var/lib/postgresql/data`); pidfiles, logs and work dirs, so a leaked
+default leaked an anonymous volume even on success: `postgres:18` declares
+`VOLUME /var/lib/postgresql`); pidfiles, logs and work dirs, so a leaked
 run's `app.log`/`app.pid` survive; `it-work/app-latest.log` symlinks the
 newest.
 
@@ -468,9 +468,39 @@ putting `app-stop` before `pg-stop`), `RollerPostgresContainerTest`.
 Roller is **PostgreSQL-only** — one engine for dev, test and production
 (Derby and the Velocity/Texen DDL generator are gone).
 
-- **Development**: PostgreSQL 16 via `docker-compose.yml` (named volume; persists)
-- **Testing**: PostgreSQL 16 via Testcontainers, schema from the migration chain
+- **Development**: PostgreSQL 18 via `docker-compose.yml` (named volume; persists)
+- **Testing**: PostgreSQL 18 via Testcontainers, schema from the migration chain
+- **Production**: PostgreSQL 18 via `docker-compose.prod.yml`
 - **JNDI Name**: `jdbc/rollerdb`
+
+**Four files name the server major, and `PostgresMajorPinTest` fails the build
+when they disagree**: both compose files, `RollerPostgresContainer`
+(Testcontainers) and `it-selenium/pom.xml`. They had already drifted — the
+compose files pinned a digest while both harnesses floated on a bare tag —
+and nothing went red, which is the point: a suite green on a different major
+than production proves nothing about production.
+
+**The 18 image mounts its data one directory higher.** `PGDATA` is
+`/var/lib/postgresql/18/docker` and the declared `VOLUME` is the parent,
+`/var/lib/postgresql`, so both compose files mount *that*, not
+`/var/lib/postgresql/data`. One volume then holds successive majors side by
+side, which is what makes a later in-place `pg_upgrade --link` possible. A
+pre-18 cluster mounted at the new path is refused by the entrypoint rather
+than silently re-initialised — loud, but it does not say "your compose file
+is a major behind", which is why the test pins the path against the image.
+Production keeps the plain `roller-pgdata` name, never having been deployed
+on 16; **dev** renamed its volume to `roller-pgdata18` because the 16 cluster
+still occupies `roller_roller-pgdata` and is the dev rollback.
+
+**`pg_dump` refuses a server newer than itself, and the app image is also the
+backup runner**, so its client floor is declared in the `Dockerfile` as
+`ARG PG_CLIENT_MIN_MAJOR` and checked against the production server major by
+the same test. It is not decoration: `eclipse-temurin:25-jre` became Ubuntu
+26.04 at the pinned digest (`724cd0129`, 2026-08-19), moving the client from
+16 to 18 with no signal. While the server was still 16, every nightly dump
+was unrestorable by the `pg_restore` *inside* the postgres container
+(`unsupported version (1.16) in file header`) — backups sound, restores
+broken, nothing red. Raise the floor and the server image together.
 
 #### Schema changes
 

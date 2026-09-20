@@ -45,7 +45,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 public final class RollerPostgresContainer {
 
     /** Pinned to match docker-compose.yml. */
-    private static final String IMAGE = "postgres:16";
+    private static final String IMAGE = "postgres:18";
 
     private static volatile PostgreSQLContainer container;
 
