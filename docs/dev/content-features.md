@@ -1,0 +1,79 @@
+# SEO, travel, shortcodes and plugins
+
+Developer notes moved out of `CLAUDE.md` (which is sent with every
+request) so they are read only when this area is being changed. Section
+names are unchanged, so an older "see CLAUDE.md, <section>" pointer
+resolves through the index at the end of `CLAUDE.md`.
+
+## SEO (Stage 2 Wave 1)
+- Per-entry SEO fields on `WeblogEntry` (metaTitle, searchDescription,
+  canonicalUrl, noindex, featuredImageId, ogImageId), edited in the entry
+  editor's "SEO & Social Sharing" card with featured/social image pickers.
+- `#showSeoHead` (`WEB-INF/velocity/weblog.vm`, called from every bundled
+  theme head) emits meta description, canonical, robots noindex, Open
+  Graph/Twitter card and JSON-LD; `#showResponsiveImage` is the theme-side
+  `<picture>`/srcset emitter.
+- `SeoController` serves `/robots.txt`, `/sitemap.xml` (index) and
+  `/sitemap-<handle>.xml` (via `*.xml`; a middle-wildcard servlet pattern is
+  illegal).
+
+## Travel (Stage 2 Wave 3)
+- Three shortcodes in `business/shortcodes`, registered in
+  `ShortcodeExpander.DEFAULT` like `[image]`/`[gallery]`: `[map]` with
+  `[pin lat lng label]` children (or `auto="<dir>"` mapping a directory's
+  GPS-bearing photos, same private-directory refusal as `[gallery]`), `[faq]`
+  with `[q]`/`[a]` pairs, and `[cta href label note]` (absolute http(s)
+  only, UTM-tagged).
+- `MapPins.parse` / `FaqBlocks.parse` are the single source of truth for both
+  the shortcode renderers and the JSON-LD head emission, so map and itinerary
+  cannot drift.
+- Leaflet 1.9.4 (webjar, self-hosted) ships via `#showMapAssets`, the map
+  twin of `#showGalleryAssets`; OSM tiles, no API key. Leaflet paints aborted
+  tiles with a `data:` GIF, so every theme head's CSP carries
+  `img-src * data:`, pinned byte-for-byte by
+  `MapAssetsRenderingTest`/`PortfolioThemeRenderingTest`/`TravelThemeRenderingTest`.
+- Per-entry structured-data type (`WeblogEntry.jsonLdType` + geo/event
+  columns, V008): `EntryJsonLd` emits TouristAttraction/TouristTrip/Event/
+  FAQPage as a SECOND `ld+json` block; the BlogPosting block is always
+  emitted unchanged, so entries keep author/date/headline.
+
+## Plugin System
+- **The entry-plugin seam has nothing registered, on purpose.**
+  `ConvertLineBreaksPlugin` (the only `WeblogEntryPlugin` ever shipped,
+  `roller.properties` `plugins.page`), the "Plugins to apply" card and
+  `WeblogConfig.jsp`'s per-weblog default are deleted;
+  `weblogentry.plugins`/`weblog.defaultplugins` drop via V021 (idempotent),
+  discarding live `"ConvertLineBreaks"` data. `PluginManagerImpl`,
+  `WeblogEntryPlugin` and `Weblog.getInitializedPlugins()` **stay** as the seam
+  `ShortcodeExpander` runs through (`applyWeblogEntryPlugins`); it and
+  `WeblogEntry.render()` apply every registered plugin unconditionally. See
+  Entry editing.
+
+## Shortcodes
+`org.apache.roller.weblogger.business.shortcodes` — `ShortcodeExpander` expands
+`[name attr="v"]body[/name]` **unconditionally** at both render seams
+(`WeblogEntry.render()` and `PluginManagerImpl.applyWeblogEntryPlugins`),
+immediately before sanitization.
+
+- `[image id=".." caption=".." alt=".."]` emits a responsive
+  `<figure><picture>` (the media chooser pastes it).
+- `[gallery dir=".." row=".." max=".."]` renders a media directory as a
+  justified grid (`GalleryMarkup`, flex-grow `--ar` CSS from
+  `#showGalleryGridStyles`) with a PhotoSwipe lightbox (`#showGalleryAssets`;
+  EXIF overlay, captions); refuses private directories.
+- `[video url=".." caption=".."]` (YouTube/Vimeo) matches the url against a
+  provider allowlist and never fetches; it emits an inert placeholder `<div>`
+  (`HTMLSanitizer` strips iframes) and `#showEmbedAssets` click-injects the
+  real `<iframe>` once a reader opts in — nothing from the provider before that
+  except the placeholder's thumbnail `<img>` (e.g. `i.ytimg.com`). Each theme
+  CSP carries the provider's `frame-src`, pinned byte-for-byte by three
+  rendering tests (as `img-src * data:` is).
+- `[contact]`/`[subscribe]` use the same placeholder-div pattern (an inert slot
+  `<div>`, never a `<form>`; `#showAudienceAssets` injects the real form — see
+  Audience). `[contact]` carries a server-built `data-endpoint`; `[subscribe]`
+  carries `data-list-uuid` and renders nothing without a uuid-shaped list uuid.
+- `[[name ...]]` / `[[/name]]` escape a registered shortcode to literal text;
+  unknown names and malformed input pass through byte-for-byte.
+- New handlers implement `ShortcodeHandler` and register in
+  `defaultExpander()`; the required `ShortcodeCard` (label + snippet) feeds the
+  editor's Insert menu, so a new shortcode cannot ship undiscoverable.
