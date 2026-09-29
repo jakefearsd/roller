@@ -157,7 +157,10 @@ environment-variable-configured container.
     `ROLLER_MAIL_PORT`, and optionally `ROLLER_MAIL_USERNAME` /
     `ROLLER_MAIL_PASSWORD` — your SMTP relay, for password-reset and
     notification mail. Roller runs fine without these set; those two
-    features just won't send anything.
+    features just won't send anything. `ROLLER_MAIL_SECURITY` defaults to
+    `starttls` (required, not just offered, once username/password are set),
+    use `ssl` for a port-465 relay or `none` only for a local relay with no
+    TLS.
   - `ROLLER_NEWSLETTER_LISTMONK_BASEURL` — where `/newsletter/subscribe`
     forwards to. Blank makes that endpoint return 503; see
     [Newsletter](#newsletter).

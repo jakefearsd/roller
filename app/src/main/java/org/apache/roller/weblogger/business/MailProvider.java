@@ -35,11 +35,26 @@ import org.apache.roller.weblogger.config.WebloggerConfig;
  * Encapsulates Roller mail configuration, returns mail sessions.
  */
 public class MailProvider {
-    
+
     private static final Logger log = LoggerFactory.getLogger(MailProvider.class);
-    
+
     private enum ConfigurationType {JNDI_NAME, MAIL_PROPERTIES }
-    
+
+    private static final String SECURITY_STARTTLS = "starttls";
+    private static final String SECURITY_SSL = "ssl";
+    private static final String SECURITY_NONE = "none";
+
+    /**
+     * Connect/read/write timeout (milliseconds) for a properties-mode SMTP
+     * socket. {@link MailProvider} connects at construction time so a
+     * misconfigured relay fails startup rather than the first
+     * password-reset mail -- but only if the socket itself is bounded: with
+     * no timeout set, a relay that accepts the TCP connection and then never
+     * answers hangs startup forever. Package-private and non-final so the
+     * test suite can shrink it rather than wait out the real default.
+     */
+    static int connectTimeoutMillis = 30_000;
+
     private Session session = null;
     
     private ConfigurationType type = ConfigurationType.JNDI_NAME;
@@ -84,13 +99,24 @@ public class MailProvider {
         } else {
             Properties props = new Properties();
             props.setProperty("mail.smtp.host", mailHostname);
-            if (mailUsername != null && mailPassword != null) {
-                props.setProperty("mail.smtp.auth", "true");   
+            // A relay that accepts the TCP connection and then never
+            // answers must not hang startup forever. mail.smtp.* covers the
+            // plain and implicit-TLS (ssl.enable) cases alike -- both use
+            // the "smtp" transport/protocol name, so no separate
+            // mail.smtps.* spelling is needed.
+            String timeoutMillis = Integer.toString(connectTimeoutMillis);
+            props.setProperty("mail.smtp.connectiontimeout", timeoutMillis);
+            props.setProperty("mail.smtp.timeout", timeoutMillis);
+            props.setProperty("mail.smtp.writetimeout", timeoutMillis);
+            boolean hasCredentials = mailUsername != null && mailPassword != null;
+            if (hasCredentials) {
+                props.setProperty("mail.smtp.auth", "true");
             }
             if (mailPort != -1) {
                 props.setProperty("mail.smtp.port", ""+mailPort);
             }
-            session = Session.getDefaultInstance(props, null);
+            applySecurityProperties(props, hasCredentials);
+            session = Session.getInstance(props, null);
         }
         
         try (Transport ignored = getTransport()) {
@@ -102,6 +128,43 @@ public class MailProvider {
     }
     
     
+    /**
+     * Set STARTTLS/SSL properties on a properties-mode session according to
+     * the {@code mail.security} startup property: {@code starttls} (the
+     * default when unset), {@code ssl} or {@code none}. Any other value
+     * fails startup loudly rather than silently sending credentials in the
+     * clear.
+     */
+    private static void applySecurityProperties(Properties props, boolean hasCredentials)
+            throws StartupException {
+        String security = WebloggerConfig.getProperty("mail.security");
+        if (security == null) {
+            security = SECURITY_STARTTLS;
+        }
+        switch (security) {
+            case SECURITY_STARTTLS:
+                props.setProperty("mail.smtp.starttls.enable", "true");
+                props.setProperty("mail.smtp.ssl.checkserveridentity", "true");
+                // Credentials must never go over the wire in the clear: if a
+                // username/password is configured, STARTTLS is mandatory,
+                // not merely offered.
+                if (hasCredentials) {
+                    props.setProperty("mail.smtp.starttls.required", "true");
+                }
+                break;
+            case SECURITY_SSL:
+                props.setProperty("mail.smtp.ssl.enable", "true");
+                props.setProperty("mail.smtp.ssl.checkserveridentity", "true");
+                break;
+            case SECURITY_NONE:
+                break;
+            default:
+                throw new StartupException(
+                        "ERROR unsupported mail.security property value: " + security);
+        }
+    }
+
+
     /**
      * Get a mail Session.
      */
