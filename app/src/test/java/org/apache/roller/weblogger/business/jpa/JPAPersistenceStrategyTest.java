@@ -18,9 +18,15 @@
 package org.apache.roller.weblogger.business.jpa;
 
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import jakarta.persistence.FlushModeType;
+import jakarta.persistence.PersistenceException;
+import jakarta.persistence.Query;
+
 import org.apache.roller.testing.RollerDatabaseExtension;
+import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.VirtualHostRegistry;
 import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.startup.WebloggerStartup;
@@ -29,7 +35,11 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -199,6 +209,110 @@ class JPAPersistenceStrategyTest {
             assertDoesNotThrow(() -> strategy.refresh(neverPersisted),
                     "refresh() of an entity the EntityManager has never seen must not throw");
         } finally {
+            strategy.shutdown();
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Characterisation tests (written against the existing behaviour and
+    // expected to pass immediately): commit failure, the by-id and bulk
+    // removes, and the untyped named query's no-flush contract.
+    // ------------------------------------------------------------------
+
+    private static JPAPersistenceStrategy freshStrategy() throws Exception {
+        RollerDatabaseExtension.ensureSchema();
+        if (!WebloggerStartup.isPrepared()) {
+            WebloggerStartup.prepare();
+        }
+        return new JPAPersistenceStrategy(WebloggerStartup.getDatabaseProvider());
+    }
+
+    private static Weblog weblog(String handle) {
+        Weblog weblog = new Weblog();
+        weblog.setName("Strategy Test " + handle);
+        weblog.setHandle(handle);
+        weblog.setEmailAddress(handle + "@dev.null");
+        weblog.setEditorTheme("journal");
+        weblog.setLocale("en_US");
+        weblog.setTimeZone("America/Los_Angeles");
+        weblog.setDateCreated(new Date());
+        weblog.setCreatorUserName("nobody");
+        return weblog;
+    }
+
+    private static List<?> byHandle(JPAPersistenceStrategy strategy, String handle) throws Exception {
+        Query q = strategy.getNamedQuery("Weblog.getByHandle");
+        q.setParameter(1, handle);
+        return q.getResultList();
+    }
+
+    @Test
+    void aCommitThatViolatesAConstraintSurfacesAsWebloggerExceptionAndStoresNothing() throws Exception {
+        JPAPersistenceStrategy strategy = freshStrategy();
+        try {
+            strategy.store(weblog("strategydupehandle"));
+            strategy.store(weblog("strategydupehandle"));
+
+            WebloggerException thrown = assertThrows(WebloggerException.class, strategy::flush);
+            assertInstanceOf(PersistenceException.class, thrown.getCause());
+            strategy.release();
+
+            assertTrue(byHandle(strategy, "strategydupehandle").isEmpty(),
+                    "the failed commit must not have stored either row");
+        } finally {
+            strategy.release();
+            strategy.shutdown();
+        }
+    }
+
+    @Test
+    void removeByClassAndIdAndRemoveAllDeleteTheRows() throws Exception {
+        JPAPersistenceStrategy strategy = freshStrategy();
+        try {
+            Weblog single = weblog("strategyremovebyid");
+            Weblog first = weblog("strategyremoveall1");
+            Weblog second = weblog("strategyremoveall2");
+            strategy.store(single);
+            strategy.store(first);
+            strategy.store(second);
+            strategy.flush();
+            strategy.release();
+
+            strategy.remove(Weblog.class, single.getId());
+            strategy.removeAll(List.of(strategy.load(Weblog.class, first.getId()),
+                    strategy.load(Weblog.class, second.getId())));
+            strategy.flush();
+            strategy.release();
+
+            assertNull(strategy.load(Weblog.class, single.getId()));
+            assertNull(strategy.load(Weblog.class, first.getId()));
+            assertNull(strategy.load(Weblog.class, second.getId()));
+        } finally {
+            strategy.release();
+            strategy.shutdown();
+        }
+    }
+
+    @Test
+    void theUntypedNamedQueryNeverFlushesPendingWrites() throws Exception {
+        JPAPersistenceStrategy strategy = freshStrategy();
+        try {
+            Weblog pending = weblog("strategynamedquery");
+            strategy.store(pending);
+
+            Query q = strategy.getNamedQuery("Weblog.getByHandle");
+            assertEquals(FlushModeType.COMMIT, q.getFlushMode());
+            q.setParameter(1, "strategynamedquery");
+            assertTrue(q.getResultList().isEmpty(),
+                    "FlushModeType.COMMIT: an unflushed insert is invisible to the query");
+
+            strategy.flush();
+            assertEquals(1, byHandle(strategy, "strategynamedquery").size());
+
+            strategy.remove(Weblog.class, pending.getId());
+            strategy.flush();
+        } finally {
+            strategy.release();
             strategy.shutdown();
         }
     }
