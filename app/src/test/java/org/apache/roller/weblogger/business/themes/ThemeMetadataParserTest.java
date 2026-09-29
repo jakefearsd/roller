@@ -21,11 +21,16 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
+import java.util.stream.Stream;
 
 import org.apache.roller.weblogger.pojos.TemplateRendition.RenditionType;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -157,5 +162,102 @@ class ThemeMetadataParserTest {
                 parsed.getStylesheet().getTemplateRendition(RenditionType.STANDARD);
         assertNotNull(rendition, "the explicit standard rendition must be reachable by type");
         assertEquals(RenditionType.STANDARD, rendition.getType());
+    }
+
+    // --- required elements ---------------------------------------------------
+    //
+    // Characterisation tests, written against the existing behaviour and
+    // expected to pass immediately: each names what a theme.xml left out, and
+    // that message is all a theme author gets in the startup log.
+
+    private static final String WEBLOG_TEMPLATE =
+            "<template action=\"weblog\"><name>t</name>"
+            + "<rendition><templateLanguage>velocity</templateLanguage>"
+            + "<contentsFile>t.vm</contentsFile></rendition></template>";
+
+    static Stream<Arguments> descriptorsMissingARequiredElement() {
+        return Stream.of(
+                Arguments.of("no id",
+                        "<weblogtheme><name>t</name><preview-image path=\"p.png\" />"
+                                + WEBLOG_TEMPLATE + FOOTER,
+                        "'id' and 'name' are required theme elements"),
+                Arguments.of("no name",
+                        "<weblogtheme><id>t</id><preview-image path=\"p.png\" />"
+                                + WEBLOG_TEMPLATE + FOOTER,
+                        "'id' and 'name' are required theme elements"),
+                Arguments.of("no preview image",
+                        "<weblogtheme><id>t</id><name>t</name>" + WEBLOG_TEMPLATE + FOOTER,
+                        "No preview image specified"),
+                Arguments.of("no weblog template",
+                        HEADER + "<template action=\"permalink\"><name>p</name></template>"
+                                + FOOTER,
+                        "did not find a template of action = 'weblog'"),
+                Arguments.of("a template with no action",
+                        HEADER + "<template><name>t</name></template>" + FOOTER,
+                        "Template must contain an 'action' element"),
+                Arguments.of("a template with no name",
+                        HEADER + "<template action=\"weblog\"><link>t</link></template>" + FOOTER,
+                        "templates must contain a 'name' element"),
+                Arguments.of("a rendition with no language",
+                        HEADER + "<template action=\"weblog\"><name>t</name>"
+                                + "<rendition><contentsFile>t.vm</contentsFile></rendition>"
+                                + "</template>" + FOOTER,
+                        "rendition must contain a 'templateLanguage' element"),
+                Arguments.of("a template rendition with no file",
+                        HEADER + "<template action=\"weblog\"><name>t</name>"
+                                + "<rendition><templateLanguage>velocity</templateLanguage>"
+                                + "</rendition></template>" + FOOTER,
+                        "Rendition must contain a 'contentsFile' element"),
+                Arguments.of("a stylesheet rendition with no file",
+                        HEADER + "<stylesheet><name>s</name><link>s</link>"
+                                + "<rendition><templateLanguage>velocity</templateLanguage>"
+                                + "</rendition></stylesheet>" + WEBLOG_TEMPLATE + FOOTER,
+                        "stylesheet must contain a 'contentsFile' element"),
+                Arguments.of("a stylesheet with no name",
+                        HEADER + "<stylesheet><link>s</link></stylesheet>"
+                                + WEBLOG_TEMPLATE + FOOTER,
+                        "stylesheet must contain a 'name' element"),
+                Arguments.of("a stylesheet with no link",
+                        HEADER + "<stylesheet><name>s</name></stylesheet>"
+                                + WEBLOG_TEMPLATE + FOOTER,
+                        "stylesheet must contain a 'link' element"));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("descriptorsMissingARequiredElement")
+    void aDescriptorMissingARequiredElementIsRefusedNamingIt(String what, String xml,
+            String expectedMessage) {
+        ThemeParsingException ex = assertThrows(ThemeParsingException.class, () -> parse(xml));
+
+        assertEquals(expectedMessage, ex.getMessage());
+    }
+
+    /**
+     * The navbar flag is what puts a theme page in the weblog's navigation
+     * menu; no bundled theme sets it, and it is read case-insensitively.
+     */
+    @Test
+    void theNavbarAndHiddenFlagsAreReadCaseInsensitively() throws Exception {
+        String xml = HEADER
+                + "<template action=\"weblog\"><name>t</name>"
+                + "<navbar>TRUE</navbar><hidden>True</hidden>"
+                + "<rendition><templateLanguage>velocity</templateLanguage>"
+                + "<contentsFile>t.vm</contentsFile></rendition></template>"
+                + "<template action=\"custom\"><name>plain</name>"
+                + "<navbar>yes</navbar>"
+                + "<rendition><templateLanguage>velocity</templateLanguage>"
+                + "<contentsFile>p.vm</contentsFile></rendition></template>"
+                + FOOTER;
+
+        ThemeMetadata parsed = parse(xml);
+
+        ThemeMetadataTemplate flagged = parsed.getTemplates().stream()
+                .filter(t -> "t".equals(t.getName())).findFirst().orElseThrow();
+        ThemeMetadataTemplate plain = parsed.getTemplates().stream()
+                .filter(t -> "plain".equals(t.getName())).findFirst().orElseThrow();
+        assertTrue(flagged.isNavbar());
+        assertTrue(flagged.isHidden());
+        assertFalse(plain.isNavbar(), "only \"true\" turns the flag on");
+        assertFalse(plain.isHidden(), "and it is off when absent");
     }
 }

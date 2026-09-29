@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
 
 import org.apache.roller.weblogger.pojos.ThemeResource;
 import org.apache.roller.weblogger.pojos.ThemeTemplate;
@@ -284,5 +285,100 @@ class SharedThemeFromDirTest {
 
         assertThrows(ThemeInitializationException.class, () -> new SharedThemeFromDir(path),
                 "a template that declares no way to render itself is not usable");
+    }
+
+    // --- further failure shapes and timestamps ------------------------------
+    //
+    // Characterisation tests, written against the existing behaviour and
+    // expected to pass immediately.
+
+    /**
+     * A stylesheet whose FILE is missing is dropped (above), but one that
+     * declares no standard rendition at all fails the whole theme -- the
+     * descriptor itself is wrong, not the disk.
+     */
+    @Test
+    void aStylesheetWithNoStandardRenditionFailsTheWholeTheme(@TempDir Path dir)
+            throws Exception {
+        String path = themeDir(dir,
+                themeXml("<stylesheet><name>custom.css</name><description>d</description>"
+                        + "<link>custom.css</link><contentType>text/css</contentType>"
+                        + "</stylesheet>"
+                        + template("weblog", "Weblog", "weblog.vm")),
+                "weblog.vm", "x", "preview.png", "x");
+
+        ThemeInitializationException ex = assertThrows(ThemeInitializationException.class,
+                () -> new SharedThemeFromDir(path));
+
+        assertEquals("Error in getting template codes for template", ex.getMessage());
+    }
+
+    /**
+     * A template path that names a directory cannot be read; like a missing
+     * template file, that is fatal and the message names the path.
+     */
+    @Test
+    void aTemplatePathThatIsADirectoryFailsTheWholeTheme(@TempDir Path dir) throws Exception {
+        String path = themeDir(dir,
+                themeXml(template("weblog", "Weblog", "weblog.vm")),
+                "preview.png", "x");
+        Files.createDirectories(dir.resolve("weblog.vm"));
+
+        ThemeInitializationException ex = assertThrows(ThemeInitializationException.class,
+                () -> new SharedThemeFromDir(path));
+
+        assertTrue(ex.getMessage().contains("weblog.vm"), ex.getMessage());
+    }
+
+    /** The same unreadable path on the stylesheet only drops the stylesheet. */
+    @Test
+    void aStylesheetPathThatIsADirectoryOnlyDropsTheStylesheet(@TempDir Path dir)
+            throws Exception {
+        String path = themeDir(dir,
+                themeXml("<stylesheet><name>custom.css</name><description>d</description>"
+                        + "<link>custom.css</link><contentType>text/css</contentType>"
+                        + "<rendition><contentsFile>custom.css</contentsFile>"
+                        + "<templateLanguage>velocity</templateLanguage></rendition>"
+                        + "</stylesheet>"
+                        + template("weblog", "Weblog", "weblog.vm")),
+                "weblog.vm", "x", "preview.png", "x");
+        Files.createDirectories(dir.resolve("custom.css"));
+
+        SharedThemeFromDir theme = new SharedThemeFromDir(path);
+
+        assertNull(theme.getStylesheet());
+        assertNotNull(theme.getDefaultTemplate());
+    }
+
+    /**
+     * The theme is dated by its newest file, and no template is dated earlier
+     * than its own file -- theme reload compares these to decide whether the
+     * copy on disk is newer.
+     *
+     * <p>Deliberately no stronger claim about the older template: each
+     * template is stamped with the newest time seen <em>so far</em> while
+     * loading, and templates load in {@code HashSet} order, so whether the
+     * older file's template carries its own time or the newer one varies.
+     */
+    @Test
+    void theThemeIsDatedByItsNewestFileAndNoTemplateByLessThanItsOwn(@TempDir Path dir)
+            throws Exception {
+        String path = themeDir(dir,
+                themeXml(template("weblog", "Weblog", "weblog.vm")
+                        + template("permalink", "permalink", "permalink.vm")),
+                "weblog.vm", "list", "permalink.vm", "one entry", "preview.png", "x");
+        long older = 1_600_000_000_000L;
+        long newer = 1_700_000_000_000L;
+        Files.setLastModifiedTime(dir.resolve("weblog.vm"), FileTime.fromMillis(older));
+        Files.setLastModifiedTime(dir.resolve("permalink.vm"), FileTime.fromMillis(newer));
+
+        SharedThemeFromDir theme = new SharedThemeFromDir(path);
+
+        assertEquals(newer, theme.getLastModified().getTime());
+        assertEquals(newer, theme.getTemplateByName("permalink").getLastModified().getTime());
+        long weblogDated = theme.getTemplateByName("Weblog").getLastModified().getTime();
+        assertTrue(weblogDated == older || weblogDated == newer,
+                "the older file's template is dated by its own file or the newest: "
+                        + weblogDated);
     }
 }

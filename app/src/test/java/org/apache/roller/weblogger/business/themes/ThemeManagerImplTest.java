@@ -35,17 +35,32 @@ import org.apache.roller.weblogger.pojos.MediaFile;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.MockedStatic;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.nio.file.attribute.FileTime;
+import java.time.Instant;
+import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.config.WebloggerConfig;
+import org.apache.roller.weblogger.pojos.ThemeResource;
+import org.apache.roller.weblogger.pojos.TemplateRendition.RenditionType;
+import org.apache.roller.weblogger.util.RollerMessages;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -401,6 +416,201 @@ class ThemeManagerImplTest {
         verify(weblogger.mediaFileManager()).removeMediaFile(weblog, existing);
         verify(weblogger.mediaFileManager())
                 .createThemeMediaFile(eq(weblog), any(), any());
+    }
+
+    // --- directory resources and refused resources ---------------------------
+    //
+    // Characterisation tests (this section and the two below), written against
+    // the existing behaviour and expected to pass immediately.
+
+    /**
+     * A resource that is a directory becomes a media directory, created only
+     * when the weblog does not already have one of that name.
+     */
+    @Test
+    void aDirectoryResourceBecomesAMediaDirectory(@TempDir Path dir) throws Exception {
+        SharedTheme theme = themeWithDirectoryResource(dir, "gallery");
+
+        themeManager.importTheme(weblog, theme, false);
+
+        verify(weblogger.mediaFileManager()).createMediaFileDirectory(weblog, "gallery");
+        verify(weblogger.mediaFileManager(), never())
+                .createThemeMediaFile(any(), any(), any());
+    }
+
+    @Test
+    void anExistingMediaDirectoryIsLeftAlone(@TempDir Path dir) throws Exception {
+        SharedTheme theme = themeWithDirectoryResource(dir, "gallery");
+        when(weblogger.mediaFileManager().getMediaFileDirectoryByName(weblog, "gallery"))
+                .thenReturn(new MediaFileDirectory());
+
+        themeManager.importTheme(weblog, theme, false);
+
+        verify(weblogger.mediaFileManager(), never()).createMediaFileDirectory(any(), any());
+    }
+
+    /**
+     * The media manager reports a refused file through the messages it is
+     * handed rather than by throwing; the import must not read that silence
+     * as success.
+     */
+    @Test
+    void aResourceTheMediaManagerRefusesFailsTheImport(@TempDir Path dir) throws Exception {
+        SharedTheme theme = themeWithResources(dir, "logo.png");
+        doAnswer(invocation -> {
+            invocation.<RollerMessages>getArgument(2).addError("error.upload.forbiddenFile");
+            return null;
+        }).when(weblogger.mediaFileManager()).createThemeMediaFile(eq(weblog), any(), any());
+
+        WebloggerException ex = assertThrows(WebloggerException.class,
+                () -> themeManager.importTheme(weblog, theme, false));
+
+        assertTrue(ex.getMessage().contains("error.upload.forbiddenFile"),
+                "the refusal must surface, named: " + ex.getMessage());
+    }
+
+    /**
+     * A resource stream that cannot be closed is reported as an import
+     * failure too, not swallowed.
+     */
+    @Test
+    void aResourceStreamThatFailsToCloseFailsTheImport() throws Exception {
+        ThemeResource resource = mock(ThemeResource.class);
+        when(resource.getPath()).thenReturn("logo.png");
+        when(resource.isDirectory()).thenReturn(false);
+        when(resource.getInputStream()).thenReturn(new ByteArrayInputStream(new byte[0]) {
+            @Override
+            public void close() throws IOException {
+                throw new IOException("disk went away");
+            }
+        });
+        SharedTheme theme = mock(SharedTheme.class);
+        when(theme.getName()).thenReturn("Unclosable");
+        when(theme.getResources()).thenReturn(List.of(resource));
+
+        WebloggerException ex = assertThrows(WebloggerException.class,
+                () -> themeManager.importTheme(weblog, theme, false));
+
+        assertTrue(ex.getMessage().contains("error.closingStream"), ex.getMessage());
+    }
+
+    // --- where the themes come from ------------------------------------------
+
+    @Test
+    void aMissingThemesDirSettingRefusesToStart() {
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> managerFor("  "));
+
+        assertEquals("couldn't get themes directory from config", ex.getMessage());
+    }
+
+    /**
+     * A themes dir that is not there fails construction, naming the path
+     * with any trailing slash already removed.
+     */
+    @Test
+    void anUnreadableThemesDirRefusesToStart(@TempDir Path dir) {
+        String missing = dir.resolve("no-such-themes").toString();
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> managerFor(missing + "/"));
+
+        assertEquals("couldn't access theme dir [" + missing + "]", ex.getMessage());
+    }
+
+    /**
+     * One broken theme directory costs only that theme: the others still
+     * load, and hidden directories are not mistaken for themes.
+     */
+    @Test
+    void aBrokenThemeDirectoryIsSkippedAndTheRestLoad(@TempDir Path dir) throws Exception {
+        writeTheme(Files.createDirectories(dir.resolve("good")), "goodtheme", "$entry.title");
+        Files.writeString(Files.createDirectories(dir.resolve("broken")).resolve("theme.xml"),
+                "<weblogtheme>", StandardCharsets.UTF_8);
+        writeTheme(Files.createDirectories(dir.resolve(".hidden")), "hiddentheme", "x");
+
+        ThemeManagerImpl manager = managerFor(dir.toString());
+        manager.initialize();
+
+        assertEquals(List.of("goodtheme"),
+                manager.getEnabledThemesList().stream().map(SharedTheme::getId).toList());
+    }
+
+    // --- reloading a theme from disk -----------------------------------------
+
+    /**
+     * Theme reload mode: a theme whose files changed on disk replaces the
+     * cached one, so a template edit shows without a restart.
+     */
+    @Test
+    void aThemeChangedOnDiskReplacesTheCachedOne(@TempDir Path dir) throws Exception {
+        Path themeDir = Files.createDirectories(dir.resolve("reloadable"));
+        writeTheme(themeDir, "reloadable", "old body");
+        ThemeManagerImpl manager = managerFor(dir.toString());
+        manager.initialize();
+        SharedTheme before = manager.getTheme("reloadable");
+
+        Files.writeString(themeDir.resolve("weblog.vm"), "new body", StandardCharsets.UTF_8);
+        Files.setLastModifiedTime(themeDir.resolve("weblog.vm"),
+                FileTime.from(Instant.now().plusSeconds(60)));
+
+        assertTrue(manager.reLoadThemeFromDisk("reloadable"));
+        SharedTheme after = manager.getTheme("reloadable");
+        assertNotSame(before, after, "the cached theme must be replaced");
+        assertEquals("new body", after.getDefaultTemplate()
+                .getTemplateRendition(RenditionType.STANDARD).getTemplate());
+    }
+
+    /**
+     * A theme that no longer loads from disk (its descriptor broken mid-edit)
+     * is not reloaded; the working cached copy stays in service.
+     */
+    @Test
+    void aThemeThatNoLongerLoadsKeepsItsCachedCopy(@TempDir Path dir) throws Exception {
+        Path themeDir = Files.createDirectories(dir.resolve("reloadable"));
+        writeTheme(themeDir, "reloadable", "body");
+        ThemeManagerImpl manager = managerFor(dir.toString());
+        manager.initialize();
+        SharedTheme before = manager.getTheme("reloadable");
+
+        Files.writeString(themeDir.resolve("theme.xml"), "<weblogtheme>", StandardCharsets.UTF_8);
+
+        assertFalse(manager.reLoadThemeFromDisk("reloadable"));
+        assertSame(before, manager.getTheme("reloadable"));
+    }
+
+    /** A manager whose themes.dir setting is the given value. */
+    private ThemeManagerImpl managerFor(String themesDir) {
+        try (MockedStatic<WebloggerConfig> config = mockStatic(WebloggerConfig.class)) {
+            config.when(() -> WebloggerConfig.getProperty("themes.dir")).thenReturn(themesDir);
+            return new ThemeManagerImpl(weblogger.weblogger());
+        }
+    }
+
+    /** A minimal loadable theme whose Weblog template has the given body. */
+    private static void writeTheme(Path dir, String id, String body) throws IOException {
+        String xml = "<weblogtheme><id>" + id + "</id><name>" + id + "</name>"
+                + "<preview-image path=\"preview.png\" />"
+                + "<template action=\"weblog\"><name>Weblog</name><description>d</description>"
+                + "<navbar>false</navbar><hidden>false</hidden>"
+                + "<contentType>text/html</contentType>"
+                + "<rendition><contentsFile>weblog.vm</contentsFile>"
+                + "<templateLanguage>velocity</templateLanguage></rendition></template>"
+                + "</weblogtheme>";
+        Files.writeString(dir.resolve("theme.xml"), xml, StandardCharsets.UTF_8);
+        Files.writeString(dir.resolve("weblog.vm"), body, StandardCharsets.UTF_8);
+        Files.writeString(dir.resolve("preview.png"), "png", StandardCharsets.UTF_8);
+    }
+
+    /** A theme declaring one resource that is a directory on disk. */
+    private static SharedTheme themeWithDirectoryResource(Path dir, String directory)
+            throws Exception {
+        themeWithResources(dir);   // writes a resource-free theme into dir
+        Files.createDirectories(dir.resolve(directory));
+        String xml = Files.readString(dir.resolve("theme.xml"), StandardCharsets.UTF_8)
+                .replace("<template ", "<resource path=\"" + directory + "\" /><template ");
+        Files.writeString(dir.resolve("theme.xml"), xml, StandardCharsets.UTF_8);
+        return new SharedThemeFromDir(dir.toString());
     }
 
     /** Builds a theme directory that declares the given resource paths. */
