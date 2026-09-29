@@ -18,6 +18,7 @@
 /* Created on Jul 16, 2003 */
 package org.apache.roller.weblogger.business.search.lucene;
 
+import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 
@@ -99,9 +100,28 @@ public class RebuildWebsiteIndexOperation extends WriteToIndexOperation {
         }
 
         IndexWriter writer = beginWriting();
+        boolean succeeded = false;
 
         try {
             if (writer != null) {
+
+                // Fetch the entries to re-add. This runs only once the
+                // writer is open -- and so only once WriteToIndexOperation's
+                // write lock is held -- so a concurrent AddEntryOperation for
+                // a newly published entry cannot slip in between this fetch
+                // and the delete below and be silently dropped by the
+                // re-add. If the query fails, the catch below rolls back the
+                // delete too: a rebuild that deletes first and only then
+                // discovers the query failed would otherwise leave the
+                // weblog with no search results until the next successful
+                // rebuild.
+                WeblogEntryManager weblogManager = roller.getWeblogEntryManager();
+                WeblogEntrySearchCriteria wesc = new WeblogEntrySearchCriteria();
+                wesc.setWeblog(website);
+                wesc.setStatus(PubStatus.PUBLISHED);
+                List<WeblogEntry> entries = weblogManager.getWeblogEntries(wesc);
+
+                log.debug("Entries to index: {}", entries.size());
 
                 // Delete Doc
                 Term tWebsite = null;
@@ -118,26 +138,29 @@ public class RebuildWebsiteIndexOperation extends WriteToIndexOperation {
                 }
 
                 // Add Doc
-                WeblogEntryManager weblogManager = roller
-                        .getWeblogEntryManager();
-                WeblogEntrySearchCriteria wesc = new WeblogEntrySearchCriteria();
-                wesc.setWeblog(website);
-                wesc.setStatus(PubStatus.PUBLISHED);
-                List<WeblogEntry> entries = weblogManager.getWeblogEntries(wesc);
-
-                log.debug("Entries to index: {}", entries.size());
-
                 for (WeblogEntry entry : entries) {
                     writer.addDocument(getDocument(entry));
                     log.debug("Indexed entry {}: {}", entry.getPubTime(), entry.getAnchor());
                 }
-
-                // release the database connection
-                roller.release();
             }
+            succeeded = true;
         } catch (Exception e) {
-            log.error("ERROR adding/deleting doc to index", e);
+            log.error("ERROR adding/deleting doc to index; rolling back rebuild", e);
         } finally {
+            // A rebuild is all-or-nothing: on any failure after the writer is
+            // open, roll back rather than let endWriting()'s close() commit a
+            // partial delete/add. IndexWriter.rollback() itself closes the
+            // writer, and closing an already-closed writer is a documented
+            // no-op, so endWriting() below still safely releases the
+            // analyzer and (via the write lock in WriteToIndexOperation) the
+            // index is never left half-written.
+            if (writer != null && !succeeded) {
+                try {
+                    writer.rollback();
+                } catch (IOException ioe) {
+                    log.error("ERROR rolling back index writer", ioe);
+                }
+            }
             endWriting();
             if (roller != null) {
                 roller.release();
