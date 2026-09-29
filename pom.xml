@@ -89,9 +89,15 @@ limitations under the License.
              leaves ~41 branches. Coverage of NEW work remains the diff
              gate's job (bin/check-diff-coverage.sh, ~90% of changed lines);
              this floor's job is only to stop the whole-codebase number
-             sliding back. -->
-        <jacoco.line.minimum>0.9100</jacoco.line.minimum>
-        <jacoco.branch.minimum>0.8400</jacoco.branch.minimum>
+             sliding back.
+
+             Raised 2026-09-28 after a test-only coverage wave (453 lines,
+             nine commits of characterisation tests): measured LINE 0.9377,
+             BRANCH 0.8722 on `mvn -pl app clean verify` without cwebp.
+             Floors keep the same headroom as the 2026-09-08 raise: 0.9330
+             leaves ~95 lines, 0.8670 leaves ~37 branches. -->
+        <jacoco.line.minimum>0.9330</jacoco.line.minimum>
+        <jacoco.branch.minimum>0.8670</jacoco.branch.minimum>
         <jacoco.check.skip>false</jacoco.check.skip>
 
         <quality.check.skip>false</quality.check.skip>

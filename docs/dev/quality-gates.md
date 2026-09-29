@@ -10,15 +10,17 @@ resolves through the index at the end of `CLAUDE.md`.
 - JaCoCo `check` runs at `verify` with floors in the parent `pom.xml`
   (`jacoco.line.minimum` / `jacoco.branch.minimum`, plus a PACKAGE rule for
   `ui.rendering.*`). Floors only ever move up; "raise" means raise where
-  there is slack, not all three. Re-measured 2026-09-08: LINE 0.9142, BRANCH
-  0.8458, PACKAGE velocity 0.8806 / servlets 0.8571 / rendering 0.9447;
-  floors stand at **0.9100 / 0.8400 / 0.80**. Set a floor a few tenths
+  there is slack, not all three. Re-measured 2026-09-28 (after a test-only
+  coverage wave, without `cwebp`): LINE 0.9377, BRANCH 0.8722, PACKAGE
+  velocity 0.8819 / servlets 0.8551 / rendering 0.9447; floors stand at
+  **0.9330 / 0.8670 / 0.80** (raised from 0.9100 / 0.8400, measured
+  0.9142 / 0.8458 on 2026-09-08). Set a floor a few tenths
   under measured, never at it — the margin separates a ratchet from a
   tripwire an unrelated change sets off. The PACKAGE rule's binding package
   is whatever its `<includes>` names, not the lowest number in the report:
   `ui.rendering.filters` measures lower (0.8333) but is not included and at
   18 lines is too volatile (one line = 5.6 points); the real constraint is
-  `servlets` at 0.8571 across 693 lines. New work's coverage is the diff
+  `servlets` at 0.8551. New work's coverage is the diff
   gate's job.
   `cwebp` caveat: the same tree measures differently with and without
   `cwebp` on `PATH` (three WebP tests skip without it) — 2026-09-09,
