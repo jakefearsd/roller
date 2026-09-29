@@ -20,11 +20,14 @@ package org.apache.roller.weblogger.business.startup;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Savepoint;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +43,8 @@ import java.util.regex.Pattern;
  * where semicolons and "--" are ordinary content, not statement/comment syntax.
  */
 public class SQLScriptRunner {
+
+    private static final Logger log = LoggerFactory.getLogger(SQLScriptRunner.class);
 
     /** Matches a dollar-quote delimiter: {@code $$} or {@code $tag$}. */
     private static final Pattern DOLLAR_QUOTE = Pattern.compile("\\$[A-Za-z0-9_]*\\$");
@@ -185,25 +190,49 @@ public class SQLScriptRunner {
             Connection con, boolean stopOnError) throws SQLException {
         failed = false;
         errors = false;
+
+        // A connection not in autocommit mode belongs to the caller (in
+        // production, DatabaseInstaller.applyMigration, which commits the
+        // whole script and its schema_migrations row together): this method
+        // must never commit on its own initiative there, or a rollback the
+        // caller issues after a later failure only undoes the one statement
+        // that failed, not the script's earlier, already-committed work.
+        // PostgreSQL also aborts the whole transaction after any failed
+        // statement, so a tolerated failure (or stopOnError=false) needs a
+        // savepoint per statement to keep the statements around it usable.
+        // With autocommit on, neither problem exists -- PostgreSQL commits
+        // each statement itself -- so this stays a no-op there, unchanged.
+        boolean transactional = !con.getAutoCommit();
+
         for (String command : commands) {
-            
-            // run each command
-            try (Statement stmt = con.createStatement()) {
-                stmt.executeUpdate(command);
-                if (!con.getAutoCommit()) {
-                    con.commit();
+
+            Savepoint savepoint = null;
+            try {
+                if (transactional) {
+                    savepoint = con.setSavepoint();
+                }
+
+                try (Statement stmt = con.createStatement()) {
+                    stmt.executeUpdate(command);
+                }
+
+                if (transactional) {
+                    con.releaseSavepoint(savepoint);
                 }
 
                 // on success, echo command to messages
                 successMessage(command);
 
             } catch (SQLException ex) {
+                if (transactional) {
+                    rollbackToSavepoint(con, savepoint, command);
+                }
                 if (command.contains("drop foreign key") || command.contains("drop index")) {
                     errorMessage("INFO: SQL command [" + command + "] failed, ignored.");
                     continue;
                 }
                 // add error message with text of SQL command to messages
-                errorMessage("ERROR: SQLException executing SQL [" + command 
+                errorMessage("ERROR: SQLException executing SQL [" + command
                         + "] : " + ex.getLocalizedMessage());
                 // add stack trace to messages
                 StringWriter sw = new StringWriter();
@@ -214,6 +243,22 @@ public class SQLScriptRunner {
                     throw ex;
                 }
             }
+        }
+    }
+
+    /**
+     * Isolates one statement's failure from the rest of the caller's
+     * transaction. A null {@code savepoint} (only possible if
+     * {@code con.setSavepoint()} itself threw) has nothing to roll back to.
+     */
+    private void rollbackToSavepoint(Connection con, Savepoint savepoint, String command) {
+        if (savepoint == null) {
+            return;
+        }
+        try {
+            con.rollback(savepoint);
+        } catch (SQLException rollbackFailure) {
+            log.error("Rollback to savepoint for [{}] failed", command, rollbackFailure);
         }
     }
     

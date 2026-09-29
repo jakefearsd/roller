@@ -23,6 +23,7 @@ import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Savepoint;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,8 +33,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -181,6 +185,115 @@ class SQLScriptRunnerTest {
         assertEquals(List.of("SELECT 2"), executed);
         assertEquals(List.of("INFO: SQL command [alter table t drop index ix_t] failed, ignored.", "SELECT 2"),
                 runner.getMessages());
+    }
+
+    @Test
+    void withAutocommitOnNoSavepointMachineryIsUsed() throws Exception {
+        List<String> executed = new ArrayList<>();
+        Connection con = recordingConnection(executed, new SQLException("unused"));
+        SQLScriptRunner runner = runnerFor("SELECT 1;");
+
+        runner.runScript(con, true);
+
+        verify(con, never()).setSavepoint();
+        verify(con, never()).commit();
+    }
+
+    /**
+     * When the connection is not in autocommit mode, the caller (in
+     * production, {@code DatabaseInstaller.applyMigration}) owns the
+     * transaction: {@code runScript} must never commit on its behalf, or a
+     * rollback after a later statement's failure only undoes that one
+     * statement rather than the whole script.
+     */
+    @Test
+    void insideATransactionEachSuccessfulStatementIsSavepointedAndReleasedButNeverCommitted()
+            throws Exception {
+        List<String> executed = new ArrayList<>();
+        Connection con = mock(Connection.class);
+        when(con.getAutoCommit()).thenReturn(false);
+        Savepoint sp1 = mock(Savepoint.class);
+        Savepoint sp2 = mock(Savepoint.class);
+        when(con.setSavepoint()).thenReturn(sp1, sp2);
+        when(con.createStatement()).thenAnswer(invocation -> {
+            Statement st = mock(Statement.class);
+            when(st.executeUpdate(anyString())).thenAnswer(call -> {
+                executed.add(call.getArgument(0));
+                return 0;
+            });
+            return st;
+        });
+        SQLScriptRunner runner = runnerFor("SELECT 1;\nSELECT 2;");
+
+        runner.runScript(con, true);
+
+        assertEquals(List.of("SELECT 1", "SELECT 2"), executed);
+        verify(con).releaseSavepoint(sp1);
+        verify(con).releaseSavepoint(sp2);
+        verify(con, never()).commit();
+        verify(con, never()).rollback(any(Savepoint.class));
+    }
+
+    /**
+     * PostgreSQL aborts the whole transaction after any failed statement
+     * unless the failure is isolated by a savepoint; without one, a tolerated
+     * failure (or {@code stopOnError=false}) would poison every statement
+     * after it, not just report and move on.
+     */
+    @Test
+    void insideATransactionAToleratedFailureRollsBackToItsSavepointAndTheScriptContinues()
+            throws Exception {
+        List<String> executed = new ArrayList<>();
+        Connection con = mock(Connection.class);
+        when(con.getAutoCommit()).thenReturn(false);
+        Savepoint sp1 = mock(Savepoint.class);
+        Savepoint sp2 = mock(Savepoint.class);
+        when(con.setSavepoint()).thenReturn(sp1, sp2);
+        SQLException failure = new SQLException("no such index");
+        when(con.createStatement()).thenAnswer(invocation -> {
+            Statement st = mock(Statement.class);
+            when(st.executeUpdate(anyString())).thenAnswer(call -> {
+                String command = call.getArgument(0);
+                if (command.contains("drop index")) {
+                    throw failure;
+                }
+                executed.add(command);
+                return 0;
+            });
+            return st;
+        });
+        SQLScriptRunner runner = runnerFor("alter table t drop index ix_t;\nSELECT 2;");
+
+        runner.runScript(con, true);
+
+        assertFalse(runner.getFailed());
+        assertEquals(List.of("SELECT 2"), executed);
+        verify(con).rollback(sp1);
+        verify(con).releaseSavepoint(sp2);
+        verify(con, never()).commit();
+    }
+
+    @Test
+    void insideATransactionStopOnErrorRollsBackToTheSavepointBeforeRethrowingAndNeverCommits()
+            throws Exception {
+        Connection con = mock(Connection.class);
+        when(con.getAutoCommit()).thenReturn(false);
+        Savepoint sp1 = mock(Savepoint.class);
+        when(con.setSavepoint()).thenReturn(sp1);
+        SQLException failure = new SQLException("syntax error at BAD");
+        when(con.createStatement()).thenAnswer(invocation -> {
+            Statement st = mock(Statement.class);
+            when(st.executeUpdate(anyString())).thenThrow(failure);
+            return st;
+        });
+        SQLScriptRunner runner = runnerFor("BAD STATEMENT;");
+
+        SQLException thrown = assertThrows(SQLException.class, () -> runner.runScript(con, true));
+
+        assertSame(failure, thrown);
+        assertTrue(runner.getFailed());
+        verify(con).rollback(sp1);
+        verify(con, never()).commit();
     }
 
     @Test

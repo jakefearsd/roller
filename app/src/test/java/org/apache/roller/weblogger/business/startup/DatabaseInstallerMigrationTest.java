@@ -192,6 +192,83 @@ class DatabaseInstallerMigrationTest {
     }
 
     @Test
+    void aFailingMigrationLeavesNoPartialEffectsAndIsNotRecorded() throws Exception {
+        String second = MigrationCatalog.versions().get(1);
+        DatabaseScriptProvider scripts = onlyV001Then(sql(
+                "CREATE TABLE half_applied (id INT);\n"
+                + "CREATE TABLE broken (;"));
+        DatabaseInstaller installer = new DatabaseInstaller(provider, scripts);
+
+        StartupException failure = assertThrows(StartupException.class, installer::createDatabase);
+
+        assertEquals("Error applying migration " + second, failure.getMessage());
+        assertFalse(tableExists("half_applied"),
+                "the whole migration must roll back, not just the failing statement");
+        assertEquals(List.of(V001), recordedVersions(),
+                "a partially-applied, non-atomic migration must not be recorded, "
+                        + "or a retry of it fails forever");
+    }
+
+    /**
+     * Mirrors {@code anUpgradeAppliesOnlyThePendingMigrationAndExpandsTheAppUserVariable}'s
+     * setup: every migration but the last is pre-recorded, so the installer applies
+     * exactly one, custom, multi-statement migration and there is no "next" migration
+     * for the chain to (wrongly) continue into.
+     */
+    @Test
+    void aSuccessfulMultiStatementMigrationCommitsEverythingAndRecordsTheVersion() throws Exception {
+        List<String> versions = MigrationCatalog.versions();
+        String last = versions.getLast();
+        execute("CREATE TABLE schema_migrations (version VARCHAR(64) PRIMARY KEY, "
+                + "applied_at TIMESTAMP NOT NULL DEFAULT NOW())");
+        for (String version : versions.subList(0, versions.size() - 1)) {
+            execute("INSERT INTO schema_migrations (version) VALUES ('" + version + "')");
+        }
+        DatabaseScriptProvider scripts = path -> path.equals(last + ".sql")
+                ? sql("CREATE TABLE multi_a (id INT);\n"
+                        + "CREATE TABLE multi_b (id INT);\n"
+                        + "CREATE TABLE multi_c (id INT);")
+                : failIfRead(path);
+        DatabaseInstaller installer = new DatabaseInstaller(provider, scripts);
+
+        installer.upgradeDatabase(false);
+
+        assertTrue(tableExists("multi_a"));
+        assertTrue(tableExists("multi_b"));
+        assertTrue(tableExists("multi_c"));
+        assertEquals(versions, recordedVersions());
+    }
+
+    @Test
+    void aToleratedFailureInsideATransactionDoesNotAbortTheStatementsAfterIt() throws Exception {
+        List<String> versions = MigrationCatalog.versions();
+        String last = versions.getLast();
+        execute("CREATE TABLE schema_migrations (version VARCHAR(64) PRIMARY KEY, "
+                + "applied_at TIMESTAMP NOT NULL DEFAULT NOW())");
+        for (String version : versions.subList(0, versions.size() - 1)) {
+            execute("INSERT INTO schema_migrations (version) VALUES ('" + version + "')");
+        }
+        DatabaseScriptProvider scripts = path -> path.equals(last + ".sql")
+                ? sql("CREATE TABLE tolerant_probe (id INT);\n"
+                        + "alter table tolerant_probe drop index ix_ghost;\n"
+                        + "CREATE TABLE tolerant_probe2 (id INT);")
+                : failIfRead(path);
+        DatabaseInstaller installer = new DatabaseInstaller(provider, scripts);
+
+        installer.upgradeDatabase(false);
+
+        assertTrue(tableExists("tolerant_probe"));
+        assertTrue(tableExists("tolerant_probe2"),
+                "a tolerated failure (drop index) must not abort the statements after it, "
+                        + "even inside a single migration transaction");
+        assertEquals(versions, recordedVersions());
+        List<String> messages = installer.getMessages();
+        assertTrue(messages.stream().anyMatch(
+                        m -> m.contains("drop index") && m.contains("failed, ignored")),
+                messages.toString());
+    }
+
+    @Test
     void aMigrationMissingFromTheClasspathIsReportedByName() throws Exception {
         String second = MigrationCatalog.versions().get(1);
         DatabaseInstaller installer = new DatabaseInstaller(provider, onlyV001Then(null));
