@@ -17,13 +17,16 @@
  */
 package org.apache.roller.weblogger.business.startup;
 
+import org.apache.roller.weblogger.business.DatabaseProvider;
 import org.junit.jupiter.api.Test;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -37,6 +40,10 @@ import static org.mockito.Mockito.when;
  * null guard is kept anyway and fails safe with a diagnostic message rather
  * than a bare NPE. These tests pin all three branches of that check directly,
  * without a real database connection.
+ *
+ * <p>The unreachable-database tests below are characterisation tests, written
+ * against the existing behaviour and expected to pass immediately: none of
+ * the three entry points may read a connection failure as "nothing to do".
  */
 class DatabaseInstallerTest {
 
@@ -74,5 +81,46 @@ class DatabaseInstallerTest {
         assertEquals(
                 "Refusing to substitute unsafe database user name: null",
                 ex.getMessage());
+    }
+
+    private static DatabaseProvider unreachable(SQLException refusal) throws SQLException {
+        DatabaseProvider provider = mock(DatabaseProvider.class);
+        when(provider.getConnection()).thenThrow(refusal);
+        return provider;
+    }
+
+    @Test
+    void anUnreachableDatabaseIsNotReportedAsNeedingNoCreation() throws Exception {
+        SQLException refusal = new SQLException("connection refused");
+        DatabaseInstaller installer = new DatabaseInstaller(unreachable(refusal), null);
+
+        RuntimeException ex = assertThrows(RuntimeException.class, installer::isCreationRequired);
+
+        assertEquals("Error checking database state", ex.getMessage());
+        assertSame(refusal, ex.getCause());
+    }
+
+    @Test
+    void anUnreachableDatabaseIsNotReportedAsUpToDate() throws Exception {
+        SQLException refusal = new SQLException("connection refused");
+        DatabaseInstaller installer = new DatabaseInstaller(unreachable(refusal), null);
+
+        RuntimeException ex = assertThrows(RuntimeException.class, installer::isUpgradeRequired);
+
+        assertEquals("Error checking for pending migrations", ex.getMessage());
+        assertSame(refusal, ex.getCause());
+    }
+
+    @Test
+    void anUnreachableDatabaseFailsCreationWithTheInstallersLog() throws Exception {
+        SQLException refusal = new SQLException("connection refused");
+        DatabaseInstaller installer = new DatabaseInstaller(unreachable(refusal), null);
+
+        StartupException ex = assertThrows(StartupException.class, installer::createDatabase);
+
+        assertEquals("Error applying database migrations", ex.getMessage());
+        assertSame(refusal, ex.getCause());
+        assertEquals(List.of("ERROR connecting to database to apply migrations"), ex.getStartupLog());
+        assertEquals(ex.getStartupLog(), installer.getMessages());
     }
 }
