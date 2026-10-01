@@ -90,14 +90,17 @@ class ContextRefreshDoesNotBootstrapTest {
         SpringApplicationBuilder builder = new SpringApplicationBuilder(RollerApplication.class)
                 .web(WebApplicationType.SERVLET)
                 .initializers(ctx -> ctx.getBeanFactory()
-                        .registerSingleton("excludeTestClasses", EXCLUDE_TEST_CLASSES))
-                .properties(
-                        "roller.lifecycle.enabled=false",
-                        "server.port=0",
-                        "management.server.port=-1",
-                        "spring.main.banner-mode=off");
+                        .registerSingleton("excludeTestClasses", EXCLUDE_TEST_CLASSES));
 
-        try (ConfigurableApplicationContext ctx = builder.run()) {
+        // Command-line arguments, not builder.properties(): those are default
+        // properties, the lowest precedence, so application.properties'
+        // server.port=8080 and management.server.port=8090 beat them and the
+        // test bound the real ports -- failing on any machine with 8080 taken.
+        try (ConfigurableApplicationContext ctx = builder.run(
+                "--roller.lifecycle.enabled=false",
+                "--server.port=0",
+                "--management.server.port=-1",
+                "--spring.main.banner-mode=off")) {
             ConfigurableListableBeanFactory beans = ctx.getBeanFactory();
 
             String[] configNames = ctx.getBeanNamesForType(WebloggerBeanConfig.class);
