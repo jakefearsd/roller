@@ -17,6 +17,8 @@
  */
 package org.apache.roller.it;
 
+import java.time.Duration;
+
 import com.codeborne.selenide.WebDriverRunner;
 import org.apache.roller.it.support.BrowserHealth;
 import org.apache.roller.it.support.Editor;
@@ -24,6 +26,9 @@ import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceAccessMode;
 import org.junit.jupiter.api.parallel.ResourceLock;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
 
 import static com.codeborne.selenide.Condition.disappear;
 import static com.codeborne.selenide.Condition.exist;
@@ -286,7 +291,15 @@ class MultiUserJourneyIT extends RollerIT {
         BrowserHealth.current().settle();
         executeJavaScript("showDeleteModal(arguments[0], 'x');", entryId);
         $("#delete-entry-modal").shouldBe(visible);
+        WebElement listPage = $("html").toWebElement();
         $("#delete-entry-modal button[type='submit']").click();
+        // Wait for the POST's answer to replace this page. settle() alone can
+        // return before the POST has produced any event, and the caller's
+        // logout then races it: the POST lands on a dead session, is refused
+        // for its CSRF token instead of by the ownership check, and its 403
+        // overwrites the next user's freshly issued session cookie.
+        new WebDriverWait(WebDriverRunner.getWebDriver(), Duration.ofSeconds(10))
+                .until(ExpectedConditions.stalenessOf(listPage));
         BrowserHealth.current().settle();
     }
 }
