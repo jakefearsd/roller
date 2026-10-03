@@ -449,18 +449,37 @@ public class Weblog implements Serializable {
         return placeLat;
     }
 
-    /** Kept to two decimals (about 1 km), HALF_UP; null stays null. */
+    /**
+     * Kept to two decimals (about 1 km), HALF_UP; null stays null. A value
+     * whose scale is outside [{@value #MIN_COORDINATE_SCALE},
+     * {@value #MAX_COORDINATE_SCALE}] is refused with an
+     * IllegalArgumentException: rounding "1E-100000000" computes a power of
+     * ten with a hundred million digits and holds the thread for seconds.
+     */
     public void setPlaceLat(BigDecimal placeLat) {
-        this.placeLat = placeLat == null ? null : placeLat.setScale(2, RoundingMode.HALF_UP);
+        this.placeLat = toTwoPlaces(placeLat);
     }
 
     public BigDecimal getPlaceLng() {
         return placeLng;
     }
 
-    /** Kept to two decimals (about 1 km), HALF_UP; null stays null. */
+    /** As {@link #setPlaceLat(BigDecimal)}. */
     public void setPlaceLng(BigDecimal placeLng) {
-        this.placeLng = placeLng == null ? null : placeLng.setScale(2, RoundingMode.HALF_UP);
+        this.placeLng = toTwoPlaces(placeLng);
+    }
+
+    private static final int MIN_COORDINATE_SCALE = -10;
+    private static final int MAX_COORDINATE_SCALE = 20;
+
+    private static BigDecimal toTwoPlaces(BigDecimal value) {
+        if (value == null) {
+            return null;
+        }
+        if (value.scale() < MIN_COORDINATE_SCALE || value.scale() > MAX_COORDINATE_SCALE) {
+            throw new IllegalArgumentException("coordinate scale out of range: " + value.scale());
+        }
+        return value.setScale(2, RoundingMode.HALF_UP);
     }
 
     /** This blog's booking link, overriding the business's. */

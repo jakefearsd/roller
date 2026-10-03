@@ -18,6 +18,7 @@
 package org.apache.roller.weblogger.ui.controllers.editor;
 
 import java.lang.reflect.Field;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 
@@ -34,6 +35,7 @@ import org.springframework.ui.Model;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -615,6 +617,66 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
             assertEquals(List.of("weblog_bean_placeLat"), invalidFields(model), bad);
         }
         verify(weblogger.getWeblogManager(), never()).saveWeblog(any());
+    }
+
+    /**
+     * A coordinate is a plain decimal. Exponent notation is refused at
+     * validation, before any BigDecimal arithmetic: "1E-100000000" is
+     * numerically 0 and so passes a range check, but rounding it to two
+     * places computes 10^99999998 and ties up a request thread for ~25 s.
+     * Bounded, so a regression fails here rather than hanging the build.
+     */
+    @Test
+    void aCoordinateWithATinyExponentIsRefusedQuickly() throws Exception {
+        assertTimeoutPreemptively(Duration.ofSeconds(10), () -> {
+            bean.setPlaceLat("1E-100000000");
+            bean.setPlaceLng("10");
+            controller.save(request, model, bean);
+            assertEquals(List.of("weblog_bean_placeLat"), invalidFields(model));
+
+            model = newModel();
+            bean.setPlaceLat("10");
+            bean.setPlaceLng("-1e-100000000");
+            controller.save(request, model, bean);
+            assertEquals(List.of("weblog_bean_placeLng"), invalidFields(model));
+
+            // Beyond BigInteger's range the rounding throws instead of
+            // hanging; that must be a field error too, not a failed save.
+            model = newModel();
+            bean.setPlaceLat("1E-999999999");
+            bean.setPlaceLng("10");
+            controller.save(request, model, bean);
+            assertEquals(List.of("weblog_bean_placeLat"), invalidFields(model));
+        });
+        verify(weblogger.getWeblogManager(), never()).saveWeblog(any());
+    }
+
+    @Test
+    void aCoordinateInExponentNotationIsRefusedEvenWhenInRange() throws Exception {
+        String[][] cases = {
+                {"1e1", "10", "weblog_bean_placeLat"},
+                {"10", "1E+2", "weblog_bean_placeLng"},
+        };
+        for (String[] c : cases) {
+            model = newModel();
+            bean.setPlaceLat(c[0]);
+            bean.setPlaceLng(c[1]);
+            controller.save(request, model, bean);
+            assertEquals(List.of(c[2]), invalidFields(model), c[0] + "," + c[1]);
+        }
+        verify(weblogger.getWeblogManager(), never()).saveWeblog(any());
+    }
+
+    @Test
+    void plainDecimalCoordinatesAtTheirLimitsAreAccepted() throws Exception {
+        bean.setPlaceLat("-90.00000000");
+        bean.setPlaceLng("180");
+
+        controller.save(request, model, bean);
+
+        assertTrue(errors(model).isEmpty(), "Expected no errors, got: " + errors(model));
+        assertEquals(new BigDecimal("-90.00"), weblog.getPlaceLat());
+        assertEquals(new BigDecimal("180.00"), weblog.getPlaceLng());
     }
 
     @Test

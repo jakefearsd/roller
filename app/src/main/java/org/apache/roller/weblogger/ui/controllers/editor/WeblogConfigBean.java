@@ -20,6 +20,7 @@ package org.apache.roller.weblogger.ui.controllers.editor;
 
 import org.apache.commons.lang3.StringUtils;
 import java.math.BigDecimal;
+import java.util.regex.Pattern;
 
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.BusinessManager;
@@ -305,17 +306,24 @@ public class WeblogConfigBean {
         dataHolder.setBusiness(business);
     }
 
-    /** The number typed, or null when blank or not a number (validation reports the latter). */
+    /**
+     * A coordinate as typed: a plain decimal, at most three integer digits and
+     * eight decimals. No exponent, ever -- "1E-100000000" is numerically zero
+     * and would pass a range check, but rounding it costs seconds of CPU.
+     */
+    private static final Pattern PLAIN_DECIMAL = Pattern.compile("^-?\\d{1,3}(\\.\\d{1,8})?$");
+
+    /**
+     * The number typed, or null when blank or not a plain decimal (validation
+     * reports the latter). Checked against the pattern before any BigDecimal
+     * is made, so no arithmetic ever sees an exponent.
+     */
     static BigDecimal toDecimal(String text) {
         String trimmed = StringUtils.trimToNull(text);
-        if (trimmed == null) {
+        if (trimmed == null || !PLAIN_DECIMAL.matcher(trimmed).matches()) {
             return null;
         }
-        try {
-            return new BigDecimal(trimmed);
-        } catch (NumberFormatException e) {
-            return null;
-        }
+        return new BigDecimal(trimmed);
     }
     
 

@@ -18,11 +18,14 @@
 package org.apache.roller.weblogger.pojos;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 /** Place coordinates are kept to two decimals (about 1 km), HALF_UP. */
 class WeblogPlaceTest {
@@ -49,5 +52,37 @@ class WeblogPlaceTest {
         w.setPlaceLng(null);
         assertNull(w.getPlaceLat());
         assertNull(w.getPlaceLng());
+    }
+
+    /**
+     * Defence in depth behind the settings form's plain-decimal rule: a value
+     * whose scale is absurd would make the two-place rounding compute an
+     * enormous power of ten, so the setter refuses it instead. Bounded, so a
+     * regression fails rather than hanging the build.
+     */
+    @Test
+    void anAbsurdScaleIsRefusedRatherThanRounded() {
+        Weblog w = new Weblog();
+        assertTimeoutPreemptively(Duration.ofSeconds(10), () -> {
+            assertThrows(IllegalArgumentException.class,
+                    () -> w.setPlaceLat(new BigDecimal("1E-100000000")));
+            assertThrows(IllegalArgumentException.class,
+                    () -> w.setPlaceLng(new BigDecimal("1E+100000000")));
+            assertThrows(IllegalArgumentException.class,
+                    () -> w.setPlaceLat(new BigDecimal("1E-21")));
+            assertThrows(IllegalArgumentException.class,
+                    () -> w.setPlaceLng(new BigDecimal("1E+11")));
+        });
+        assertNull(w.getPlaceLat());
+        assertNull(w.getPlaceLng());
+    }
+
+    @Test
+    void scalesAtTheEdgesOfTheAllowedRangeAreRounded() {
+        Weblog w = new Weblog();
+        w.setPlaceLat(new BigDecimal("1E+1"));
+        w.setPlaceLng(new BigDecimal("0.00000000000000000001"));
+        assertEquals(new BigDecimal("10.00"), w.getPlaceLat());
+        assertEquals(new BigDecimal("0.00"), w.getPlaceLng());
     }
 }
