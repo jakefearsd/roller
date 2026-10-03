@@ -28,7 +28,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.Weblogger;
+import org.apache.roller.weblogger.business.jsonld.BusinessJsonLd;
 import org.apache.roller.weblogger.business.jsonld.EntryJsonLd;
+import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogWrapper;
 import org.apache.roller.weblogger.ui.rendering.util.WeblogRequest;
@@ -290,6 +292,29 @@ public class UtilitiesModel implements Model {
             String imageUrl, String url) {
         return EntryJsonLd.build(entry, name, description, imageUrl, url,
                 weblogger == null ? null : weblogger.getMediaFileManager());
+    }
+
+    /**
+     * The finished JSON for the weblog's business or place block on its
+     * non-entry pages, or null when it declares neither. The place's url is
+     * the blog's own public URL (so a custom domain is honoured); the
+     * business {@code @id} hangs off the site URL.
+     */
+    public String businessJsonLd(Weblog w) {
+        if (w == null || weblogger == null) {
+            return null;
+        }
+        return BusinessJsonLd.forWeblog(w,
+                weblogger.getUrlStrategy().getWeblogURL(w, null, true),
+                WebloggerRuntimeConfig.getAbsoluteContextURL());
+    }
+
+    /** The business as a JSON object for BlogPosting.publisher, or null. */
+    public String businessPublisherJson(Weblog w) {
+        if (w == null) {
+            return null;
+        }
+        return BusinessJsonLd.publisherFor(w, WebloggerRuntimeConfig.getAbsoluteContextURL());
     }
 
     public String replace(String src, String target, String rWith) {

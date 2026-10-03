@@ -328,6 +328,10 @@ containing "</script>" cannot terminate the inline JSON-LD block).
         #end
         #set($seoTypedJson = false)
         #set($seoTypedJson = $utils.travelJsonLd($seoEntry.pojo, $seoNamePlain, $seoDescriptionArg, $seoImageArg, $seoCanonicalArg))
+        ## The business is the publisher of every post. A #set to null keeps
+        ## the old value, so reset it first.
+        #set($seoPublisher = false)
+        #set($seoPublisher = $utils.businessPublisherJson($model.weblog.pojo))
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
@@ -337,6 +341,7 @@ containing "</script>" cannot terminate the inline JSON-LD block).
         #if ($seoEntry.updateTime)"dateModified": "$utils.formatIso8601Date($seoEntry.updateTime)",#end
         #if ($seoDescription)"description": "$utils.escapeJson($seoDescription)",#end
         #if ($seoAuthor)"author": { "@type": "Person", "name": "$utils.escapeJson($seoAuthor.screenName)" },#end
+        #if ($seoPublisher)"publisher": $seoPublisher,#end
         "mainEntityOfPage": "$utils.escapeJson($seoCanonical)",
         "headline": "$seoTitleJson"
     }
@@ -356,6 +361,15 @@ containing "</script>" cannot terminate the inline JSON-LD block).
         "name": "$utils.escapeJson($model.weblog.pojo.name)"
     }
     </script>
+        ## The blog's business or place, as a second block. Reset first: a
+        ## #set to null keeps the old value.
+        #set($seoBusinessJson = false)
+        #set($seoBusinessJson = $utils.businessJsonLd($model.weblog.pojo))
+        #if ($seoBusinessJson)
+    <script type="application/ld+json">
+    $seoBusinessJson
+    </script>
+        #end
     #end
 #end
 

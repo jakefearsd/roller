@@ -15,9 +15,11 @@ import java.util.regex.Pattern;
 import javax.imageio.ImageIO;
 
 import org.apache.roller.weblogger.TestUtils;
+import org.apache.roller.weblogger.business.BusinessManager;
 import org.apache.roller.weblogger.business.MediaFileManager;
 import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WeblogPageManager;
+import org.apache.roller.weblogger.pojos.Business;
 import org.apache.roller.weblogger.pojos.JsonLdType;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.MediaFileDirectory;
@@ -60,6 +62,7 @@ class SeoHeadRenderingTest {
 
     private User user;
     private Weblog weblog;
+    private Business business;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -76,6 +79,11 @@ class SeoHeadRenderingTest {
                 .removePages(TestUtils.getManagedWebsite(weblog));
         TestUtils.endSession(true);
         TestUtils.teardownWeblog(weblog.getId());
+        if (business != null) {
+            BusinessManager businesses = TestUtils.weblogger().getBusinessManager();
+            businesses.removeBusiness(businesses.getBusiness(business.getId()));
+            business = null;
+        }
         TestUtils.teardownUser(user.getUserName());
         TestUtils.endSession(true);
     }
@@ -902,5 +910,107 @@ class SeoHeadRenderingTest {
         assertNotNull(body);
         assertTrue(ldJsonBlocks(body).isEmpty(),
                 "search pages emit no JSON-LD:\n" + body);
+    }
+
+    /**
+     * Characterisation test, written BEFORE the business/publisher change to
+     * {@code #showSeoHead} and expected to pass against the old template: a
+     * blog with no business renders the BlogPosting block byte for byte as it
+     * did, so declaring businesses cannot disturb the blogs that have none.
+     * The two timestamps are normalised because they are the wall clock.
+     */
+    @Test
+    void aBlogWithoutABusinessKeepsItsBlogPostingBlockByteForByte() throws Exception {
+        WeblogEntry entry = TestUtils.setupWeblogEntry("fixture-entry", weblog, user);
+        updateEntry(entry, e -> e.setSearchDescription("Fixture description."));
+
+        List<String> sources = ldJsonSources(render("/" + HANDLE + "/entry/fixture-entry"));
+
+        assertEquals(1, sources.size());
+        String normalised = sources.get(0)
+                .replaceAll("\"datePublished\": \"[^\"]*\"", "\"datePublished\": \"T\"")
+                .replaceAll("\"dateModified\": \"[^\"]*\"", "\"dateModified\": \"T\"");
+        assertEquals("\n    {\n"
+                + "        \"@context\": \"https://schema.org\",\n"
+                + "        \"@type\": \"BlogPosting\",\n"
+                + "\"datePublished\": \"T\",\"dateModified\": \"T\",\"description\": \"Fixture description.\","
+                + "\"author\": { \"@type\": \"Person\", \"name\": \"Test User Screen Name\" },"
+                + "        \"mainEntityOfPage\": \"http:\\/\\/localhost:8080\\/roller\\/seorenderblog"
+                + "\\/entry\\/fixture-entry\",\n"
+                + "        \"headline\": \"fixture-entry\"\n    }\n    ", normalised);
+    }
+
+    // ------------------------------------------------------ business / place
+
+    /** Gives the blog a ProfessionalService business, optionally a lodging place. */
+    private void giveBlogABusiness(boolean withPlace, String customDomain) throws Exception {
+        business = new Business();
+        business.setName("Maiia Photography");
+        business.setBusinessType(Business.BusinessType.ProfessionalService);
+        business.setWebsiteUrl("https://maiia.example");
+        TestUtils.weblogger().getBusinessManager().saveBusiness(business);
+        TestUtils.endSession(true);
+
+        Weblog managed = TestUtils.getManagedWebsite(weblog);
+        managed.setBusiness(TestUtils.weblogger().getBusinessManager().getBusiness(business.getId()));
+        if (withPlace) {
+            managed.setPlaceType("LodgingBusiness");
+            managed.setPlaceLocality("Ponta Delgada");
+            managed.setPlaceCountry("PT");
+        }
+        if (customDomain != null) {
+            managed.setCustomDomain(customDomain);
+        }
+        TestUtils.weblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.endSession(true);
+        RenderingTestSupport.clearRenderCaches();
+    }
+
+    @Test
+    void aBlogWithABusinessEmitsASecondBlockOnItsHomePage() throws Exception {
+        giveBlogABusiness(false, null);
+
+        List<JsonNode> blocks = ldJsonBlocks(render("/" + HANDLE));
+
+        assertEquals(2, blocks.size(), blocks.toString());
+        assertEquals("Blog", blocks.get(0).path("@type").asString());
+        assertEquals("ProfessionalService", blocks.get(1).path("@type").asString());
+        assertEquals("Maiia Photography", blocks.get(1).path("name").asString());
+    }
+
+    @Test
+    void aPermalinkPublisherIsTheBusiness() throws Exception {
+        giveBlogABusiness(false, null);
+        TestUtils.setupWeblogEntry("pub-entry", weblog, user);
+
+        List<JsonNode> blocks = ldJsonBlocks(render("/" + HANDLE + "/entry/pub-entry"));
+
+        assertEquals(1, blocks.size(), blocks.toString());
+        assertEquals("BlogPosting", blocks.get(0).path("@type").asString());
+        assertEquals("Maiia Photography", blocks.get(0).path("publisher").path("name").asString());
+        assertFalse(blocks.get(0).path("publisher").has("@context"));
+    }
+
+    @Test
+    void aBlogWithoutABusinessEmitsNoPublisherAndNoSecondBlock() throws Exception {
+        TestUtils.setupWeblogEntry("plain-entry", weblog, user);
+
+        singleLdJson(render("/" + HANDLE), "Blog");
+        assertFalse(singleLdJson(render("/" + HANDLE + "/entry/plain-entry"), "BlogPosting")
+                .has("publisher"));
+    }
+
+    @Test
+    void aPlaceOnACustomDomainUsesThatDomainAsItsUrl() throws Exception {
+        giveBlogABusiness(true, "guide.example.com");
+
+        List<JsonNode> blocks = ldJsonBlocks(render("/" + HANDLE));
+
+        assertEquals(2, blocks.size(), blocks.toString());
+        JsonNode place = blocks.get(1);
+        assertEquals("LodgingBusiness", place.path("@type").asString());
+        assertEquals("guide.example.com",
+                java.net.URI.create(place.path("url").asString()).getHost());
+        assertEquals("Maiia Photography", place.path("parentOrganization").path("name").asString());
     }
 }

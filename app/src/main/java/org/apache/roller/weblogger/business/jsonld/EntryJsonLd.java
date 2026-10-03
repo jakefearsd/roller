@@ -37,6 +37,8 @@ import org.apache.roller.weblogger.pojos.JsonLdType;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.util.Utilities;
 
+import static org.apache.roller.weblogger.business.jsonld.JsonLdWriter.put;
+
 /**
  * Builds the typed schema.org JSON-LD object a permalink emits when its author
  * picked a travel type in the editor's SEO card.
@@ -170,7 +172,7 @@ public final class EntryJsonLd {
             }
             default -> { /* BLOG_POSTING already returned above */ }
         }
-        return write(node);
+        return JsonLdWriter.write(node);
     }
 
     // ------------------------------------------------------------ per type
@@ -320,60 +322,5 @@ public final class EntryJsonLd {
         String spaced = LINE_BREAKING_TAG.matcher(html).replaceAll(" ");
         String text = StringEscapeUtils.unescapeHtml4(Utilities.removeHTML(spaced, false));
         return StringUtils.trimToNull(WHITESPACE_RUN.matcher(text).replaceAll(" "));
-    }
-
-    // ------------------------------------------------------- JSON plumbing
-
-    /** Puts {@code value} under {@code key} unless it is null. */
-    private static void put(Map<String, Object> node, String key, Object value) {
-        if (value != null) {
-            node.put(key, value);
-        }
-    }
-
-    /**
-     * Serializes the nested maps/lists/strings/numbers this class builds. A
-     * hand-rolled writer beats pulling a JSON library into the render path for
-     * five object shapes, and it cannot be handed anything it does not
-     * understand: every value here is produced above.
-     */
-    private static String write(Object value) {
-        StringBuilder json = new StringBuilder(256);
-        write(json, value);
-        return json.toString();
-    }
-
-    private static void write(StringBuilder json, Object value) {
-        if (value instanceof Map<?, ?> map) {
-            json.append('{');
-            boolean first = true;
-            for (Map.Entry<?, ?> field : map.entrySet()) {
-                if (!first) {
-                    json.append(',');
-                }
-                first = false;
-                writeString(json, String.valueOf(field.getKey()));
-                json.append(':');
-                write(json, field.getValue());
-            }
-            json.append('}');
-        } else if (value instanceof List<?> list) {
-            json.append('[');
-            for (int i = 0; i < list.size(); i++) {
-                if (i > 0) {
-                    json.append(',');
-                }
-                write(json, list.get(i));
-            }
-            json.append(']');
-        } else if (value instanceof Number number) {
-            json.append(number);
-        } else {
-            writeString(json, String.valueOf(value));
-        }
-    }
-
-    private static void writeString(StringBuilder json, String value) {
-        json.append('"').append(StringEscapeUtils.escapeJson(value)).append('"');
     }
 }
