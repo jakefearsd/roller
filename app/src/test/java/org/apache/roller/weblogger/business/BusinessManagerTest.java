@@ -153,6 +153,17 @@ class BusinessManagerTest {
     }
 
     @Test
+    void getWeblogsUsingListsOnlyTheBlogsThatPointAtIt() throws Exception {
+        use(a, biz);
+        use(b, biz);
+
+        List<String> handles = mgr().getWeblogsUsing(mgr().getBusiness(biz.getId())).stream()
+                .map(Weblog::getHandle).sorted().toList();
+
+        assertEquals(List.of("bizbloga", "bizblogb"), handles);
+    }
+
+    @Test
     void countWeblogsUsing() throws Exception {
         use(a, biz);
         use(b, biz);

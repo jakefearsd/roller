@@ -30,8 +30,10 @@ import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.BusinessManager;
 import org.apache.roller.weblogger.pojos.Business;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
+import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
 import org.apache.roller.weblogger.ui.controllers.BusinessRules;
+import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
@@ -144,6 +146,7 @@ public class BusinessesController extends BaseController {
             addError(model, "generic.error.check.logs", request);
             return EDIT_VIEW;
         }
+        invalidateUsers(business);
         addFlashMessage(redirectAttributes, "businesses.saved", request);
         return LIST_REDIRECT;
     }
@@ -178,6 +181,23 @@ public class BusinessesController extends BaseController {
         }
         addFlashMessage(redirectAttributes, "businesses.deleted", StringEscapeUtils.escapeHtml4(business.getName()), request);
         return LIST_REDIRECT;
+    }
+
+    /**
+     * Drops the eager site-wide cache for every blog using this business.
+     * The page and feed caches expire through weblog.lastModified, which
+     * saveBusiness touches; SiteWideCache ignores it. The save has already
+     * happened, so a failure here is logged, not reported: the cache still
+     * expires on its own timeout.
+     */
+    private void invalidateUsers(Business business) {
+        try {
+            for (Weblog weblog : weblogger.getBusinessManager().getWeblogsUsing(business)) {
+                CacheManager.invalidate(weblog);
+            }
+        } catch (WebloggerException ex) {
+            log.error("Saved business {} but could not invalidate the blogs using it", business.getId(), ex);
+        }
     }
 
     private Business find(String id) {

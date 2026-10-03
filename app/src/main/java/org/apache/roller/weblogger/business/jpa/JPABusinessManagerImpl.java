@@ -75,7 +75,7 @@ public class JPABusinessManagerImpl implements BusinessManager {
         // users and set the field on the managed instances instead; the
         // flush writes the rows and the cache stays coherent (10-50 blogs).
         Date touched = new Date(now.getTime());
-        for (Weblog weblog : weblogsUsing(business)) {
+        for (Weblog weblog : getWeblogsUsing(business)) {
             weblog.setLastModified(touched);
             strategy.store(weblog);
         }
@@ -98,7 +98,8 @@ public class JPABusinessManagerImpl implements BusinessManager {
         return query.getSingleResult();
     }
 
-    private List<Weblog> weblogsUsing(Business business) throws WebloggerException {
+    @Override
+    public List<Weblog> getWeblogsUsing(Business business) throws WebloggerException {
         TypedQuery<Weblog> query = strategy.getNamedQueryCommitFirst(
                 "Weblog.getByBusiness", Weblog.class);
         query.setParameter(1, business);

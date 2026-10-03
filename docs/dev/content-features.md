@@ -33,10 +33,15 @@ resolves through the index at the end of `CLAUDE.md`.
   be http(s) with a real TLD.
 - `[cta]` without `href` falls back to the weblog's booking URL, then the
   business's.
-- **Cache expiry.** Rendered pages expire only through `weblog.lastModified`,
-  so saving a shared business touches `lastModified` of every weblog using it
-  (`BusinessManager.saveBusiness`); otherwise their cards and JSON-LD would stay
-  stale. `BusinessProfileIT` covers the path end to end.
+- **Cache expiry.** Weblog pages and feeds expire only through
+  `weblog.lastModified`, so saving a shared business touches `lastModified` of
+  every weblog using it (`BusinessManager.saveBusiness`); otherwise their cards
+  and JSON-LD would stay stale. The exception is `SiteWideCache` (the front
+  page's blog), which ignores `lastModified` and is dropped only by
+  `CacheManager.invalidate(...)`; `BusinessesController.save` therefore
+  invalidates each weblog from `BusinessManager.getWeblogsUsing` after the
+  flush. Unit-tested only (`BusinessManagerTest`, `BusinessesControllerTest`):
+  `BusinessProfileIT` does not cover cache expiry.
 
 ## Travel (Stage 2 Wave 3)
 - Three shortcodes in `business/shortcodes`, registered in

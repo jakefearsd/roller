@@ -21,6 +21,7 @@ import java.util.List;
 
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.pojos.Business;
+import org.apache.roller.weblogger.pojos.Weblog;
 
 /**
  * Stores the shared business records that blogs reference for their
@@ -45,4 +46,11 @@ public interface BusinessManager {
 
     /** How many weblogs reference this business. */
     long countWeblogsUsing(Business business) throws WebloggerException;
+
+    /**
+     * The weblogs that reference this business. After a save, the caller
+     * drops their entries from the eager site-wide cache, which (unlike the
+     * page and feed caches) ignores weblog.lastModified.
+     */
+    List<Weblog> getWeblogsUsing(Business business) throws WebloggerException;
 }

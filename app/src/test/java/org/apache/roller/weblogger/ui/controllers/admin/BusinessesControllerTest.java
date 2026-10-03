@@ -25,9 +25,12 @@ import org.apache.roller.weblogger.business.MockWeblogger;
 import org.apache.roller.weblogger.pojos.Business;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.User;
+import org.apache.roller.weblogger.pojos.Weblog;
+import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
@@ -38,6 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -196,6 +200,54 @@ class BusinessesControllerTest {
 
         verify(manager).saveBusiness(existing);
         assertEquals("Casa Azul", existing.getName());
+    }
+
+    /**
+     * SiteWideCache ignores weblog.lastModified and is dropped only by
+     * CacheManager.invalidate, so a front page built from a blog that uses
+     * this business would otherwise show the old details for up to
+     * cache.sitewide.timeout. CacheManager is static, hence MockedStatic.
+     */
+    @Test
+    void savingABusinessInvalidatesEveryBlogThatUsesIt() throws Exception {
+        Business existing = new Business();
+        existing.setName("Old");
+        when(manager.getBusiness(existing.getId())).thenReturn(existing);
+        Weblog one = new Weblog();
+        one.setHandle("one");
+        Weblog two = new Weblog();
+        two.setHandle("two");
+        when(manager.getWeblogsUsing(existing)).thenReturn(List.of(one, two));
+        BusinessBean bean = validBean();
+        bean.setId(existing.getId());
+
+        try (MockedStatic<CacheManager> cache = mockStatic(CacheManager.class)) {
+            assertEquals("redirect:/roller-ui/admin/businesses.rol", save(bean));
+            cache.verify(() -> CacheManager.invalidate(one));
+            cache.verify(() -> CacheManager.invalidate(two));
+        }
+    }
+
+    @Test
+    void aSaveThatFailsInvalidatesNothing() throws Exception {
+        doThrow(new WebloggerException("down")).when(manager).saveBusiness(any());
+
+        try (MockedStatic<CacheManager> cache = mockStatic(CacheManager.class)) {
+            save(validBean());
+            cache.verifyNoInteractions();
+        }
+    }
+
+    @Test
+    void aSavedBusinessWhoseUsersCannotBeListedIsStillReportedSaved() throws Exception {
+        when(manager.getWeblogsUsing(any())).thenThrow(new WebloggerException("down"));
+
+        try (MockedStatic<CacheManager> cache = mockStatic(CacheManager.class)) {
+            assertEquals("redirect:/roller-ui/admin/businesses.rol", save(validBean()));
+            cache.verifyNoInteractions();
+        }
+        assertTrue(ControllerTestFixture.errors(model).isEmpty(),
+                "the save happened; the cache expires on its own timeout");
     }
 
     @Test
