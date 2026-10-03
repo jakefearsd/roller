@@ -186,13 +186,8 @@ public class Business implements Serializable {
 
     @Override
     public boolean equals(Object other) {
-        if (other == this) {
-            return true;
-        }
-        if (!(other instanceof Business)) {
-            return false;
-        }
-        return getId().equals(((Business) other).getId());
+        return other == this
+                || (other instanceof Business && getId().equals(((Business) other).getId()));
     }
 
     @Override
