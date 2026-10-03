@@ -84,7 +84,14 @@ final class JsonLdWriter {
         }
     }
 
+    /**
+     * escapeJson already writes '/' as "\/", so "</script>" cannot end the
+     * block. '<' is also written as its JSON escape, because "<!--<script"
+     * inside a script element puts the HTML parser into the double-escaped
+     * state, where the real closing tag no longer ends the block and the rest
+     * of the page is swallowed. Both are valid JSON for the same string.
+     */
     private static void writeString(StringBuilder json, String value) {
-        json.append('"').append(StringEscapeUtils.escapeJson(value)).append('"');
+        json.append('"').append(StringEscapeUtils.escapeJson(value).replace("<", "\\u003c")).append('"');
     }
 }

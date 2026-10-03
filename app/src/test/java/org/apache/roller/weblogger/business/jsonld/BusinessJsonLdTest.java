@@ -103,6 +103,29 @@ class BusinessJsonLdTest {
         assertEquals(name, MAPPER.readTree(json).path("name").asString());
     }
 
+    /**
+     * Inside a script element, "<!--<script" moves the HTML parser into the
+     * script-data double-escaped state, where the closing </script> no longer
+     * ends the block and the rest of the page is swallowed. No '<' reaches
+     * the page at all: it is written as the JSON escape u003c.
+     */
+    @Test
+    void anOpeningAngleBracketNeverReachesThePage() {
+        String name = "Ana <!--<script> x";
+        Weblog w = new Weblog();
+        w.setBusiness(business(name));
+        w.setName("Sea View"); // Weblog.setName strips markup itself
+        w.setPlaceType("LodgingBusiness");
+        w.setPlaceLocality("<!--<script>");
+
+        String json = BusinessJsonLd.forWeblog(w, BLOG, SITE);
+
+        assertFalse(json.contains("<"), json);
+        JsonNode node = MAPPER.readTree(json);
+        assertEquals("<!--<script>", node.path("address").path("addressLocality").asString());
+        assertEquals(name, node.path("parentOrganization").path("name").asString());
+    }
+
     @Test
     void sparseBusiness() {
         Weblog w = new Weblog();
