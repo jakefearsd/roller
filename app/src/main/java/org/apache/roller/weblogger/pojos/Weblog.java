@@ -19,6 +19,8 @@
 package org.apache.roller.weblogger.pojos;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
@@ -62,6 +64,14 @@ public class Weblog implements Serializable {
     private String  analyticsShareUrl = null;
     private String  newsletterListUuid = null;
     private String  customDomain     = null;
+    private Business business        = null;
+    private String  placeType        = null;
+    private String  placeLocality    = null;
+    private String  placeRegion      = null;
+    private String  placeCountry     = null;
+    private BigDecimal placeLat      = null;
+    private BigDecimal placeLng      = null;
+    private String  bookingUrl       = null;
 
 
     private transient List<WeblogCategory> weblogCategories = new ArrayList<>();
@@ -390,6 +400,76 @@ public class Weblog implements Serializable {
 
     public void setCustomDomain(String customDomain) {
         this.customDomain = customDomain;
+    }
+
+    /** The business this blog belongs to, or null. */
+    public Business getBusiness() {
+        return business;
+    }
+
+    public void setBusiness(Business business) {
+        this.business = business;
+    }
+
+    /** Null, or the schema.org place type ("LodgingBusiness"). */
+    public String getPlaceType() {
+        return placeType;
+    }
+
+    public void setPlaceType(String placeType) {
+        this.placeType = placeType;
+    }
+
+    public String getPlaceLocality() {
+        return placeLocality;
+    }
+
+    public void setPlaceLocality(String placeLocality) {
+        this.placeLocality = placeLocality;
+    }
+
+    public String getPlaceRegion() {
+        return placeRegion;
+    }
+
+    public void setPlaceRegion(String placeRegion) {
+        this.placeRegion = placeRegion;
+    }
+
+    /** ISO 3166-1 alpha-2 country code. */
+    public String getPlaceCountry() {
+        return placeCountry;
+    }
+
+    public void setPlaceCountry(String placeCountry) {
+        this.placeCountry = placeCountry;
+    }
+
+    public BigDecimal getPlaceLat() {
+        return placeLat;
+    }
+
+    /** Kept to two decimals (about 1 km), HALF_UP; null stays null. */
+    public void setPlaceLat(BigDecimal placeLat) {
+        this.placeLat = placeLat == null ? null : placeLat.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal getPlaceLng() {
+        return placeLng;
+    }
+
+    /** Kept to two decimals (about 1 km), HALF_UP; null stays null. */
+    public void setPlaceLng(BigDecimal placeLng) {
+        this.placeLng = placeLng == null ? null : placeLng.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /** This blog's booking link, overriding the business's. */
+    public String getBookingUrl() {
+        return bookingUrl;
+    }
+
+    public void setBookingUrl(String bookingUrl) {
+        this.bookingUrl = bookingUrl;
     }
 
     /**

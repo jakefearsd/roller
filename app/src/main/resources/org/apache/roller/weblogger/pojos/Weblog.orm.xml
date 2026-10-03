@@ -93,6 +93,32 @@
 				<column name="lastmodified" insertable="true" updatable="true" unique="false"/>
 				<temporal>TIMESTAMP</temporal>
 			</basic>
+            <basic name="placeType">
+                <column name="place_type" insertable="true" updatable="true"/>
+            </basic>
+            <basic name="placeLocality">
+                <column name="place_locality" insertable="true" updatable="true"/>
+            </basic>
+            <basic name="placeRegion">
+                <column name="place_region" insertable="true" updatable="true"/>
+            </basic>
+            <basic name="placeCountry">
+                <column name="place_country" insertable="true" updatable="true"/>
+            </basic>
+            <basic name="placeLat">
+                <column name="place_lat" insertable="true" updatable="true"/>
+            </basic>
+            <basic name="placeLng">
+                <column name="place_lng" insertable="true" updatable="true"/>
+            </basic>
+            <basic name="bookingUrl">
+                <column name="booking_url" insertable="true" updatable="true"/>
+            </basic>
+            <!-- Eager on purpose: the persistence unit runs without weaving,
+                 so LAZY would be silently eager anyway; the row is tiny. -->
+            <many-to-one name="business" target-entity="org.apache.roller.weblogger.pojos.Business">
+                <join-column name="business_id" insertable="true" updatable="true" nullable="true"/>
+            </many-to-one>
             <one-to-many name="weblogCategories" target-entity="org.apache.roller.weblogger.pojos.WeblogCategory" mapped-by="weblog">
                 <order-by>position</order-by>
                 <cascade>

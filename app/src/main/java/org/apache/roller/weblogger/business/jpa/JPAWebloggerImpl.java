@@ -33,6 +33,7 @@ import org.apache.roller.weblogger.business.WeblogEntryManager;
 import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.WeblogPageManager;
 import org.apache.roller.weblogger.business.WeblogRedirectManager;
+import org.apache.roller.weblogger.business.BusinessManager;
 import org.apache.roller.weblogger.business.WebloggerImpl;
 import org.apache.roller.weblogger.business.plugins.PluginManager;
 import org.apache.roller.weblogger.business.runnable.ThreadManager;
@@ -59,6 +60,7 @@ public class JPAWebloggerImpl extends WebloggerImpl {
         FileContentManager   fileContentManager,
         WeblogPageManager    weblogPageManager,
         WeblogRedirectManager weblogRedirectManager,
+        BusinessManager      businessManager,
         EventManager         eventManager,
         FormSubmissionManager formSubmissionManager,
         UserTokenManager     userTokenManager,
@@ -80,6 +82,7 @@ public class JPAWebloggerImpl extends WebloggerImpl {
             fileContentManager,
             weblogPageManager,
             weblogRedirectManager,
+            businessManager,
             eventManager,
             formSubmissionManager,
             userTokenManager,

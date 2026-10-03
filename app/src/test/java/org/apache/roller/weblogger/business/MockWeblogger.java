@@ -77,6 +77,7 @@ public final class MockWeblogger {
     private final FileContentManager fileContentManager = mock(FileContentManager.class);
     private final WeblogPageManager weblogPageManager = mock(WeblogPageManager.class);
     private final WeblogRedirectManager weblogRedirectManager = mock(WeblogRedirectManager.class);
+    private final BusinessManager businessManager = mock(BusinessManager.class);
     private final URLStrategy urlStrategy = mock(URLStrategy.class);
     private final FormSubmissionManager formSubmissionManager = mock(FormSubmissionManager.class);
     private final EventManager eventManager = mock(EventManager.class);
@@ -105,6 +106,7 @@ public final class MockWeblogger {
         when(weblogger.getFileContentManager()).thenReturn(fileContentManager);
         when(weblogger.getWeblogPageManager()).thenReturn(weblogPageManager);
         when(weblogger.getWeblogRedirectManager()).thenReturn(weblogRedirectManager);
+        when(weblogger.getBusinessManager()).thenReturn(businessManager);
         when(weblogger.getUrlStrategy()).thenReturn(urlStrategy);
         when(weblogger.getFormSubmissionManager()).thenReturn(formSubmissionManager);
         when(weblogger.getEventManager()).thenReturn(eventManager);
@@ -302,6 +304,10 @@ public final class MockWeblogger {
 
     public WeblogRedirectManager weblogRedirectManager() {
         return weblogRedirectManager;
+    }
+
+    public BusinessManager businessManager() {
+        return businessManager;
     }
 
     public FormSubmissionManager formSubmissionManager() {

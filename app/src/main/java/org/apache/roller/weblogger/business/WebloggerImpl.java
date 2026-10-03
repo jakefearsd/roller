@@ -47,6 +47,7 @@ public abstract class WebloggerImpl implements Weblogger {
     private final FileContentManager   fileContentManager;
     private final WeblogPageManager    weblogPageManager;
     private final WeblogRedirectManager weblogRedirectManager;
+    private final BusinessManager     businessManager;
     private final EventManager         eventManager;
     private final FormSubmissionManager formSubmissionManager;
     private final UserTokenManager     userTokenManager;
@@ -77,6 +78,7 @@ public abstract class WebloggerImpl implements Weblogger {
         FileContentManager   fileContentManager,
         WeblogPageManager    weblogPageManager,
         WeblogRedirectManager weblogRedirectManager,
+        BusinessManager      businessManager,
         EventManager         eventManager,
         FormSubmissionManager formSubmissionManager,
         UserTokenManager     userTokenManager,
@@ -97,6 +99,7 @@ public abstract class WebloggerImpl implements Weblogger {
         this.fileContentManager  = fileContentManager;
         this.weblogPageManager   = weblogPageManager;
         this.weblogRedirectManager = weblogRedirectManager;
+        this.businessManager     = businessManager;
         this.eventManager        = eventManager;
         this.formSubmissionManager = formSubmissionManager;
         this.userTokenManager    = userTokenManager;
@@ -214,6 +217,11 @@ public abstract class WebloggerImpl implements Weblogger {
     @Override
     public WeblogRedirectManager getWeblogRedirectManager() {
         return weblogRedirectManager;
+    }
+
+    @Override
+    public BusinessManager getBusinessManager() {
+        return businessManager;
     }
 
 

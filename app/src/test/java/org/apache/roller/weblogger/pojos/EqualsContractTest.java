@@ -215,6 +215,9 @@ class EqualsContractTest {
                 new Specimen("WeblogRedirect (keyed on id)",
                         redirect("redirect-a"), redirect("redirect-a"), redirect("redirect-b")),
 
+                new Specimen("Business (keyed on id)",
+                        business("business-a"), business("business-a"), business("business-b")),
+
                 new Specimen("RollerEvent (keyed on id)",
                         event("event-a"), event("event-a"), event("event-b")),
 
@@ -251,6 +254,13 @@ class EqualsContractTest {
         WeblogPage page = new WeblogPage();
         page.setId(id);
         return page;
+    }
+
+    private static Business business(String id) {
+        Business business = new Business();
+        business.setId(id);
+        business.setName("Acme");
+        return business;
     }
 
     private static WeblogRedirect redirect(String id) {

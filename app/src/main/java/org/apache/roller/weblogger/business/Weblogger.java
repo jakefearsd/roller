@@ -103,6 +103,11 @@ public interface Weblogger {
     WeblogRedirectManager getWeblogRedirectManager();
 
     /**
+     * Get the BusinessManager, which stores the shared business records.
+     */
+    BusinessManager getBusinessManager();
+
+    /**
      * Get the EventManager, which records first-party outcome events.
      */
     EventManager getEventManager();
