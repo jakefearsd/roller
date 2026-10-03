@@ -26,6 +26,7 @@ import java.util.Locale;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.roller.weblogger.pojos.Weblog;
 
 /**
@@ -38,17 +39,31 @@ public final class BookingLink {
     private BookingLink() {
     }
 
-    /** weblog.bookingUrl, else weblog.business.bookingUrl, else null. */
+    /** The same schemes the entry-content sanitizer accepts for anchor hrefs. */
+    private static final UrlValidator URL_VALIDATOR =
+            new UrlValidator(new String[] {"http", "https"});
+
+    /** True for an absolute http(s) URL; the one rule every booking link obeys. */
+    public static boolean isHttpUrl(String url) {
+        return url != null && URL_VALIDATOR.isValid(url);
+    }
+
+    /**
+     * weblog.bookingUrl, else weblog.business.bookingUrl, else null. A value
+     * that is not an absolute http(s) URL is skipped, so a javascript: or
+     * data: URL can never reach an href.
+     */
     public static String resolve(Weblog w) {
         if (w == null) {
             return null;
         }
         String own = StringUtils.trimToNull(w.getBookingUrl());
-        if (own != null) {
+        if (isHttpUrl(own)) {
             return own;
         }
-        return w.getBusiness() == null ? null
+        String shared = w.getBusiness() == null ? null
                 : StringUtils.trimToNull(w.getBusiness().getBookingUrl());
+        return isHttpUrl(shared) ? shared : null;
     }
 
     /**

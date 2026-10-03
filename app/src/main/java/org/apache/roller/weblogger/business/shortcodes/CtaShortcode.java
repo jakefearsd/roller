@@ -22,7 +22,6 @@ import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.roller.weblogger.business.BookingLink;
 import org.apache.roller.weblogger.util.HTMLSanitizer;
 
@@ -66,10 +65,6 @@ public class CtaShortcode implements ShortcodeHandler {
 
     private static final Logger log = LoggerFactory.getLogger(CtaShortcode.class);
 
-    /** The same schemes the sanitizer accepts for anchor hrefs. */
-    private static final UrlValidator URL_VALIDATOR =
-            new UrlValidator(new String[] {"http", "https"});
-
     @Override
     public String getName() {
         return "cta";
@@ -94,7 +89,7 @@ public class CtaShortcode implements ShortcodeHandler {
             log.debug("[cta] shortcode without href or label; leaving it as written");
             return null;
         }
-        if (!URL_VALIDATOR.isValid(href)) {
+        if (!BookingLink.isHttpUrl(href)) {
             // the sanitizer would silently delete the whole anchor; failing
             // here keeps the author's [cta ...] text visible instead
             log.debug("[cta] shortcode href is not an absolute http(s) URL;"

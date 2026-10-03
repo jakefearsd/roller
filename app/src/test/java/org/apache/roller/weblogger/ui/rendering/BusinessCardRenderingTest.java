@@ -217,16 +217,16 @@ class BusinessCardRenderingTest {
     @Test
     void theBookButtonIsTaggedAndUsesTheThemesLabel() throws Exception {
         Business b = namedBusiness("Casa Azul");
-        b.setBookingUrl("https://b.example/x?ref=a&utm_source=keep#dates");
+        b.setBookingUrl("https://b.example.com/x?ref=a&utm_source=keep#dates");
         configure("journal", b, null, null);
         String card = card(render("/" + HANDLE));
         assertTrue(card != null, "a card is expected");
         assertTrue(card.contains("class=\"business-card-book\""), card);
         assertTrue(card.contains(
-                "href=\"https://b.example/x?ref=a&amp;utm_source=keep&amp;utm_medium=blog#dates\""),
+                "href=\"https://b.example.com/x?ref=a&amp;utm_source=keep&amp;utm_medium=blog#dates\""),
                 card);
         assertTrue(card.contains("data-umami-event=\"business-card-click\""), card);
-        assertTrue(card.contains("data-umami-event-dest=\"b.example\""), card);
+        assertTrue(card.contains("data-umami-event-dest=\"b.example.com\""), card);
         assertFalse(card.contains("data-umami-event-entry"), card);
         assertTrue(card.contains(">Book a stay</a>"), card);
     }
@@ -234,7 +234,7 @@ class BusinessCardRenderingTest {
     @Test
     void onAPermalinkTheBookLinkCarriesTheEntryAnchor() throws Exception {
         Business b = namedBusiness("Casa Azul");
-        b.setBookingUrl("https://b.example/x");
+        b.setBookingUrl("https://b.example.com/x");
         configure("travel", b, null, null);
         TestUtils.setupWeblogEntry("card-entry", weblog, user);
         TestUtils.endSession(true);
@@ -244,5 +244,16 @@ class BusinessCardRenderingTest {
         assertTrue(card != null, "a card is expected");
         assertTrue(card.contains("data-umami-event-entry=\"card-entry\""), card);
         assertTrue(card.contains("utm_campaign=card-entry"), card);
+    }
+
+    @Test
+    void aJavascriptBookingUrlGivesNoBookLink() throws Exception {
+        Business b = namedBusiness("Casa Azul");
+        b.setBookingUrl("javascript:alert(1)");
+        configure("journal", b, null, "javascript:alert(2)");
+        String card = card(render("/" + HANDLE));
+        assertTrue(card != null, "a card is expected");
+        assertFalse(card.contains("business-card-book"), card);
+        assertFalse(card.contains("javascript:"), card);
     }
 }

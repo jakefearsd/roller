@@ -41,16 +41,16 @@ class BookingLinkTest {
 
     @Test
     void theWeblogsOwnUrlWinsOverTheBusinesss() {
-        assertEquals("https://own.example/b",
-                BookingLink.resolve(weblog("https://own.example/b", "https://biz.example/b")));
+        assertEquals("https://own.example.com/b",
+                BookingLink.resolve(weblog("https://own.example.com/b", "https://biz.example.com/b")));
     }
 
     @Test
     void theBusinessUrlIsTheFallback() {
-        assertEquals("https://biz.example/b",
-                BookingLink.resolve(weblog(null, "https://biz.example/b")));
-        assertEquals("https://biz.example/b",
-                BookingLink.resolve(weblog("  ", "https://biz.example/b")));
+        assertEquals("https://biz.example.com/b",
+                BookingLink.resolve(weblog(null, "https://biz.example.com/b")));
+        assertEquals("https://biz.example.com/b",
+                BookingLink.resolve(weblog("  ", "https://biz.example.com/b")));
     }
 
     @Test
@@ -62,8 +62,8 @@ class BookingLinkTest {
 
     @Test
     void utmGoesBeforeTheFragmentAndNeverDuplicatesAnExistingParameter() {
-        assertEquals("https://b.example/x?ref=a&utm_source=keep&utm_medium=blog&utm_campaign=s#dates",
-                BookingLink.withUtmParams("https://b.example/x?ref=a&utm_source=keep#dates",
+        assertEquals("https://b.example.com/x?ref=a&utm_source=keep&utm_medium=blog&utm_campaign=s#dates",
+                BookingLink.withUtmParams("https://b.example.com/x?ref=a&utm_source=keep#dates",
                         weblog(null, null), "s"));
     }
 
@@ -72,5 +72,17 @@ class BookingLinkTest {
         assertEquals("book.example.com",
                 BookingLink.destHost("https://User@Book.Example.com:8443/p?q=1"));
         assertNull(BookingLink.destHost("not a url"));
+    }
+
+    @Test
+    void aNonHttpWeblogUrlFallsThroughToAValidBusinessUrl() {
+        assertEquals("https://biz.example.com/b",
+                BookingLink.resolve(weblog("javascript:alert(1)", "https://biz.example.com/b")));
+    }
+
+    @Test
+    void whenNeitherUrlIsHttpTheResultIsNull() {
+        assertNull(BookingLink.resolve(weblog("javascript:alert(1)", "data:text/html,x")));
+        assertNull(BookingLink.resolve(weblog("/relative/path", "ftp://biz.example.com/b")));
     }
 }
