@@ -54,6 +54,37 @@ class CtaShortcodeTest {
         return shortcode.render(attributes, null, entry);
     }
 
+    // ------------------------------------------------------ umami click tracking
+
+    @Test
+    void anchorCarriesUmamiClickAttributes() {
+        String html = render(Map.of("href", "https://book.example.com/x", "label", "Book"));
+        assertTrue(html.contains(" data-umami-event=\"cta-click\""), html);
+        assertTrue(html.contains(" data-umami-event-entry=\"summer-cottage\""), html);
+        assertTrue(html.contains(" data-umami-event-dest=\"book.example.com\""), html);
+    }
+
+    @Test
+    void noSlugOmitsEntryButKeepsEventAndDest() {
+        entry.setAnchor(null);
+        String html = render(Map.of("href", "https://book.example.com/x", "label", "Book"));
+        assertTrue(html.contains(" data-umami-event=\"cta-click\""), html);
+        assertFalse(html.contains("data-umami-event-entry"), html);
+        assertTrue(html.contains(" data-umami-event-dest=\"book.example.com\""), html);
+    }
+
+    @Test
+    void destHostDropsUserinfoPortPathAndCase() {
+        assertEquals("book.example.com",
+                CtaShortcode.destHost("https://User@Book.Example.com:8443/p?q=1"));
+    }
+
+    @Test
+    void destHostIsNullWhenTheUrlCannotBeParsed() {
+        assertNull(CtaShortcode.destHost("http://exa mple.com"));
+        assertNull(CtaShortcode.destHost("not a url"));
+    }
+
     // -------------------------------------------------------------- happy path
 
     @Test
@@ -65,7 +96,9 @@ class CtaShortcodeTest {
 
         assertEquals("<a class=\"cta-card\" href=\"https://booking.example.com/cottage"
                 + "?utm_source=travelblog&utm_medium=blog&utm_campaign=summer-cottage\""
-                + " rel=\"nofollow sponsored noopener\" target=\"_blank\">"
+                + " rel=\"nofollow sponsored noopener\" target=\"_blank\""
+                + " data-umami-event=\"cta-click\" data-umami-event-entry=\"summer-cottage\""
+                + " data-umami-event-dest=\"booking.example.com\">"
                 + "<span class=\"cta-label\">Book this cottage</span>"
                 + "<span class=\"cta-note\">From EUR 120/night</span></a>", html);
     }

@@ -102,6 +102,10 @@ public final class HTMLSanitizer {
                     "data-exif-camera", "data-exif-lens", "data-exif-exposure",
                     "data-exif-aperture", "data-exif-iso", "data-exif-focal",
                     "data-blurhash").onElements("a")
+            // Umami's declarative click tracking (CtaShortcode). Exactly these three names:
+            // a data-umami-* wildcard would let authors attach arbitrary event properties.
+            .allowAttributes("data-umami-event", "data-umami-event-entry",
+                    "data-umami-event-dest").onElements("a")
 
             .allowAttributes("src", "srcset", "sizes", "alt", "title",
                     "width", "height", "loading", "decoding", "data-blurhash")

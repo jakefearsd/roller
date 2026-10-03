@@ -332,6 +332,18 @@ class EntryRendererTest {
                 "label must not include escaped quotes in correct order: " + html);
     }
 
+    /** Post-sanitizer seam: the click attributes must survive to the output. */
+    @Test
+    void ctaClickAttributesSurviveTheSanitizer() {
+        String source = "[cta href=\"https://book.example.com/x\" label=\"Book\"]";
+
+        String html = renderer.render(context(source), source);
+
+        assertTrue(html.contains("data-umami-event=\"cta-click\""), html);
+        assertTrue(html.contains("data-umami-event-entry=\"a-slug\""), html);
+        assertTrue(html.contains("data-umami-event-dest=\"book.example.com\""), html);
+    }
+
     /** The sanitizer is the security boundary, and it runs last. */
     @Test
     void scriptIsStrippedEvenThoughRawHtmlPassesThroughMarkdown() {

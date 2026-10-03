@@ -36,6 +36,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class HTMLSanitizerTest {
 
+    @Test
+    void keepsExactlyTheThreeUmamiAttributesOnAnchors() {
+        String out = HTMLSanitizer.sanitize(
+                "<a href=\"https://x.example.com\" data-umami-event=\"e\""
+                + " data-umami-event-entry=\"s\" data-umami-event-dest=\"d\""
+                + " data-umami-event-foo=\"z\">x</a>"
+                + "<div data-umami-event=\"e\">y</div>");
+        assertTrue(out.contains("data-umami-event=\"e\""), out);
+        assertTrue(out.contains("data-umami-event-entry=\"s\""), out);
+        assertTrue(out.contains("data-umami-event-dest=\"d\""), out);
+        assertFalse(out.contains("data-umami-event-foo"), out);
+        assertEquals(3, out.split("data-umami-event", -1).length - 1, out);
+    }
+
     @Nested
     class Attacks {
 

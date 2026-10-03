@@ -17,6 +17,8 @@
  */
 package org.apache.roller.weblogger.business.shortcodes;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
@@ -55,6 +57,10 @@ import org.apache.roller.weblogger.util.HTMLSanitizer;
  * string, preserving existing query parameters and the fragment. A utm
  * parameter the author already put in the URL wins -- it is never
  * overwritten or duplicated.
+ *
+ * <p>Umami click tracking: the anchor carries {@code data-umami-event="cta-click"}
+ * plus {@code data-umami-event-entry} (the entry anchor, when present) and
+ * {@code data-umami-event-dest} (the destination host, when parseable).
  *
  * <p>{@code label} is required, {@code note} is optional; both are
  * attribute values and therefore HTML-escaped on emission.
@@ -97,7 +103,17 @@ public class CtaShortcode implements ShortcodeHandler {
 
         StringBuilder html = new StringBuilder(160);
         html.append("<a class=\"cta-card\" href=\"").append(escape(withUtmParams(href, content)))
-                .append("\" rel=\"nofollow sponsored noopener\" target=\"_blank\">");
+                .append("\" rel=\"nofollow sponsored noopener\" target=\"_blank\"")
+                .append(" data-umami-event=\"cta-click\"");
+        String slug = content == null ? null : StringUtils.trimToNull(content.getSlug());
+        if (slug != null) {
+            html.append(" data-umami-event-entry=\"").append(escape(slug)).append('"');
+        }
+        String dest = destHost(href);
+        if (dest != null) {
+            html.append(" data-umami-event-dest=\"").append(escape(dest)).append('"');
+        }
+        html.append('>');
         html.append("<span class=\"cta-label\">").append(escape(label)).append("</span>");
         String note = StringUtils.trimToNull(attributes.get("note"));
         if (note != null) {
@@ -156,6 +172,19 @@ public class CtaShortcode implements ShortcodeHandler {
             }
         }
         return names;
+    }
+
+    /**
+     * The lower-cased host of {@code absoluteUrl} -- no userinfo, port or
+     * path -- or null when it cannot be parsed.
+     */
+    static String destHost(String absoluteUrl) {
+        try {
+            String host = new URI(absoluteUrl).getHost();
+            return host == null ? null : host.toLowerCase(Locale.ROOT);
+        } catch (URISyntaxException e) {
+            return null;
+        }
     }
 
     private static String escape(String value) {
