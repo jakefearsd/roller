@@ -198,6 +198,14 @@ public final class Routes {
             new Route("/roller-ui/admin/userAdmin.rol", Role.ADMIN, "",
                     "form[action$='/roller-ui/admin/userAdmin!edit.rol']"),
 
+            // Businesses: the list's own wrapper, and the edit form, which a
+            // blank id opens empty (the new-business case), so neither needs seeding.
+            new Route("/roller-ui/admin/businesses.rol", Role.ADMIN, "",
+                    "#businesses-list-marker"),
+
+            new Route("/roller-ui/admin/businesses!edit.rol", Role.ADMIN, "",
+                    "form[action$='/roller-ui/admin/businesses!save.rol']"),
+
             // Maintenance moved off the blog-author tabs and into Global
             // Admin: the three actions (flush cache, rebuild search index,
             // regenerate media renditions) are operator work, not authoring

@@ -422,7 +422,8 @@ class JspConsistencyTest {
             "editor/MembersController.java", List.of("editor/Members.jsp"),
             "core/CreateWeblogController.java", List.of("core/CreateWeblog.jsp"),
             "core/ProfileController.java", List.of("core/Profile.jsp"),
-            "admin/UserEditController.java", List.of("admin/UserEdit.jsp"));
+            "admin/UserEditController.java", List.of("admin/UserEdit.jsp"),
+            "admin/BusinessesController.java", List.of("admin/BusinessEdit.jsp"));
 
     private static final Path CONTROLLERS =
             Path.of("src/main/java/org/apache/roller/weblogger/ui/controllers");
