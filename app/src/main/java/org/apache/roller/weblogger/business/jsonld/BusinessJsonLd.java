@@ -54,10 +54,10 @@ public final class BusinessJsonLd {
         return siteUrl + "#business-" + b.getId();
     }
 
-    /** Business node, or null when weblog has no business. siteUrl = absolute site URL. */
+    /** Business node, or an empty map when weblog has no business. siteUrl = absolute site URL. */
     static Map<String, Object> businessNode(Business b, String siteUrl) {
         if (b == null) {
-            return null;
+            return Map.of();
         }
         Map<String, Object> node = new LinkedHashMap<>();
         node.put("@context", CONTEXT);
@@ -70,7 +70,7 @@ public final class BusinessJsonLd {
         put(node, "email", StringUtils.trimToNull(b.getEmail()));
         put(node, "logo", StringUtils.trimToNull(b.getLogoUrl()));
         List<String> sameAs = b.getSameAsList();
-        if (sameAs != null && !sameAs.isEmpty()) {
+        if (!sameAs.isEmpty()) {
             node.put("sameAs", sameAs);
         }
         put(node, "areaServed", StringUtils.trimToNull(b.getAreaServed()));
@@ -78,11 +78,11 @@ public final class BusinessJsonLd {
         return node;
     }
 
-    /** Place node with parentOrganization, or null when placeType is null. */
+    /** Place node with parentOrganization, or an empty map when placeType is blank. */
     static Map<String, Object> placeNode(Weblog w, String weblogAbsoluteUrl, String siteUrl) {
         String type = StringUtils.trimToNull(w.getPlaceType());
         if (type == null) {
-            return null;
+            return Map.of();
         }
         Map<String, Object> node = new LinkedHashMap<>();
         node.put("@context", CONTEXT);
@@ -108,7 +108,7 @@ public final class BusinessJsonLd {
             node.put("geo", geo);
         }
         Map<String, Object> parent = businessNode(w.getBusiness(), siteUrl);
-        if (parent != null) {
+        if (!parent.isEmpty()) {
             parent.remove("@context");
             node.put("parentOrganization", parent);
         }
@@ -118,16 +118,16 @@ public final class BusinessJsonLd {
     /** Complete JSON for the non-entry block: place if present, else business, else null. */
     public static String forWeblog(Weblog w, String weblogAbsoluteUrl, String siteUrl) {
         Map<String, Object> node = placeNode(w, weblogAbsoluteUrl, siteUrl);
-        if (node == null) {
+        if (node.isEmpty()) {
             node = businessNode(w.getBusiness(), siteUrl);
         }
-        return node == null ? null : JsonLdWriter.write(node);
+        return node.isEmpty() ? null : JsonLdWriter.write(node);
     }
 
     /** JSON object (no @context) for BlogPosting.publisher, or null. */
     public static String publisherFor(Weblog w, String siteUrl) {
         Map<String, Object> node = businessNode(w.getBusiness(), siteUrl);
-        if (node == null) {
+        if (node.isEmpty()) {
             return null;
         }
         node.remove("@context");

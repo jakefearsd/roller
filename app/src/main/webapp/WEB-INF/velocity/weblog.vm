@@ -1485,7 +1485,7 @@ Every value is escaped here; the model hands back raw strings.
 #end
 #set($card = false)
 #set($card = $utils.businessCard($weblog.pojo, $cardSlug))
-#if($card)
+#if($card && !$card.isEmpty())
 <aside class="business-card">
     #if($card.name)<p class="business-card-name">$utils.escapeHTML($card.name)</p>#end
     #if($card.locality)<p class="business-card-locality">$utils.escapeHTML($card.locality)</p>#end

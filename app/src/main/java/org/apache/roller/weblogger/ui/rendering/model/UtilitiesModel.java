@@ -324,7 +324,7 @@ public class UtilitiesModel implements Model {
     }
 
     /**
-     * The facts the footer business card shows, or null when the blog has
+     * The facts the footer business card shows, or an empty map when the blog has
      * neither a business nor a place. Keys, each present only when it has a
      * value: {@code name} (the business name, else the blog name for a
      * place-only blog), {@code locality} ("Locality, Region", else the
@@ -335,7 +335,7 @@ public class UtilitiesModel implements Model {
      */
     public Map<String, String> businessCard(Weblog w, String slug) {
         if (w == null) {
-            return null;
+            return Map.of();
         }
         Business business = w.getBusiness();
         String locality = StringUtils.trimToNull(w.getPlaceLocality());
@@ -343,7 +343,7 @@ public class UtilitiesModel implements Model {
         boolean hasPlace = w.getPlaceType() != null && !w.getPlaceType().isBlank()
                 || locality != null || region != null;
         if (business == null && !hasPlace) {
-            return null;
+            return Map.of();
         }
         Map<String, String> card = new HashMap<>();
         String name = business == null ? null : StringUtils.trimToNull(business.getName());

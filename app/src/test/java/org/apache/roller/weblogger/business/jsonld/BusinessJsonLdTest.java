@@ -174,8 +174,8 @@ class BusinessJsonLdTest {
 
         assertNull(BusinessJsonLd.forWeblog(w, BLOG, SITE));
         assertNull(BusinessJsonLd.publisherFor(w, SITE));
-        assertNull(BusinessJsonLd.businessNode(null, SITE));
-        assertNull(BusinessJsonLd.placeNode(w, BLOG, SITE));
+        assertTrue(BusinessJsonLd.businessNode(null, SITE).isEmpty());
+        assertTrue(BusinessJsonLd.placeNode(w, BLOG, SITE).isEmpty());
     }
 
     @Test
