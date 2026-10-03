@@ -346,3 +346,26 @@ body.tg .video-embed { border-radius: var(--tg-radius); overflow: hidden; }
 
 /* the showNextPrevSearchControl macro's hit count (was an <h3>, now a status line). */
 body.tg .search-summary { margin: 0 0 .75rem; font-size: .75rem; color: var(--tg-muted); }
+
+/* ---- business card ----
+ * the footer card for a blog with a business or place; the markup is the
+ * showBusinessCard macro's. Tokens only, so light and dark follow the theme. */
+body.tg .business-card {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--tg-line);
+    font-size: .875rem;
+}
+body.tg .business-card p { margin: 0 0 .25rem; }
+body.tg .business-card-name { font-weight: 600; }
+body.tg .business-card-locality { color: var(--tg-muted); }
+body.tg .business-card-tel { display: inline-block; margin-right: 1rem; }
+body.tg .business-card-book {
+    display: inline-block;
+    padding: .375rem .875rem;
+    border: 1px solid var(--tg-accent);
+    border-radius: 6px;
+    color: var(--tg-accent);
+    text-decoration: none;
+}
+body.tg .business-card-book:hover { background: var(--tg-accent); color: var(--tg-paper); }

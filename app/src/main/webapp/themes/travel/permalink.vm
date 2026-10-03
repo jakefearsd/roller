@@ -47,6 +47,7 @@
         <input type="search" name="q" placeholder="Search guides" aria-label="Search">
     </form>
     #showSubscribeForm($model.weblog "Get new guides by email")
+    #showBusinessCard($model.weblog "Book a stay")
 </footer>
 
 </body>

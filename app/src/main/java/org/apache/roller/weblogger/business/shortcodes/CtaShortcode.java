@@ -17,20 +17,13 @@
  */
 package org.apache.roller.weblogger.business.shortcodes;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.HashSet;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.commons.validator.routines.UrlValidator;
-import org.apache.roller.weblogger.pojos.Weblog;
+import org.apache.roller.weblogger.business.BookingLink;
 import org.apache.roller.weblogger.util.HTMLSanitizer;
 
 /**
@@ -62,6 +55,10 @@ import org.apache.roller.weblogger.util.HTMLSanitizer;
  * plus {@code data-umami-event-entry} (the entry anchor, when present) and
  * {@code data-umami-event-dest} (the destination host, when parseable).
  *
+ * <p>Without an {@code href} the blog's booking link is used
+ * ({@link BookingLink#resolve}); with none configured the text is left as
+ * written. An explicit {@code href} always wins.
+ *
  * <p>{@code label} is required, {@code note} is optional; both are
  * attribute values and therefore HTML-escaped on emission.
  */
@@ -88,6 +85,10 @@ public class CtaShortcode implements ShortcodeHandler {
     @Override
     public String render(Map<String, String> attributes, String body, ShortcodeContext content) {
         String href = StringUtils.trimToNull(attributes.get("href"));
+        if (href == null && content != null) {
+            // no explicit href: the blog's own booking link, else its business's
+            href = BookingLink.resolve(content.getWeblog());
+        }
         String label = StringUtils.trimToNull(attributes.get("label"));
         if (href == null || label == null) {
             log.debug("[cta] shortcode without href or label; leaving it as written");
@@ -102,14 +103,15 @@ public class CtaShortcode implements ShortcodeHandler {
         }
 
         StringBuilder html = new StringBuilder(160);
-        html.append("<a class=\"cta-card\" href=\"").append(escape(withUtmParams(href, content)))
+        html.append("<a class=\"cta-card\" href=\"").append(escape(BookingLink.withUtmParams(href,
+                content == null ? null : content.getWeblog(), content == null ? null : content.getSlug())))
                 .append("\" rel=\"nofollow sponsored noopener\" target=\"_blank\"")
                 .append(" data-umami-event=\"cta-click\"");
         String slug = content == null ? null : StringUtils.trimToNull(content.getSlug());
         if (slug != null) {
             html.append(" data-umami-event-entry=\"").append(escape(slug)).append('"');
         }
-        String dest = destHost(href);
+        String dest = BookingLink.destHost(href);
         if (dest != null) {
             html.append(" data-umami-event-dest=\"").append(escape(dest)).append('"');
         }
@@ -121,70 +123,6 @@ public class CtaShortcode implements ShortcodeHandler {
         }
         html.append("</a>");
         return html.toString();
-    }
-
-    /**
-     * {@code href} with the missing utm parameters appended before the
-     * fragment: source = the weblog handle, medium = blog, campaign = the
-     * entry anchor (each skipped when unavailable or already present).
-     */
-    private static String withUtmParams(String href, ShortcodeContext content) {
-        int hash = href.indexOf('#');
-        String base = hash >= 0 ? href.substring(0, hash) : href;
-        String fragment = hash >= 0 ? href.substring(hash) : "";
-
-        Set<String> existing = existingParamNames(base);
-        Weblog weblog = content == null ? null : content.getWeblog();
-        String handle = weblog == null ? null : StringUtils.trimToNull(weblog.getHandle());
-        String anchor = content == null ? null : StringUtils.trimToNull(content.getSlug());
-
-        StringBuilder url = new StringBuilder(base);
-        appendParam(url, existing, "utm_source", handle);
-        appendParam(url, existing, "utm_medium", "blog");
-        appendParam(url, existing, "utm_campaign", anchor);
-        return url.append(fragment).toString();
-    }
-
-    private static void appendParam(StringBuilder url, Set<String> existing,
-            String name, String value) {
-        if (value == null || existing.contains(name)) {
-            return;
-        }
-        char last = url.charAt(url.length() - 1);
-        if (last != '?' && last != '&') {
-            url.append(url.indexOf("?") >= 0 ? '&' : '?');
-        }
-        url.append(name).append('=').append(URLEncoder.encode(value, StandardCharsets.UTF_8));
-    }
-
-    /** The (lower-cased) names of the query parameters already on {@code base}. */
-    private static Set<String> existingParamNames(String base) {
-        Set<String> names = new HashSet<>();
-        int query = base.indexOf('?');
-        if (query < 0) {
-            return names;
-        }
-        for (String param : base.substring(query + 1).split("&")) {
-            int eq = param.indexOf('=');
-            String name = eq >= 0 ? param.substring(0, eq) : param;
-            if (!name.isBlank()) {
-                names.add(name.toLowerCase(Locale.ROOT));
-            }
-        }
-        return names;
-    }
-
-    /**
-     * The lower-cased host of {@code absoluteUrl} -- no userinfo, port or
-     * path -- or null when it cannot be parsed.
-     */
-    static String destHost(String absoluteUrl) {
-        try {
-            String host = new URI(absoluteUrl).getHost();
-            return host == null ? null : host.toLowerCase(Locale.ROOT);
-        } catch (URISyntaxException e) {
-            return null;
-        }
     }
 
     private static String escape(String value) {

@@ -106,6 +106,7 @@
         <input type="search" name="q" placeholder="Search the journal" aria-label="Search">
     </form>
     #showSubscribeForm($model.weblog "Get new entries by email")
+    #showBusinessCard($model.weblog "Book a stay")
 </footer>
 
 </body>

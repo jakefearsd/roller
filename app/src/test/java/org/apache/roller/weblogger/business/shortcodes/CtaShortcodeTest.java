@@ -20,6 +20,7 @@ package org.apache.roller.weblogger.business.shortcodes;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.roller.weblogger.business.BookingLink;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.junit.jupiter.api.BeforeEach;
@@ -76,13 +77,13 @@ class CtaShortcodeTest {
     @Test
     void destHostDropsUserinfoPortPathAndCase() {
         assertEquals("book.example.com",
-                CtaShortcode.destHost("https://User@Book.Example.com:8443/p?q=1"));
+                BookingLink.destHost("https://User@Book.Example.com:8443/p?q=1"));
     }
 
     @Test
     void destHostIsNullWhenTheUrlCannotBeParsed() {
-        assertNull(CtaShortcode.destHost("http://exa mple.com"));
-        assertNull(CtaShortcode.destHost("not a url"));
+        assertNull(BookingLink.destHost("http://exa mple.com"));
+        assertNull(BookingLink.destHost("not a url"));
     }
 
     // -------------------------------------------------------------- happy path
@@ -244,5 +245,47 @@ class CtaShortcodeTest {
 
         assertEquals("[cta href=\"/book\" label=\"Book now\"]", rendered,
                 "null from the handler is the SPI's visible-failure signal");
+    }
+
+    // ------------------------------------------------- default booking link (AC16)
+
+    private Weblog entryWeblog() {
+        return entry.getWebsite();
+    }
+
+    @Test
+    void noHrefUsesTheWeblogsBookingUrl() {
+        entryWeblog().setBookingUrl("https://own.example.com/book");
+        org.apache.roller.weblogger.pojos.Business b = new org.apache.roller.weblogger.pojos.Business();
+        b.setBookingUrl("https://biz.example.com/book");
+        entryWeblog().setBusiness(b);
+        String html = render(Map.of("label", "Book"));
+        assertTrue(html.contains(
+                "href=\"https://own.example.com/book?utm_source=travelblog&utm_medium=blog"
+                        + "&utm_campaign=summer-cottage\""), html);
+        assertTrue(html.contains(" data-umami-event-dest=\"own.example.com\""), html);
+    }
+
+    @Test
+    void noHrefFallsBackToTheBusinessBookingUrl() {
+        org.apache.roller.weblogger.pojos.Business b = new org.apache.roller.weblogger.pojos.Business();
+        b.setBookingUrl("https://biz.example.com/book");
+        entryWeblog().setBusiness(b);
+        String html = render(Map.of("label", "Book"));
+        assertTrue(html.contains("href=\"https://biz.example.com/book?utm_source=travelblog"), html);
+        assertTrue(html.contains(" data-umami-event-dest=\"biz.example.com\""), html);
+    }
+
+    @Test
+    void noHrefAndNoBookingUrlIsLeftAsWritten() {
+        assertNull(render(Map.of("label", "Book")));
+    }
+
+    @Test
+    void anExplicitHrefBeatsTheDefaultBookingLink() {
+        entryWeblog().setBookingUrl("https://own.example.com/book");
+        String html = render(Map.of("href", "https://explicit.example.com/x", "label", "Book"));
+        assertTrue(html.contains("href=\"https://explicit.example.com/x?"), html);
+        assertFalse(html.contains("own.example.com"), html);
     }
 }

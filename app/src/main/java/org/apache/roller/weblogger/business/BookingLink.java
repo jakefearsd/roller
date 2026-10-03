@@ -1,0 +1,116 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  The ASF licenses this file to You
+ * under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.  For additional information regarding
+ * copyright in this work, please see the NOTICE file in the top level
+ * directory of this distribution.
+ */
+package org.apache.roller.weblogger.business;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Set;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.roller.weblogger.pojos.Weblog;
+
+/**
+ * A blog's booking link: which URL it is, and how it is tagged for
+ * attribution. Shared by the {@code [cta]} shortcode (when it has no
+ * {@code href}) and the footer business card, so both tag identically.
+ */
+public final class BookingLink {
+
+    private BookingLink() {
+    }
+
+    /** weblog.bookingUrl, else weblog.business.bookingUrl, else null. */
+    public static String resolve(Weblog w) {
+        if (w == null) {
+            return null;
+        }
+        String own = StringUtils.trimToNull(w.getBookingUrl());
+        if (own != null) {
+            return own;
+        }
+        return w.getBusiness() == null ? null
+                : StringUtils.trimToNull(w.getBusiness().getBookingUrl());
+    }
+
+    /**
+     * {@code href} with the missing utm parameters appended before the
+     * fragment: source = the weblog handle, medium = blog, campaign = the
+     * entry anchor (each skipped when unavailable or already present).
+     */
+    public static String withUtmParams(String href, Weblog weblog, String slug) {
+        int hash = href.indexOf('#');
+        String base = hash >= 0 ? href.substring(0, hash) : href;
+        String fragment = hash >= 0 ? href.substring(hash) : "";
+
+        Set<String> existing = existingParamNames(base);
+        String handle = weblog == null ? null : StringUtils.trimToNull(weblog.getHandle());
+        String anchor = StringUtils.trimToNull(slug);
+
+        StringBuilder url = new StringBuilder(base);
+        appendParam(url, existing, "utm_source", handle);
+        appendParam(url, existing, "utm_medium", "blog");
+        appendParam(url, existing, "utm_campaign", anchor);
+        return url.append(fragment).toString();
+    }
+
+    private static void appendParam(StringBuilder url, Set<String> existing,
+            String name, String value) {
+        if (value == null || existing.contains(name)) {
+            return;
+        }
+        char last = url.charAt(url.length() - 1);
+        if (last != '?' && last != '&') {
+            url.append(url.indexOf("?") >= 0 ? '&' : '?');
+        }
+        url.append(name).append('=').append(URLEncoder.encode(value, StandardCharsets.UTF_8));
+    }
+
+    /** The (lower-cased) names of the query parameters already on {@code base}. */
+    private static Set<String> existingParamNames(String base) {
+        Set<String> names = new HashSet<>();
+        int query = base.indexOf('?');
+        if (query < 0) {
+            return names;
+        }
+        for (String param : base.substring(query + 1).split("&")) {
+            int eq = param.indexOf('=');
+            String name = eq >= 0 ? param.substring(0, eq) : param;
+            if (!name.isBlank()) {
+                names.add(name.toLowerCase(Locale.ROOT));
+            }
+        }
+        return names;
+    }
+
+    /**
+     * The lower-cased host of {@code absoluteUrl} -- no userinfo, port or
+     * path -- or null when it cannot be parsed.
+     */
+    public static String destHost(String absoluteUrl) {
+        try {
+            String host = new URI(absoluteUrl).getHost();
+            return host == null ? null : host.toLowerCase(Locale.ROOT);
+        } catch (URISyntaxException e) {
+            return null;
+        }
+    }
+}

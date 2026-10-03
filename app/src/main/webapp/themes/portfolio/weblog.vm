@@ -80,6 +80,7 @@
         <input type="search" name="q" placeholder="Search" aria-label="Search">
     </form>
     #showSubscribeForm($model.weblog "New work, by email")
+    #showBusinessCard($model.weblog "Book a session")
 </footer>
 
 </body>

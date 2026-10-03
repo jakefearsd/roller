@@ -20,13 +20,18 @@ package org.apache.roller.weblogger.ui.rendering.model;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TimeZone;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.BookingLink;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.jsonld.BusinessJsonLd;
 import org.apache.roller.weblogger.business.jsonld.EntryJsonLd;
@@ -37,6 +42,7 @@ import org.apache.roller.weblogger.ui.rendering.util.WeblogRequest;
 import org.apache.roller.util.DateUtil;
 import org.apache.roller.util.RegexUtil;
 import org.apache.roller.weblogger.business.shortcodes.GalleryMarkup;
+import org.apache.roller.weblogger.pojos.Business;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.pojos.WeblogPermission;
 import org.apache.roller.weblogger.pojos.wrapper.UserWrapper;
@@ -315,6 +321,63 @@ public class UtilitiesModel implements Model {
             return null;
         }
         return BusinessJsonLd.publisherFor(w, WebloggerRuntimeConfig.getAbsoluteContextURL());
+    }
+
+    /**
+     * The facts the footer business card shows, or null when the blog has
+     * neither a business nor a place. Keys, each present only when it has a
+     * value: {@code name} (the business name, else the blog name for a
+     * place-only blog), {@code locality} ("Locality, Region", else the
+     * business's area served), {@code telephone} (as typed), {@code telHref}
+     * ("tel:" + digits with any leading +), {@code bookingHref} (UTM-tagged,
+     * campaign = {@code slug}) and {@code dest} (its host). Values are raw;
+     * the template escapes them.
+     */
+    public Map<String, String> businessCard(Weblog w, String slug) {
+        if (w == null) {
+            return null;
+        }
+        Business business = w.getBusiness();
+        String locality = StringUtils.trimToNull(w.getPlaceLocality());
+        String region = StringUtils.trimToNull(w.getPlaceRegion());
+        boolean hasPlace = w.getPlaceType() != null && !w.getPlaceType().isBlank()
+                || locality != null || region != null;
+        if (business == null && !hasPlace) {
+            return null;
+        }
+        Map<String, String> card = new HashMap<>();
+        String name = business == null ? null : StringUtils.trimToNull(business.getName());
+        if (name == null) {
+            name = StringUtils.trimToNull(w.getName());
+        }
+        if (name != null) {
+            card.put("name", name);
+        }
+        String place = Stream.of(locality, region).filter(Objects::nonNull)
+                .collect(Collectors.joining(", "));
+        if (place.isEmpty() && business != null) {
+            place = StringUtils.trimToEmpty(business.getAreaServed());
+        }
+        if (!place.isEmpty()) {
+            card.put("locality", place);
+        }
+        String phone = business == null ? null : StringUtils.trimToNull(business.getTelephone());
+        if (phone != null) {
+            String digits = phone.replaceAll("[^0-9]", "");
+            if (!digits.isEmpty()) {
+                card.put("telephone", phone);
+                card.put("telHref", "tel:" + (phone.startsWith("+") ? "+" : "") + digits);
+            }
+        }
+        String booking = BookingLink.resolve(w);
+        if (booking != null) {
+            card.put("bookingHref", BookingLink.withUtmParams(booking, w, slug));
+            String dest = BookingLink.destHost(booking);
+            if (dest != null) {
+                card.put("dest", dest);
+            }
+        }
+        return card;
     }
 
     public String replace(String src, String target, String rWith) {

@@ -1463,3 +1463,34 @@ the unsubscribe link.
 </div>
 #end
 #end
+
+
+#**
+The visible business card, for theme footers. Call it with the weblog and
+the theme's own booking-button wording:
+    #showBusinessCard($model.weblog "Book a stay")
+
+Renders NOTHING when the blog has neither a business nor a place, so themes
+call it unconditionally. It shows the same facts the business JSON-LD
+declares (Google expects structured data to describe visible content): the
+name, a locality line, the phone as a tel: link and, when a booking URL
+resolves, a UTM-tagged button carrying the Umami click attributes. The entry
+anchor is passed on a permalink so the click is attributed to that entry.
+Every value is escaped here; the model hands back raw strings.
+*#
+#macro(showBusinessCard $weblog $bookLabel)
+#set($cardSlug = "")
+#if($model.permalink && $model.weblogEntry)
+#set($cardSlug = $model.weblogEntry.anchor)
+#end
+#set($card = false)
+#set($card = $utils.businessCard($weblog.pojo, $cardSlug))
+#if($card)
+<aside class="business-card">
+    #if($card.name)<p class="business-card-name">$utils.escapeHTML($card.name)</p>#end
+    #if($card.locality)<p class="business-card-locality">$utils.escapeHTML($card.locality)</p>#end
+    #if($card.telHref)<a class="business-card-tel" href="$utils.escapeHTML($card.telHref)">$utils.escapeHTML($card.telephone)</a>#end
+    #if($card.bookingHref)<a class="business-card-book" href="$utils.escapeHTML($card.bookingHref)" rel="noopener" target="_blank" data-umami-event="business-card-click"#if($card.dest) data-umami-event-dest="$utils.escapeHTML($card.dest)"#end#if($cardSlug && $cardSlug != "") data-umami-event-entry="$utils.escapeHTML($cardSlug)"#end>$utils.escapeHTML($bookLabel)</a>#end
+</aside>
+#end
+#end

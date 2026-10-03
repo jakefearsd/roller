@@ -600,3 +600,26 @@ body.pf .search-summary {
     font-size: .75rem;
     color: var(--pf-muted);
 }
+
+/* ---- business card ----
+ * the footer card for a blog with a business or place; the markup is the
+ * showBusinessCard macro's. Tokens only, so light and dark follow the theme. */
+body.pf .business-card {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--pf-line);
+    font-size: .875rem;
+}
+body.pf .business-card p { margin: 0 0 .25rem; }
+body.pf .business-card-name { font-weight: 600; }
+body.pf .business-card-locality { color: var(--pf-muted); }
+body.pf .business-card-tel { display: inline-block; margin-right: 1rem; }
+body.pf .business-card-book {
+    display: inline-block;
+    padding: .375rem .875rem;
+    border: 1px solid var(--pf-accent);
+    border-radius: 6px;
+    color: var(--pf-accent);
+    text-decoration: none;
+}
+body.pf .business-card-book:hover { background: var(--pf-accent); color: var(--pf-bg); }
