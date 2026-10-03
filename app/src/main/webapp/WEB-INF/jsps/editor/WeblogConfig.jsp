@@ -189,12 +189,23 @@
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label" for="weblog_bean_businessId"><spring:message code="websiteSettings.business"/></label>
         <div class="col-sm-9">
-            <select id="weblog_bean_businessId" name="bean.businessId" class="form-select">
-                <option value=""><spring:message code="websiteSettings.business.none"/></option>
-                <c:forEach var="b" items="${businesses}">
-                    <option value="${fn:escapeXml(b.id)}"<c:if test="${bean.businessId == b.id}"> selected="selected"</c:if>>${fn:escapeXml(b.name)}</option>
-                </c:forEach>
-            </select>
+            <c:choose>
+                <c:when test="${businessesUnavailable}">
+                    <%-- No list to choose from: carry the current business, never post "None". --%>
+                    <select id="weblog_bean_businessId" class="form-select" disabled="disabled">
+                        <option selected="selected"><c:choose><c:when test="${empty bean.businessId}"><spring:message code="websiteSettings.business.none"/></c:when><c:otherwise><spring:message code="websiteSettings.business.kept"/></c:otherwise></c:choose></option>
+                    </select>
+                    <input type="hidden" name="bean.businessId" value="${fn:escapeXml(bean.businessId)}"/>
+                </c:when>
+                <c:otherwise>
+                    <select id="weblog_bean_businessId" name="bean.businessId" class="form-select">
+                        <option value=""><spring:message code="websiteSettings.business.none"/></option>
+                        <c:forEach var="b" items="${businesses}">
+                            <option value="${fn:escapeXml(b.id)}"<c:if test="${bean.businessId == b.id}"> selected="selected"</c:if>>${fn:escapeXml(b.name)}</option>
+                        </c:forEach>
+                    </select>
+                </c:otherwise>
+            </c:choose>
             <div class="form-text"><spring:message code="websiteSettings.business.tip"/></div>
         </div>
     </div>
@@ -213,14 +224,14 @@
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label" for="weblog_bean_placeLocality"><spring:message code="websiteSettings.placeLocality"/></label>
         <div class="col-sm-9">
-            <input id="weblog_bean_placeLocality" type="text" name="bean.placeLocality" value="${fn:escapeXml(bean.placeLocality)}" size="40" maxlength="255" class="form-control"/>
+            <input id="weblog_bean_placeLocality" type="text" name="bean.placeLocality" value="${fn:escapeXml(bean.placeLocality)}" size="40" maxlength="128" class="form-control"/>
         </div>
     </div>
 
     <div class="row mb-3">
         <label class="col-sm-3 col-form-label" for="weblog_bean_placeRegion"><spring:message code="websiteSettings.placeRegion"/></label>
         <div class="col-sm-9">
-            <input id="weblog_bean_placeRegion" type="text" name="bean.placeRegion" value="${fn:escapeXml(bean.placeRegion)}" size="40" maxlength="255" class="form-control"/>
+            <input id="weblog_bean_placeRegion" type="text" name="bean.placeRegion" value="${fn:escapeXml(bean.placeRegion)}" size="40" maxlength="128" class="form-control"/>
         </div>
     </div>
 

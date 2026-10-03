@@ -698,6 +698,100 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
         assertBusinessFieldRefused("weblog_bean_placeLng");
     }
 
+    // --- the business list could not load (fail closed) ---
+
+    @Test
+    void aBusinessListThatCannotLoadIsReportedAndTheFormKeepsTheCurrentBusiness() throws Exception {
+        weblog.setBusiness(givenBusiness("biz-1"));
+        when(weblogger.businessManager().getBusinesses()).thenThrow(new WebloggerException("db down"));
+
+        controller.execute(request, model, bean);
+
+        assertEquals(List.of("websiteSettings.business.listUnavailable"), errors(model));
+        assertEquals(Boolean.TRUE, model.getAttribute("businessesUnavailable"));
+        assertEquals("biz-1", bean.getBusinessId(),
+                "the form must carry the current business, or the next save unlinks it");
+    }
+
+    @Test
+    void aBusinessListThatLoadsSetsNoUnavailableFlag() throws Exception {
+        when(weblogger.businessManager().getBusinesses()).thenReturn(List.of());
+
+        controller.execute(request, model, bean);
+
+        assertTrue(errors(model).isEmpty(), "Expected no errors, got: " + errors(model));
+        assertNull(model.getAttribute("businessesUnavailable"));
+    }
+
+    @Test
+    void aSaveThatPostsTheCarriedBusinessKeepsIt() throws Exception {
+        Business business = givenBusiness("biz-1");
+        weblog.setBusiness(business);
+        bean.setBusinessId("biz-1");
+
+        controller.save(request, model, bean);
+
+        assertTrue(errors(model).isEmpty(), "Expected no errors, got: " + errors(model));
+        assertEquals(business, weblog.getBusiness());
+        verify(weblogger.getWeblogManager()).saveWeblog(weblog);
+    }
+
+    @Test
+    void aSaveWhileTheBusinessListCannotLoadChangesNothingAndKeepsTheInput() throws Exception {
+        Business business = givenBusiness("biz-1");
+        weblog.setBusiness(business);
+        when(weblogger.businessManager().getBusinesses()).thenThrow(new WebloggerException("db down"));
+        bean.setBusinessId("");
+        bean.setPlaceLocality("Typed town");
+
+        controller.save(request, model, bean);
+
+        assertTrue(errors(model).contains("websiteSettings.business.listUnavailable"),
+                "Expected the list failure to be reported, got: " + errors(model));
+        assertEquals(business, weblog.getBusiness(), "a save that could not see the list must not unlink");
+        verify(weblogger.getWeblogManager(), never()).saveWeblog(any());
+        assertEquals("", bean.getBusinessId(), "the re-rendered form keeps what was posted");
+        assertEquals("Typed town", bean.getPlaceLocality());
+    }
+
+    // --- column lengths (place_locality/place_region varchar(128), booking_url varchar(255)) ---
+
+    @Test
+    void placeTextLongerThanItsColumnIsAFieldErrorNotAFailedSave() throws Exception {
+        String[][] cases = {
+                {"placeLocality", "a".repeat(129), "weblog_bean_placeLocality"},
+                {"placeRegion", "r".repeat(129), "weblog_bean_placeRegion"},
+                {"bookingUrl", "https://book.example.com/" + "p".repeat(231), "weblog_bean_bookingUrl"},
+        };
+        for (String[] c : cases) {
+            model = newModel();
+            bean = new WeblogConfigBean();
+            bean.copyFrom(weblog);
+            switch (c[0]) {
+                case "placeLocality" -> bean.setPlaceLocality(c[1]);
+                case "placeRegion" -> bean.setPlaceRegion(c[1]);
+                default -> bean.setBookingUrl(c[1]);
+            }
+            controller.save(request, model, bean);
+            assertEquals(List.of(c[2]), invalidFields(model), c[0]);
+            assertEquals(List.of("businesses.error.tooLong"), errors(model), c[0]);
+        }
+        verify(weblogger.getWeblogManager(), never()).saveWeblog(any());
+    }
+
+    @Test
+    void placeTextExactlyAtItsColumnLengthIsAccepted() throws Exception {
+        bean.setPlaceLocality("a".repeat(128));
+        bean.setPlaceRegion("r".repeat(128));
+        bean.setBookingUrl("https://book.example.com/" + "p".repeat(230));
+
+        controller.save(request, model, bean);
+
+        assertTrue(errors(model).isEmpty(), "Expected no errors, got: " + errors(model));
+        assertEquals(255, weblog.getBookingUrl().length());
+        verify(weblogger.getWeblogManager()).saveWeblog(weblog);
+    }
+
     @Test
     void aBookingUrlThatIsNotHttpIsRefused() throws Exception {
         bean.setBookingUrl("javascript:alert(1)");

@@ -72,7 +72,7 @@ public class WeblogConfigController extends BaseController {
     public String execute(HttpServletRequest request, Model model,
                           @ModelAttribute("bean") WeblogConfigBean bean) {
         populateCommonModel(request, model);
-        loadFormData(model);
+        loadFormData(model, request);
 
         bean.copyFrom(getActionWeblog(request));
 
@@ -83,7 +83,7 @@ public class WeblogConfigController extends BaseController {
     public String save(HttpServletRequest request, Model model,
                        @ModelAttribute("bean") WeblogConfigBean bean) {
         populateCommonModel(request, model);
-        loadFormData(model);
+        loadFormData(model, request);
 
         myValidate(bean, request, model);
 
@@ -227,10 +227,33 @@ public class WeblogConfigController extends BaseController {
                     "websiteSettings.placeLng.invalid", request);
         }
 
+        checkLength(model, request, "weblog_bean_placeLocality", "websiteSettings.placeLocality",
+                bean.getPlaceLocality(), MAX_PLACE_TEXT);
+        checkLength(model, request, "weblog_bean_placeRegion", "websiteSettings.placeRegion",
+                bean.getPlaceRegion(), MAX_PLACE_TEXT);
+
         String bookingUrl = StringUtils.trimToNull(bean.getBookingUrl());
         if (bookingUrl != null && !BusinessRules.isHttpUrl(bookingUrl)) {
             addFieldError(model, "weblog_bean_bookingUrl",
                     "websiteSettings.bookingUrl.invalid", request);
+        } else {
+            checkLength(model, request, "weblog_bean_bookingUrl", "websiteSettings.bookingUrl",
+                    bookingUrl, MAX_BOOKING_URL);
+        }
+    }
+
+    /** place_locality and place_region are varchar(128). */
+    private static final int MAX_PLACE_TEXT = 128;
+    /** booking_url is varchar(255). */
+    private static final int MAX_BOOKING_URL = 255;
+
+    /** A value longer than its column is a field error here, not a failed flush. */
+    private void checkLength(Model model, HttpServletRequest request, String fieldId,
+                             String labelKey, String raw, int max) {
+        String value = StringUtils.trimToNull(raw);
+        if (value != null && value.length() > max) {
+            addFieldError(model, fieldId, "businesses.error.tooLong",
+                    new Object[] {getText(labelKey, request), max}, request);
         }
     }
 
@@ -243,18 +266,27 @@ public class WeblogConfigController extends BaseController {
         return value != null && value.abs().compareTo(limit) <= 0;
     }
 
-    private void loadBusinesses(Model model) {
+    /**
+     * The businesses to choose from. A list that could not load is an error,
+     * not an empty list: a select offering only "None" would post an empty id
+     * and the save would unlink the blog's business. The error refuses this
+     * request's save, and the {@code businessesUnavailable} flag makes the
+     * form carry the current business id in a hidden input instead.
+     */
+    private void loadBusinesses(Model model, HttpServletRequest request) {
         List<Business> businesses = new ArrayList<>();
         try {
             businesses = weblogger.getBusinessManager().getBusinesses();
         } catch (WebloggerException e) {
             log.error("Error loading businesses", e);
+            addError(model, "websiteSettings.business.listUnavailable", request);
+            model.addAttribute("businessesUnavailable", Boolean.TRUE);
         }
         model.addAttribute("businesses", businesses);
     }
 
-    private void loadFormData(Model model) {
-        loadBusinesses(model);
+    private void loadFormData(Model model, HttpServletRequest request) {
+        loadBusinesses(model, request);
         model.addAttribute("localesList", org.apache.roller.weblogger.ui.controllers.util.UIUtils.getLocales());
         model.addAttribute("timeZonesList", org.apache.roller.weblogger.ui.controllers.util.UIUtils.getTimeZones());
         // The same ceiling myValidate() rejects against, so the field's max=
