@@ -325,10 +325,11 @@ public class UtilitiesModel implements Model {
 
     /**
      * The facts the footer business card shows, or an empty map when the blog has
-     * neither a business nor a place. Keys, each present only when it has a
-     * value: {@code name} (the business name, else the blog name for a
-     * place-only blog), {@code locality} ("Locality, Region", else the
-     * business's area served), {@code telephone} (as typed), {@code telHref}
+     * neither a business nor a place (a place type). Keys, each present only
+     * when it has a value: {@code name} (for a place, the place name -- the
+     * blog name; otherwise the business name), {@code locality} (for a place,
+     * "Locality, Region"; otherwise the business's area served),
+     * {@code telephone} (as typed), {@code telHref}
      * ("tel:" + digits with any leading +), {@code bookingHref} (UTM-tagged,
      * campaign = {@code slug}) and {@code dest} (its host). Values are raw;
      * the template escapes them.
@@ -338,26 +339,24 @@ public class UtilitiesModel implements Model {
             return Map.of();
         }
         Business business = w.getBusiness();
-        String locality = StringUtils.trimToNull(w.getPlaceLocality());
-        String region = StringUtils.trimToNull(w.getPlaceRegion());
-        boolean hasPlace = w.getPlaceType() != null && !w.getPlaceType().isBlank()
-                || locality != null || region != null;
+        // A place is a place type, the same test BusinessJsonLd.placeNode
+        // uses, so the card never shows a place the JSON-LD does not describe.
+        boolean hasPlace = StringUtils.isNotBlank(w.getPlaceType());
         if (business == null && !hasPlace) {
             return Map.of();
         }
         Map<String, String> card = new HashMap<>();
-        String name = business == null ? null : StringUtils.trimToNull(business.getName());
-        if (name == null) {
-            name = StringUtils.trimToNull(w.getName());
-        }
+        String businessName = business == null ? null : StringUtils.trimToNull(business.getName());
+        String placeName = StringUtils.trimToNull(w.getName());
+        String name = hasPlace && placeName != null ? placeName
+                : businessName != null ? businessName : placeName;
         if (name != null) {
             card.put("name", name);
         }
-        String place = Stream.of(locality, region).filter(Objects::nonNull)
-                .collect(Collectors.joining(", "));
-        if (place.isEmpty() && business != null) {
-            place = StringUtils.trimToEmpty(business.getAreaServed());
-        }
+        String place = hasPlace
+                ? Stream.of(w.getPlaceLocality(), w.getPlaceRegion()).map(StringUtils::trimToNull)
+                        .filter(Objects::nonNull).collect(Collectors.joining(", "))
+                : StringUtils.trimToEmpty(business.getAreaServed());
         if (!place.isEmpty()) {
             card.put("locality", place);
         }

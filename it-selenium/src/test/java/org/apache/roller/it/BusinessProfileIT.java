@@ -90,8 +90,10 @@ class BusinessProfileIT extends RollerIT {
             assertTrue(card.find(), "the footer card must render");
             String cardHtml = card.group(1);
             assertTrue(cardHtml.contains(">Porto<"), "the card must carry the locality: " + cardHtml);
-            assertTrue(cardHtml.contains(">" + BUSINESS_NAME + "<"),
-                    "the card must carry the business name: " + cardHtml);
+            // A place's card shows the place name (the blog name); the
+            // business appears as the place's parentOrganization below.
+            assertTrue(cardHtml.contains(">Business " + handle + "<"),
+                    "the card must carry the place (blog) name: " + cardHtml);
             assertTrue(cardHtml.contains("href=\"https://book.example.com/stay"),
                     "the card must link the booking URL: " + cardHtml);
             assertTrue(cardHtml.contains("data-umami-event=\"business-card-click\""), cardHtml);

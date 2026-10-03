@@ -203,12 +203,29 @@ class BusinessCardRenderingTest {
     }
 
     @Test
-    void aPlaceShowsItsLocalityAndTheBusinessNameIsEscaped() throws Exception {
-        configure("portfolio", namedBusiness("Fish & <b>Chips</b>"), "São Miguel", null);
+    void withoutAPlaceTheBusinessNameIsShownEscaped() throws Exception {
+        configure("portfolio", namedBusiness("Fish & <b>Chips</b>"), null, null);
         String card = card(render("/" + HANDLE));
         assertTrue(card != null, "a card is expected");
         assertTrue(card.contains("<p class=\"business-card-name\">Fish &amp; &lt;b&gt;Chips&lt;/b&gt;</p>"),
                 card);
+    }
+
+    @Test
+    void aPlaceShowsItsOwnNameAndLocalityEscaped() throws Exception {
+        configure("portfolio", namedBusiness("Casa Azul Group"), "São Miguel", null);
+        Weblog managed = TestUtils.getManagedWebsite(weblog);
+        // Markup in a blog name is stripped on save; the ampersand survives.
+        managed.setName("Fish & Chips");
+        TestUtils.weblogger().getWeblogManager().saveWeblog(managed);
+        TestUtils.endSession(true);
+        RenderingTestSupport.clearRenderCaches();
+
+        String card = card(render("/" + HANDLE));
+        assertTrue(card != null, "a card is expected");
+        assertTrue(card.contains("<p class=\"business-card-name\">Fish &amp; Chips</p>"),
+                "a place shows the place (blog) name, escaped: " + card);
+        assertFalse(card.contains("Casa Azul Group"), card);
         assertTrue(card.contains("<p class=\"business-card-locality\">S&atilde;o Miguel</p>"), card);
     }
 
