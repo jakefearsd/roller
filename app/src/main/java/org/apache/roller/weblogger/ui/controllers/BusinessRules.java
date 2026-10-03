@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 import org.apache.commons.validator.routines.EmailValidator;
-import org.apache.commons.validator.routines.UrlValidator;
+import org.apache.roller.weblogger.business.BookingLink;
 
 /**
  * The field rules for a business record and a blog's place fields, shared by
@@ -37,15 +37,16 @@ public final class BusinessRules {
     /** Most sameAs profile links a business may carry. */
     public static final int MAX_SAME_AS = 10;
 
-    private static final UrlValidator URL_VALIDATOR =
-            new UrlValidator(new String[] {"http", "https"});
-
     private BusinessRules() {
     }
 
-    /** True for an absolute http or https URL; the same test the [cta] shortcode applies. */
+    /**
+     * True for an absolute http or https URL. Delegates to
+     * {@link BookingLink#isHttpUrl}, so the forms accept exactly the links
+     * the card and the [cta] shortcode will use.
+     */
     public static boolean isHttpUrl(String s) {
-        return s != null && URL_VALIDATOR.isValid(s);
+        return BookingLink.isHttpUrl(s);
     }
 
     public static boolean isEmail(String s) {

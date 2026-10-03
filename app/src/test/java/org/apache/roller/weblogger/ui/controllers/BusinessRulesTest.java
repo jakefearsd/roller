@@ -19,6 +19,7 @@ package org.apache.roller.weblogger.ui.controllers;
 
 import java.util.List;
 
+import org.apache.roller.weblogger.business.BookingLink;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
@@ -86,5 +87,22 @@ class BusinessRulesTest {
     @Test
     void sameAsCapIsTen() {
         assertEquals(10, BusinessRules.MAX_SAME_AS);
+    }
+
+    /**
+     * Characterisation test, written before BusinessRules.isHttpUrl was made
+     * to delegate to BookingLink.isHttpUrl and expected to pass against both
+     * the old duplicate validator and the delegation: the settings form and
+     * the Businesses screen must accept exactly the URLs a booking link
+     * resolves to, no more and no fewer.
+     */
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {
+            "https://book.example.com/stay", "http://casa.com", "HTTPS://CASA.COM/x?y=1#z",
+            "https://b.example/x", "ftp://casa.com", "javascript:alert(1)", "//casa.com",
+            "https://", "casa.com", "https://casa.com/a b", "mailto:hi@casa.com"})
+    void agreesWithTheBookingLinkRule(String url) {
+        assertEquals(BookingLink.isHttpUrl(url), BusinessRules.isHttpUrl(url), url);
     }
 }
