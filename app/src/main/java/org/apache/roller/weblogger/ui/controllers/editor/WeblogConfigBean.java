@@ -19,6 +19,10 @@
 package org.apache.roller.weblogger.ui.controllers.editor;
 
 import org.apache.commons.lang3.StringUtils;
+import java.math.BigDecimal;
+
+import org.apache.roller.weblogger.WebloggerException;
+import org.apache.roller.weblogger.business.BusinessManager;
 import org.apache.roller.weblogger.pojos.Weblog;
 
 
@@ -42,6 +46,17 @@ public class WeblogConfigBean {
     private String analyticsShareUrl = null;
     private String newsletterListUuid = null;
     private String customDomain = null;
+
+    private String businessId = null;
+    private String placeType = null;
+    private String placeLocality = null;
+    private String placeRegion = null;
+    private String placeCountry = null;
+    // Latitude and longitude arrive as text so a typo is a field error on the
+    // form, not a binding failure that never reaches the controller.
+    private String placeLat = null;
+    private String placeLng = null;
+    private String bookingUrl = null;
 
 
     public String getHandle() {
@@ -156,6 +171,70 @@ public class WeblogConfigBean {
         this.customDomain = customDomain;
     }
 
+    public String getBusinessId() {
+        return businessId;
+    }
+
+    public void setBusinessId(String businessId) {
+        this.businessId = businessId;
+    }
+
+    public String getPlaceType() {
+        return placeType;
+    }
+
+    public void setPlaceType(String placeType) {
+        this.placeType = placeType;
+    }
+
+    public String getPlaceLocality() {
+        return placeLocality;
+    }
+
+    public void setPlaceLocality(String placeLocality) {
+        this.placeLocality = placeLocality;
+    }
+
+    public String getPlaceRegion() {
+        return placeRegion;
+    }
+
+    public void setPlaceRegion(String placeRegion) {
+        this.placeRegion = placeRegion;
+    }
+
+    public String getPlaceCountry() {
+        return placeCountry;
+    }
+
+    public void setPlaceCountry(String placeCountry) {
+        this.placeCountry = placeCountry;
+    }
+
+    public String getPlaceLat() {
+        return placeLat;
+    }
+
+    public void setPlaceLat(String placeLat) {
+        this.placeLat = placeLat;
+    }
+
+    public String getPlaceLng() {
+        return placeLng;
+    }
+
+    public void setPlaceLng(String placeLng) {
+        this.placeLng = placeLng;
+    }
+
+    public String getBookingUrl() {
+        return bookingUrl;
+    }
+
+    public void setBookingUrl(String bookingUrl) {
+        this.bookingUrl = bookingUrl;
+    }
+
     public void copyFrom(Weblog dataHolder) {
         
         this.handle = dataHolder.getHandle();
@@ -172,6 +251,14 @@ public class WeblogConfigBean {
         this.customDomain = dataHolder.getCustomDomain();
         setIcon(dataHolder.getIconPath());
         setAbout(dataHolder.getAbout());
+        this.businessId = dataHolder.getBusiness() == null ? null : dataHolder.getBusiness().getId();
+        this.placeType = dataHolder.getPlaceType();
+        this.placeLocality = dataHolder.getPlaceLocality();
+        this.placeRegion = dataHolder.getPlaceRegion();
+        this.placeCountry = dataHolder.getPlaceCountry();
+        this.placeLat = dataHolder.getPlaceLat() == null ? null : dataHolder.getPlaceLat().toPlainString();
+        this.placeLng = dataHolder.getPlaceLng() == null ? null : dataHolder.getPlaceLng().toPlainString();
+        this.bookingUrl = dataHolder.getBookingUrl();
     }
     
     
@@ -189,6 +276,46 @@ public class WeblogConfigBean {
         dataHolder.setAnalyticsShareUrl(StringUtils.trimToNull(this.analyticsShareUrl));
         dataHolder.setNewsletterListUuid(StringUtils.trimToNull(this.newsletterListUuid));
         dataHolder.setCustomDomain(StringUtils.trimToNull(this.customDomain));
+        dataHolder.setPlaceType(StringUtils.trimToNull(this.placeType));
+        dataHolder.setPlaceLocality(StringUtils.trimToNull(this.placeLocality));
+        dataHolder.setPlaceRegion(StringUtils.trimToNull(this.placeRegion));
+        String country = StringUtils.trimToNull(this.placeCountry);
+        dataHolder.setPlaceCountry(country == null ? null : country.toUpperCase(java.util.Locale.ROOT));
+        dataHolder.setPlaceLat(toDecimal(this.placeLat));
+        dataHolder.setPlaceLng(toDecimal(this.placeLng));
+        dataHolder.setBookingUrl(StringUtils.trimToNull(this.bookingUrl));
+    }
+
+    /**
+     * As {@link #copyTo(Weblog)}, and also resolves {@code businessId} through
+     * the manager: blank clears the business, an unknown id is a
+     * {@link WebloggerException} so a stale form can never silently unlink it.
+     */
+    public void copyTo(Weblog dataHolder, BusinessManager businesses) throws WebloggerException {
+        copyTo(dataHolder);
+        String id = StringUtils.trimToNull(this.businessId);
+        if (id == null) {
+            dataHolder.setBusiness(null);
+            return;
+        }
+        var business = businesses.getBusiness(id);
+        if (business == null) {
+            throw new WebloggerException("Unknown business " + id);
+        }
+        dataHolder.setBusiness(business);
+    }
+
+    /** The number typed, or null when blank or not a number (validation reports the latter). */
+    static BigDecimal toDecimal(String text) {
+        String trimmed = StringUtils.trimToNull(text);
+        if (trimmed == null) {
+            return null;
+        }
+        try {
+            return new BigDecimal(trimmed);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
     
 

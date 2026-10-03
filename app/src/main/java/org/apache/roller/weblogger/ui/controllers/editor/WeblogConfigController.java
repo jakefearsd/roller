@@ -18,6 +18,9 @@
 
 package org.apache.roller.weblogger.ui.controllers.editor;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,8 +31,10 @@ import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
+import org.apache.roller.weblogger.pojos.Business;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.ui.controllers.BaseController;
+import org.apache.roller.weblogger.ui.controllers.BusinessRules;
 import org.apache.roller.weblogger.ui.controllers.CustomDomainRules;
 import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.springframework.stereotype.Controller;
@@ -86,7 +91,7 @@ public class WeblogConfigController extends BaseController {
             try {
                 Weblog weblog = getActionWeblog(request);
 
-                bean.copyTo(weblog);
+                bean.copyTo(weblog, weblogger.getBusinessManager());
 
                 weblogger.getWeblogManager().saveWeblog(weblog);
 
@@ -131,6 +136,8 @@ public class WeblogConfigController extends BaseController {
                     "websiteSettings.analyticsShareUrl.invalid", request);
         }
 
+        validateBusiness(bean, request, model);
+
         String customDomain = CustomDomainRules.normalise(bean.getCustomDomain());
         bean.setCustomDomain(customDomain);
         if (customDomain != null) {
@@ -174,7 +181,80 @@ public class WeblogConfigController extends BaseController {
         }
     }
 
+    private static final BigDecimal MAX_LAT = new BigDecimal(90);
+    private static final BigDecimal MAX_LNG = new BigDecimal(180);
+    private static final Pattern COUNTRY = Pattern.compile("^[A-Za-z]{2}$");
+
+    private void validateBusiness(WeblogConfigBean bean, HttpServletRequest request, Model model) {
+        String businessId = StringUtils.trimToNull(bean.getBusinessId());
+        if (businessId != null) {
+            try {
+                if (weblogger.getBusinessManager().getBusiness(businessId) == null) {
+                    addFieldError(model, "weblog_bean_businessId",
+                            "websiteSettings.business.invalid", request);
+                }
+            } catch (WebloggerException e) {
+                // A lookup that could not run is not one that passed.
+                log.error("Error checking business", e);
+                addFieldError(model, "weblog_bean_businessId",
+                        "websiteSettings.business.invalid", request);
+            }
+        }
+
+        String placeType = StringUtils.trimToNull(bean.getPlaceType());
+        if (placeType != null && !"LodgingBusiness".equals(placeType)) {
+            addFieldError(model, "weblog_bean_placeType",
+                    "websiteSettings.placeType.invalid", request);
+        } else if (placeType != null && StringUtils.isBlank(bean.getPlaceLocality())) {
+            addFieldError(model, "weblog_bean_placeLocality",
+                    "websiteSettings.placeLocality.required", request);
+        }
+
+        String country = StringUtils.trimToNull(bean.getPlaceCountry());
+        if (country != null && !COUNTRY.matcher(country).matches()) {
+            addFieldError(model, "weblog_bean_placeCountry",
+                    "websiteSettings.placeCountry.invalid", request);
+        }
+
+        String lat = StringUtils.trimToNull(bean.getPlaceLat());
+        String lng = StringUtils.trimToNull(bean.getPlaceLng());
+        if (!withinRange(lat, MAX_LAT) || (lat == null && lng != null)) {
+            addFieldError(model, "weblog_bean_placeLat",
+                    "websiteSettings.placeLat.invalid", request);
+        }
+        if (!withinRange(lng, MAX_LNG) || (lng == null && lat != null)) {
+            addFieldError(model, "weblog_bean_placeLng",
+                    "websiteSettings.placeLng.invalid", request);
+        }
+
+        String bookingUrl = StringUtils.trimToNull(bean.getBookingUrl());
+        if (bookingUrl != null && !BusinessRules.isHttpUrl(bookingUrl)) {
+            addFieldError(model, "weblog_bean_bookingUrl",
+                    "websiteSettings.bookingUrl.invalid", request);
+        }
+    }
+
+    /** True when blank, or a number whose magnitude is at most {@code limit}. */
+    private static boolean withinRange(String text, BigDecimal limit) {
+        if (text == null) {
+            return true;
+        }
+        BigDecimal value = WeblogConfigBean.toDecimal(text);
+        return value != null && value.abs().compareTo(limit) <= 0;
+    }
+
+    private void loadBusinesses(Model model) {
+        List<Business> businesses = new ArrayList<>();
+        try {
+            businesses = weblogger.getBusinessManager().getBusinesses();
+        } catch (WebloggerException e) {
+            log.error("Error loading businesses", e);
+        }
+        model.addAttribute("businesses", businesses);
+    }
+
     private void loadFormData(Model model) {
+        loadBusinesses(model);
         model.addAttribute("localesList", org.apache.roller.weblogger.ui.controllers.util.UIUtils.getLocales());
         model.addAttribute("timeZonesList", org.apache.roller.weblogger.ui.controllers.util.UIUtils.getTimeZones());
         // The same ceiling myValidate() rejects against, so the field's max=

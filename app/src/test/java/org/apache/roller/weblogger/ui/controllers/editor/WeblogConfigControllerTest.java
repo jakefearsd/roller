@@ -22,6 +22,9 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.roller.weblogger.WebloggerException;
+import java.math.BigDecimal;
+
+import org.apache.roller.weblogger.pojos.Business;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -491,5 +494,151 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
                         "weblog_bean_analyticsShareUrl",
                         "weblog_bean_customDomain"),
                 invalidFields(model));
+    }
+
+    // --- business and place ---
+
+    private Business givenBusiness(String id) throws Exception {
+        Business business = new Business();
+        business.setId(id);
+        business.setName("Casa do Mar");
+        when(weblogger.businessManager().getBusiness(id)).thenReturn(business);
+        return business;
+    }
+
+    private void assertBusinessFieldRefused(String fieldId) throws Exception {
+        controller.save(request, model, bean);
+        assertEquals(List.of(fieldId), invalidFields(model));
+        verify(weblogger.getWeblogManager(), never()).saveWeblog(any());
+    }
+
+    @Test
+    void savingAValidBusinessAndPlaceCopiesEveryField() throws Exception {
+        Business business = givenBusiness("biz-1");
+        bean.setBusinessId("biz-1");
+        bean.setPlaceType("LodgingBusiness");
+        bean.setPlaceLocality("Ponta Delgada");
+        bean.setPlaceRegion("Azores");
+        bean.setPlaceCountry("pt");
+        bean.setPlaceLat("37.7412");
+        bean.setPlaceLng("-25.6756");
+        bean.setBookingUrl("https://book.example.com/stay");
+
+        controller.save(request, model, bean);
+
+        assertTrue(errors(model).isEmpty(), "Expected no errors, got: " + errors(model));
+        assertEquals(business, weblog.getBusiness());
+        assertEquals("LodgingBusiness", weblog.getPlaceType());
+        assertEquals("Ponta Delgada", weblog.getPlaceLocality());
+        assertEquals("Azores", weblog.getPlaceRegion());
+        assertEquals("PT", weblog.getPlaceCountry(), "lower-case is accepted and stored upper-case");
+        assertEquals(new BigDecimal("37.74"), weblog.getPlaceLat());
+        assertEquals(new BigDecimal("-25.68"), weblog.getPlaceLng());
+        assertEquals("https://book.example.com/stay", weblog.getBookingUrl());
+        verify(weblogger.getWeblogManager()).saveWeblog(weblog);
+    }
+
+    @Test
+    void aBlankBusinessIdClearsTheBusiness() throws Exception {
+        weblog.setBusiness(givenBusiness("biz-1"));
+        bean.setBusinessId("  ");
+
+        controller.save(request, model, bean);
+
+        assertNull(weblog.getBusiness());
+        verify(weblogger.getWeblogManager()).saveWeblog(weblog);
+    }
+
+    @Test
+    void openingTheFormShowsTheStoredBusinessAndPlace() throws Exception {
+        weblog.setBusiness(givenBusiness("biz-1"));
+        weblog.setPlaceType("LodgingBusiness");
+        weblog.setPlaceLat(new BigDecimal("37.74"));
+        weblog.setBookingUrl("https://book.example.com/x");
+        when(weblogger.businessManager().getBusinesses()).thenReturn(List.of());
+
+        controller.execute(request, model, bean);
+
+        assertEquals("biz-1", bean.getBusinessId());
+        assertEquals("LodgingBusiness", bean.getPlaceType());
+        assertEquals("37.74", bean.getPlaceLat());
+        assertEquals("https://book.example.com/x", bean.getBookingUrl());
+        assertEquals(List.of(), model.getAttribute("businesses"));
+    }
+
+    @Test
+    void anUnknownBusinessIsRefused() throws Exception {
+        bean.setBusinessId("nope");
+        assertBusinessFieldRefused("weblog_bean_businessId");
+    }
+
+    @Test
+    void aBusinessLookupThatFailsIsRefusedNotSkipped() throws Exception {
+        when(weblogger.businessManager().getBusiness("biz-1"))
+                .thenThrow(new WebloggerException("db down"));
+        bean.setBusinessId("biz-1");
+        assertBusinessFieldRefused("weblog_bean_businessId");
+    }
+
+    @Test
+    void anUnknownPlaceTypeIsRefused() throws Exception {
+        bean.setPlaceType("Hotel");
+        bean.setPlaceLocality("Lisbon");
+        assertBusinessFieldRefused("weblog_bean_placeType");
+    }
+
+    @Test
+    void aPlaceTypeWithoutALocalityIsRefused() throws Exception {
+        bean.setPlaceType("LodgingBusiness");
+        bean.setPlaceLocality("  ");
+        assertBusinessFieldRefused("weblog_bean_placeLocality");
+    }
+
+    @Test
+    void aCountryThatIsNotTwoLettersIsRefused() throws Exception {
+        for (String bad : new String[] {"prt", "P1", "p"}) {
+            model = newModel();
+            bean.setPlaceCountry(bad);
+            controller.save(request, model, bean);
+            assertEquals(List.of("weblog_bean_placeCountry"), invalidFields(model), bad);
+        }
+        verify(weblogger.getWeblogManager(), never()).saveWeblog(any());
+    }
+
+    @Test
+    void aLatitudeOutOfRangeOrNotANumberIsRefused() throws Exception {
+        for (String bad : new String[] {"91", "-90.5", "north"}) {
+            model = newModel();
+            bean.setPlaceLat(bad);
+            bean.setPlaceLng("10");
+            controller.save(request, model, bean);
+            assertEquals(List.of("weblog_bean_placeLat"), invalidFields(model), bad);
+        }
+        verify(weblogger.getWeblogManager(), never()).saveWeblog(any());
+    }
+
+    @Test
+    void aLongitudeOutOfRangeIsRefused() throws Exception {
+        bean.setPlaceLat("10");
+        bean.setPlaceLng("181");
+        assertBusinessFieldRefused("weblog_bean_placeLng");
+    }
+
+    @Test
+    void aLongitudeWithoutALatitudeIsRefused() throws Exception {
+        bean.setPlaceLng("10");
+        assertBusinessFieldRefused("weblog_bean_placeLat");
+    }
+
+    @Test
+    void aLatitudeWithoutALongitudeIsRefused() throws Exception {
+        bean.setPlaceLat("10");
+        assertBusinessFieldRefused("weblog_bean_placeLng");
+    }
+
+    @Test
+    void aBookingUrlThatIsNotHttpIsRefused() throws Exception {
+        bean.setBookingUrl("javascript:alert(1)");
+        assertBusinessFieldRefused("weblog_bean_bookingUrl");
     }
 }

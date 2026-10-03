@@ -182,6 +182,78 @@
         </div>
     </div>
 
+    <%-- ***** Business settings ***** --%>
+
+    <h3 class="section-head" id="settings-business"><spring:message code="websiteSettings.businessSettings"/></h3>
+
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label" for="weblog_bean_businessId"><spring:message code="websiteSettings.business"/></label>
+        <div class="col-sm-9">
+            <select id="weblog_bean_businessId" name="bean.businessId" class="form-select">
+                <option value=""><spring:message code="websiteSettings.business.none"/></option>
+                <c:forEach var="b" items="${businesses}">
+                    <option value="${fn:escapeXml(b.id)}"<c:if test="${bean.businessId == b.id}"> selected="selected"</c:if>>${fn:escapeXml(b.name)}</option>
+                </c:forEach>
+            </select>
+            <div class="form-text"><spring:message code="websiteSettings.business.tip"/></div>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label" for="weblog_bean_placeType"><spring:message code="websiteSettings.placeType"/></label>
+        <div class="col-sm-9">
+            <select id="weblog_bean_placeType" name="bean.placeType" class="form-select">
+                <option value=""><spring:message code="websiteSettings.placeType.none"/></option>
+                <option value="LodgingBusiness"<c:if test="${bean.placeType == 'LodgingBusiness'}"> selected="selected"</c:if>><spring:message code="websiteSettings.placeType.lodging"/></option>
+            </select>
+            <div class="form-text"><spring:message code="websiteSettings.placeType.tip"/></div>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label" for="weblog_bean_placeLocality"><spring:message code="websiteSettings.placeLocality"/></label>
+        <div class="col-sm-9">
+            <input id="weblog_bean_placeLocality" type="text" name="bean.placeLocality" value="${fn:escapeXml(bean.placeLocality)}" size="40" maxlength="255" class="form-control"/>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label" for="weblog_bean_placeRegion"><spring:message code="websiteSettings.placeRegion"/></label>
+        <div class="col-sm-9">
+            <input id="weblog_bean_placeRegion" type="text" name="bean.placeRegion" value="${fn:escapeXml(bean.placeRegion)}" size="40" maxlength="255" class="form-control"/>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label" for="weblog_bean_placeCountry"><spring:message code="websiteSettings.placeCountry"/></label>
+        <div class="col-sm-9">
+            <input id="weblog_bean_placeCountry" type="text" name="bean.placeCountry" value="${fn:escapeXml(bean.placeCountry)}" size="4" maxlength="2" class="form-control"/>
+            <div class="form-text"><spring:message code="websiteSettings.placeCountry.tip"/></div>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label" for="weblog_bean_placeLat"><spring:message code="websiteSettings.placeLat"/></label>
+        <div class="col-sm-9">
+            <input id="weblog_bean_placeLat" type="text" name="bean.placeLat" value="${fn:escapeXml(bean.placeLat)}" size="40" maxlength="16" class="form-control"/>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label" for="weblog_bean_placeLng"><spring:message code="websiteSettings.placeLng"/></label>
+        <div class="col-sm-9">
+            <input id="weblog_bean_placeLng" type="text" name="bean.placeLng" value="${fn:escapeXml(bean.placeLng)}" size="40" maxlength="16" class="form-control"/>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label" for="weblog_bean_bookingUrl"><spring:message code="websiteSettings.bookingUrl"/></label>
+        <div class="col-sm-9">
+            <input id="weblog_bean_bookingUrl" type="text" name="bean.bookingUrl" value="${fn:escapeXml(bean.bookingUrl)}" size="40" maxlength="255" class="form-control"/>
+            <div class="form-text"><spring:message code="websiteSettings.bookingUrl.tip"/></div>
+        </div>
+    </div>
+
     <%-- ***** Custom domain settings ***** --%>
 
     <h3 class="section-head" id="settings-customdomain"><spring:message code="websiteSettings.customDomainSettings"/></h3>
@@ -220,6 +292,7 @@
             <a href="#settings-language"><spring:message code="websiteSettings.languageSettings"/></a>
             <a href="#settings-analytics"><spring:message code="websiteSettings.analyticsSettings"/></a>
             <a href="#settings-newsletter"><spring:message code="websiteSettings.newsletterSettings"/></a>
+            <a href="#settings-business"><spring:message code="websiteSettings.businessSettings"/></a>
             <a href="#settings-customdomain"><spring:message code="websiteSettings.customDomainSettings"/></a>
         </nav>
     </div>
