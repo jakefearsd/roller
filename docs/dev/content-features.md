@@ -16,6 +16,27 @@ resolves through the index at the end of `CLAUDE.md`.
 - `SeoController` serves `/robots.txt`, `/sitemap.xml` (index) and
   `/sitemap-<handle>.xml` (via `*.xml`; a middle-wildcard servlet pattern is
   illegal).
+- **Business profiles.** A site admin owns shared `Business` rows
+  (`/roller-ui/admin/businesses.rol`); a blog picks one in Settings and may
+  add a place (`placeType` LodgingBusiness, locality, region, country,
+  lat/lng, its own booking URL). `BusinessJsonLd` (via
+  `UtilitiesModel.businessJsonLd`/`businessPublisherJson`) emits, from
+  `#showSeoHead`: on the home page a **second** `application/ld+json` block
+  (the LodgingBusiness place node whose `parentOrganization` is the business
+  node, or the business node alone when no place is set), and on an entry
+  page `publisher` on the BlogPosting. JSON is built with `escapeJson` in
+  Java; blank fields are omitted, never emitted as `""`.
+- `#showBusinessCard` renders the footer `<aside class="business-card">`
+  (name, locality, `tel:` link, booking link). `BookingLink` is the one place
+  UTM parameters are added (before any `#fragment`, never duplicating an
+  existing `utm_source`), shared by the card and `[cta]`. A booking URL must
+  be http(s) with a real TLD.
+- `[cta]` without `href` falls back to the weblog's booking URL, then the
+  business's.
+- **Cache expiry.** Rendered pages expire only through `weblog.lastModified`,
+  so saving a shared business touches `lastModified` of every weblog using it
+  (`BusinessManager.saveBusiness`); otherwise their cards and JSON-LD would stay
+  stale. `BusinessProfileIT` covers the path end to end.
 
 ## Travel (Stage 2 Wave 3)
 - Three shortcodes in `business/shortcodes`, registered in

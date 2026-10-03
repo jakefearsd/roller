@@ -82,6 +82,15 @@ Per-weblog Umami tracking plus a read-only Grafana contract over two databases.
   reachable here) is gone end to end — `Weblog`/`WeblogConfigBean` plumbing,
   JSP, `ConfigModel`/macro branches, and the `weblog.analyticscode` column
   (`V023__drop_w2_fossils.sql`).
+- **Click attribution is two Umami custom events, no server code.**
+  `[cta]` anchors carry `data-umami-event="cta-click"` and the footer card's
+  booking link `business-card-click`; both add `data-umami-event-dest` (the
+  destination host) and, when an entry is in context,
+  `data-umami-event-entry` (its anchor). The tracker reads those attributes
+  itself. `HTMLSanitizer` allowlists exactly those three names on `<a>`
+  (not a `data-umami-*` wildcard, which would let authors invent properties).
+  Read them in Umami under the site's **Events** tab, filtered by event name,
+  with `dest` and `entry` as properties.
 - **Same-origin, so the pinned CSPs never moved.** Served via Caddy's
   `/analytics/*` handle, the tracker runs under every theme's
   `script-src 'self'` / `connect-src 'self'`;

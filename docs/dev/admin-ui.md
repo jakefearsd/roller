@@ -199,6 +199,15 @@ resolves through the index at the end of `CLAUDE.md`.
   `getText` returns an unresolvable key verbatim to the raw sink — recorded,
   not fixed.
 
+- **Businesses (Global Admin, `/roller-ui/admin/businesses.rol`).** List,
+  `businesses!edit.rol` (create/edit; blank id opens an empty form),
+  `businesses!save.rol`, `businesses!delete.rol` (`data-confirm`; refused
+  with `businesses.error.inUse` while any weblog uses it). `Routes` pins
+  `#businesses-list-marker` and the form's `action$=` selector. Blog owners
+  choose a business and place details in Settings, section `#settings-business`.
+  Saving a business touches `lastModified` of every weblog using it (see
+  Business profiles in content-features.md).
+
 ## Categories
 - **Ownership-check every id.** `BaseController.lookupEntry`/
   `lookupTemplate`/`lookupCategory`/`lookupPage` are the by-id ownership
