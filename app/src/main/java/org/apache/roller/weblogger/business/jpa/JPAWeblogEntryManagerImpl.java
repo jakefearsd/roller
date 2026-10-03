@@ -295,8 +295,13 @@ public class JPAWeblogEntryManagerImpl implements WeblogEntryManager {
 
             this.strategy.store(revision);
 
-            for (int i = retention - 1; i < existing.size(); i++) {
-                this.strategy.remove(existing.get(i));
+            // Only a positive retention prunes. A negative one keeps
+            // everything, and starting this loop at retention-1 would index
+            // the empty list at -2.
+            if (retention > 0) {
+                for (int i = retention - 1; i < existing.size(); i++) {
+                    this.strategy.remove(existing.get(i));
+                }
             }
         } catch (Exception e) {
             log.warn("Could not record a revision for entry {}; the save itself is unaffected",

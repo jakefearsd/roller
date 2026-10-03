@@ -19,9 +19,18 @@
 package org.apache.roller.weblogger.business;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.List;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.core.Appender;
+import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.appender.AbstractAppender;
+import org.apache.logging.log4j.core.config.LoggerConfig;
+import org.apache.logging.log4j.core.config.Property;
 
 import org.apache.roller.weblogger.TestUtils;
+import org.apache.roller.weblogger.business.jpa.JPAWeblogEntryManagerImpl;
 import org.apache.roller.weblogger.pojos.RuntimeConfigProperty;
 import org.apache.roller.weblogger.pojos.User;
 import org.apache.roller.weblogger.pojos.Weblog;
@@ -141,6 +150,46 @@ public class WeblogEntryRevisionTest {
                 .getRevisions(entryManager().getWeblogEntry(id));
         assertEquals(25, revisions.size(),
                 "the default must not prune; twenty-five edits leave twenty-five revisions");
+    }
+
+    /**
+     * Under the default the prune loop started at index retention-1 = -2 of
+     * an empty list, so every content-changing save threw inside
+     * recordRevision and logged a WARN with a stack trace. The revision still
+     * landed (it is stored before the loop), which is why the test above
+     * never noticed; only the log shows it.
+     */
+    @Test
+    public void theDefaultRetentionRecordsWithoutAWarning() throws Exception {
+        setRetention("-1");
+        String id = saveEntry("Quiet", "Body 0").getId();
+        TestUtils.endSession(true);
+
+        List<LogEvent> warnings = new ArrayList<>();
+        Appender appender = new AbstractAppender("WeblogEntryRevisionTest-capture", null, null,
+                false, Property.EMPTY_ARRAY) {
+            @Override
+            public void append(LogEvent event) {
+                if (event.getLevel().isMoreSpecificThan(Level.WARN)
+                        && JPAWeblogEntryManagerImpl.class.getName().equals(event.getLoggerName())) {
+                    warnings.add(event.toImmutable());
+                }
+            }
+        };
+        appender.start();
+        LoggerConfig loggerConfig = LoggerContext.getContext(false).getConfiguration()
+                .getLoggerConfig(JPAWeblogEntryManagerImpl.class.getName());
+        loggerConfig.addAppender(appender, null, null);
+        try {
+            editText(id, "Body 1");
+        } finally {
+            loggerConfig.removeAppender("WeblogEntryRevisionTest-capture");
+            appender.stop();
+        }
+
+        assertEquals(1, entryManager().getRevisions(entryManager().getWeblogEntry(id)).size());
+        assertTrue(warnings.isEmpty(), "a save under the default retention logged: "
+                + warnings.stream().map(e -> e.getMessage().getFormattedMessage()).toList());
     }
 
     @Test
