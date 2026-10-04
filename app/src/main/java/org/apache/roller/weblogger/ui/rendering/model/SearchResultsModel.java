@@ -103,7 +103,7 @@ public class SearchResultsModel extends PageModel {
 
 			Timestamp now = new Timestamp(new Date().getTime());
 			for (WeblogEntryWrapper entry : searchResultList.getResults()) {
-				if (entry.getPubTime().before(now)) {
+				if (!entry.getPubTime().after(now)) {
 					addEntryToResults(results, entry);
 				}
 			}

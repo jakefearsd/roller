@@ -139,7 +139,7 @@ public interface UserManager {
      * 
      * @param enabled True for enabled only, False for disabled only (or null for all)
      * @param startDate Restrict to those created after startDate (or null for all)
-     * @param endDate Restrict to those created before startDate (or null for all)
+     * @param endDate Restrict to those created before endDate (or null for all)
      * @param offset The index of the first result to return.
      * @param length The number of results to return.
      * @return List A list of UserDatUsers which match the criteria.

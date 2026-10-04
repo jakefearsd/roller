@@ -206,6 +206,38 @@ class LuceneIndexManagerSearchTest {
         }
     }
 
+    /**
+     * An entry whose pubTime is exactly the instant the search treats as
+     * "now" is published, not future. {@code TestUtils.setupWeblogEntry}
+     * stamps {@code new Date()}, so a strict before-now filter dropped it
+     * whenever the search ran in the same millisecond.
+     */
+    @Test
+    void anEntryPublishedAtExactlyNowIsFound() throws Exception {
+        Timestamp instant = new Timestamp(1_700_000_000_000L);
+        LuceneIndexManager fixed = new LuceneIndexManager(roller) {
+            @Override
+            Timestamp now() {
+                return instant;
+            }
+        };
+        setField(fixed, "indexDir", indexDir.toString());
+        setField(fixed, "indexConsistencyMarker", new File(indexDir.toFile(), ".index-inconsistent"));
+        fixed.initialize();
+        Weblog blog = weblog("nowblog");
+        WeblogEntry atNow = entry("now-1", blog, "General", "AtNow");
+        atNow.setPubTime(instant);
+        WeblogEntry later = entry("now-2", blog, "General", "Later");
+        later.setPubTime(new Timestamp(instant.getTime() + 1));
+        when(entries.getWeblogEntry("now-1")).thenReturn(atNow);
+        when(entries.getWeblogEntry("now-2")).thenReturn(later);
+        fixed.addEntryIndexOperation(atNow);
+        fixed.addEntryIndexOperation(later);
+
+        assertEquals(List.of("now-1"), idsOf(fixed.search(WORD, "nowblog", null, null, 0, 10, null)));
+        fixed.shutdown();
+    }
+
     private void index(WeblogEntry entry) throws Exception {
         when(entries.getWeblogEntry(entry.getId())).thenReturn(entry);
         manager.addEntryIndexOperation(entry);

@@ -94,6 +94,9 @@ A flake goes here once it is explained; a rerun that passes explains nothing.
   naturally once in 240 with the JVM pinned to one core (`taskset -c 15`),
   the test after `rebuilding...` as in CI; `SharedReaderHandoffTest` holds
   the window open deterministically (fails every run without the fix).
+  Residual: the hit filter dropped an entry with `pubTime == now` (strict
+  `before`), so publish-then-search in one millisecond found nothing; now
+  `!after(now)` (`anEntryPublishedAtExactlyNowIsFound`, also `SearchResultsModel`).
 
 ## CI: three tiers, and nothing publishes on a push
 

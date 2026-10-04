@@ -503,7 +503,7 @@ public class LuceneIndexManager implements IndexManager {
             WeblogEntry entry;
             Document doc;
             String handle;
-            Timestamp now = new Timestamp(new Date().getTime());
+            Timestamp now = now();
             for (int i = offset; i < offset + limit; i++) {
                 doc = search.getSearcher().storedFields().document(hits[i].doc);
                 handle = doc.getField(FieldConstants.WEBSITE_HANDLE).stringValue();
@@ -526,7 +526,7 @@ public class LuceneIndexManager implements IndexManager {
                 // construction rather than relying on the index always
                 // being current, the same defence ReIndexEntryOperation
                 // already applies on the write side.
-                if (entry != null && entry.isPublished() && entry.getPubTime().before(now)) {
+                if (entry != null && entry.isPublished() && !entry.getPubTime().after(now)) {
                     results.add(WeblogEntryWrapper.wrap(entry, urlStrategy, roller));
                 }
             }
@@ -540,5 +540,10 @@ public class LuceneIndexManager implements IndexManager {
         } catch (IOException e) {
             throw new WebloggerException(e);
         }
+    }
+
+    /** The instant a search treats as "now" when hiding future entries; a seam for tests. */
+    Timestamp now() {
+        return new Timestamp(new Date().getTime());
     }
 }

@@ -38,11 +38,13 @@ import org.apache.roller.weblogger.pojos.WeblogCategory;
 import org.apache.roller.weblogger.pojos.WeblogEntry;
 import org.apache.roller.weblogger.pojos.WeblogEntry.PubStatus;
 import org.apache.roller.weblogger.pojos.wrapper.WeblogEntryWrapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -102,6 +104,11 @@ class SharedReaderHandoffTest {
         manager.initialize();
     }
 
+    @AfterEach
+    void tearDown() {
+        manager.shutdown();
+    }
+
     @Test
     void aSearchQueuedBehindAWriteSeesThatWrite() throws Exception {
         Weblog blog = new Weblog();
@@ -124,11 +131,12 @@ class SharedReaderHandoffTest {
         }, "handoff-searcher");
         manager.pauseNextResetUntilSettled(searcher);
 
+        AtomicReference<Throwable> writerFailure = new AtomicReference<>();
         Thread writer = new Thread(() -> {
             try {
                 index(second);
             } catch (Exception e) {
-                throw new IllegalStateException(e);
+                writerFailure.set(e);
             }
         }, "handoff-writer");
         writer.start();
@@ -139,6 +147,7 @@ class SharedReaderHandoffTest {
         searcher.join(Duration.ofSeconds(10));
         writer.join(Duration.ofSeconds(10));
 
+        assertNull(writerFailure.get(), "the writer thread failed: " + writerFailure.get());
         assertTrue(seen.get() != null && seen.get().contains("second"),
                 "a search that began as the write finished answered from the reader cached "
                         + "before it: " + seen.get());
