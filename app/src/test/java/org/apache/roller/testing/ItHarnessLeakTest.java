@@ -73,6 +73,13 @@ import static org.junit.jupiter.api.Assertions.fail;
 @EnabledOnOs(OS.LINUX)
 class ItHarnessLeakTest {
 
+    /**
+     * Fixture loops live in a random namespace no sweep looks in, so they end with
+     * this JVM: if surefire is SIGKILLed, @AfterEach never runs and they would
+     * otherwise sleep forever.
+     */
+    private static final long JVM_PID = ProcessHandle.current().pid();
+
     private static final Path SCRIPTS = Paths.get("../it-selenium/src/test/script");
     private static final Path LIB = SCRIPTS.resolve("it-harness-lib.sh");
     private static final Path START_APP = SCRIPTS.resolve("start-app.sh");
@@ -530,7 +537,7 @@ class ItHarnessLeakTest {
     private Path fakeJava() throws IOException {
         Path java = work.resolve("fake-java.sh");
         if (!Files.exists(java)) {
-            Files.writeString(java, "#!/usr/bin/env bash\nwhile :; do sleep 1; done\n", StandardCharsets.UTF_8);
+            Files.writeString(java, "#!/usr/bin/env bash\nwhile kill -0 " + JVM_PID + " 2>/dev/null; do sleep 1; done\n", StandardCharsets.UTF_8);
             Files.setPosixFilePermissions(java, PosixFilePermissions.fromString("rwx------"));
         }
         return java;
@@ -548,7 +555,7 @@ class ItHarnessLeakTest {
      */
     private long spawnMarked(String inNamespace, String runId, String ownerToken) throws Exception {
         Process process = spawn(List.of("bash", "-c",
-                "source \"$1\"; exec bash -c 'while :; do sleep 1; done' "
+                "source \"$1\"; exec bash -c 'while kill -0 " + JVM_PID + " 2>/dev/null; do sleep 1; done' "
                         + "\"${IT_RUN_PROP}$2\" \"${IT_OWNER_PROP}$3\"",
                 "bash", LIB.toString(), runId, ownerToken), Map.of("IT_NAMESPACE", inNamespace));
         awaitProcessMarked(inNamespace, runId, "the fixture process never appeared");

@@ -34,6 +34,7 @@ import static com.codeborne.selenide.Condition.exist;
 import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
 import static com.codeborne.selenide.Selenide.$$;
+import static com.codeborne.selenide.Selenide.executeJavaScript;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -149,11 +150,15 @@ class ErrorCasesIT extends RollerIT {
         openPath(CREATE_WEBLOG);
         $("#name").should(visible).setValue("No Handle Blog");
         $("#emailAddress").setValue("nohandle@example.invalid");
-        $("button[type='submit']").click();
-        BrowserHealth.current().settle();
+        // The form marks #handle `required`, so the browser would refuse to submit and
+        // the server guard this test is named for would never run. Take it off.
+        executeJavaScript("document.getElementById('handle').removeAttribute('required')");
+        clickAndAwaitNewPage($("button[type='submit']"));
 
-        assertFalse($$("#messages").size() > 0,
-                "a weblog with no handle was created");
+        // The server refused: the create form is shown again with its field error.
+        $("#handle").should(visible);
+        assertTrue($("body").text().contains("The handle you specified is not valid"),
+                "the server did not refuse a weblog with no handle");
         logout();
     }
 

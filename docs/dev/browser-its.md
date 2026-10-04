@@ -190,10 +190,11 @@ silently falling back to its nearest binding and logging a line nobody reads.
 
 ## A click is not a barrier: wait for the answer
 
-**Symptoms, all one defect** (nightlies 2026-08-31 to 2026-10-01, CI running
-the suite serially, so nothing else was in flight): a 403 on a form's POST
-target reported by `BrowserHealth` (`ErrorCasesIT.aDuplicateUserNameIsRefused`,
-`createUser!save.rol`); "the browser is on <POST target> but this recorder
+**Symptoms, all one defect** (the two direct 403 sightings were 2026-08-19
+and 2026-09-14, on parallel runs; the "blind" and `#entry` symptoms are from the
+nightlies of 2026-08-31 to 2026-10-01, CI running the suite serially, so nothing
+else was in flight): a 403 on a form's POST target reported by `BrowserHealth`
+(`ErrorCasesIT.aDuplicateUserNameIsRefused`, `createUser!save.rol`); "the browser is on <POST target> but this recorder
 saw no network traffic at all" in the NEXT test of the class
 (`ErrorCasesIT.anUnknownWeblogIsNotFound`, which never touches the browser);
 `Element not found {#entry}` right after signing in as another user
@@ -232,10 +233,11 @@ use it: the wait fails after 10 s saying no navigation started.
 **Reproduction.** `IT_LATE_CLICK_MS=<ms> mvn verify -Pit` makes every trusted
 click on a submit button or navigating link take effect that late
 (`BrowserHealth.delayNavigatingClicksIfAsked`): the starved runner made
-deterministic. At 150 ms, before the fix, 6 tests in 5 classes failed
-(`MultiUserJourneyIT` x2, `EntryRevisionIT`, `UserAdminIT`,
-`AuthoringJourneyIT`, `MediaBulkUploadIT`), every one a wait the old page
-satisfied; after it, the whole suite (140) passes. The CI failures themselves
+deterministic. At 150 ms, before the fix, running the 7 suspect classes
+(run e1), 6 tests in 5 classes failed (`MultiUserJourneyIT` x2,
+`EntryRevisionIT`, `UserAdminIT`, `AuthoringJourneyIT`, `MediaBulkUploadIT`),
+every one a wait the old page satisfied; the whole suite ran under late-click
+only after the fix (run f1), and all 140 passed. The CI failures themselves
 need the POST to land in a narrower window, so they were reproduced by
 repeating the exact sequence over a sweep of delays: the `ErrorCasesIT` pair,
 144 repetitions at 20-135 ms, failed 14 times (13 times with the CI "blind"

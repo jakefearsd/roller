@@ -267,7 +267,7 @@ here.
 
 | Former CLAUDE.md section(s) | Read |
 |---|---|
-| Frontend build; Testing Commands; CI: three tiers (incl. the known `createUser!save.rol` flake) | `docs/dev/build-and-ci.md` |
+| Frontend build; Testing Commands; CI: three tiers (incl. the `createUser!save.rol` 403, root-caused: `docs/dev/browser-its.md`, "A click is not a barrier") | `docs/dev/build-and-ci.md` |
 | Coverage gates; Static-analysis gates | `docs/dev/quality-gates.md` |
 | The IT harness cleans up by identity; Permutation coverage; Browser ITs run class-parallel; BrowserHealth; Run the browser suite at BOTH context paths | `docs/dev/browser-its.md` |
 | Database; Schema changes | `docs/dev/database.md` |

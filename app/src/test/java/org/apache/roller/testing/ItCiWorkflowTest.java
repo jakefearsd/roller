@@ -27,6 +27,7 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -313,5 +314,23 @@ class ItCiWorkflowTest {
                 }
             }
         }
+    }
+
+    /**
+     * The late-click mode holds every click back on purpose; a nightly run in it
+     * would test the harness's reproduction, not the app.
+     */
+    @Test
+    void ciNeverRunsInLateClickMode() throws IOException {
+        assertTrue(setsLateClickMode("env:\n  IT_LATE_CLICK_MS: 150\n"),
+                "the detector must see a workflow that sets the variable");
+        assertFalse(setsLateClickMode("env:\n  CI: true\n"),
+                "the detector must not flag a workflow that does not");
+        assertFalse(setsLateClickMode(Files.readString(MAIN_WORKFLOW)),
+                "CI must never set IT_LATE_CLICK_MS: that mode delays every click on purpose.");
+    }
+
+    private static boolean setsLateClickMode(String workflow) {
+        return workflow.contains("IT_LATE_CLICK_MS");
     }
 }

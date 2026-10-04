@@ -281,6 +281,8 @@ public abstract class RollerIT {
      * <p>The wait is on the old document going stale, which happens only when the new
      * one commits: it cannot be satisfied by the page the action started from, however
      * late the browser gets round to sending the request. See {@link #clickAndAwaitNewPage}.
+     * It accepts any newly committed document, not only the one this action caused, so it
+     * is sound only when every earlier navigating action was itself awaited.
      */
     protected static void awaitNewPageAfter(Runnable action) {
         WebElement page = $("html").toWebElement();

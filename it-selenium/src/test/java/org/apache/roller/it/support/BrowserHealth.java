@@ -444,6 +444,8 @@ public final class BrowserHealth {
         if (delay == null || delay.isBlank()) {
             return;
         }
+        System.err.println("BrowserHealth: " + LATE_CLICK_ENV + "=" + delay
+                + " -- late-click reproduction mode ACTIVE; this run is not a normal run");
         devTools.send(Page.addScriptToEvaluateOnNewDocument(
                 "(function () { if (window.__rollerLateClick) { return; } window.__rollerLateClick = true;"
                         + "document.addEventListener('click', function (e) {"
