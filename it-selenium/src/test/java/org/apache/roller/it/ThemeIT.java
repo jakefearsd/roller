@@ -253,13 +253,16 @@ class ThemeIT extends RollerIT {
         // themeType=shared, and two parameters of the same name would bind the
         // FIRST -- so the POST would quietly be an ordinary shared-theme save
         // and this test would pass without ever exercising the refusal.
-        executeJavaScript(
+        //
+        // Awaited, not settled: form.submit() starts the navigation in a task of its
+        // own, and a templates check that overtook the POST would pass on a weblog
+        // nobody had yet asked to switch.
+        awaitNewPageAfter(() -> executeJavaScript(
                 "var f = document.querySelector(\"form[action$='themeEdit!save.rol']\");"
                         + "var t = f.querySelector(\"input[name='themeType']\");"
                         + "if (!t) { t = document.createElement('input');"
                         + "  t.type = 'hidden'; t.name = 'themeType'; f.appendChild(t); }"
-                        + "t.value = 'custom'; f.submit();");
-        BrowserHealth.current().settle();
+                        + "t.value = 'custom'; f.submit();"));
     }
 
     /** Switches to a custom theme, importing the current shared theme. */

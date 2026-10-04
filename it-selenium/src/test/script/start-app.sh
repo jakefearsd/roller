@@ -109,8 +109,9 @@ mkdir -p "$(dirname "$PIDFILE")" "$(dirname "$LOG")"
 # roller.it.run / roller.it.owner are inert as far as Roller is concerned: they
 # exist so this process can be found again by anything that has to clean it up.
 #
-# The two DEBUG loggers exist for one reason: the known 403 flake on
-# createUser!save.rol (CLAUDE.md, "CI: three tiers"). Every path that answers
+# The two DEBUG loggers exist for one reason: an unexplained 403 (the one on
+# createUser!save.rol was named by them -- docs/dev/build-and-ci.md, "CI: three
+# tiers" -- and the next one should be too). Every path that answers
 # 403 to an admin POST -- Spring Security's CsrfFilter, its
 # ExceptionTranslationFilter, and RollerHandlerInterceptor's own DENIED
 # branches -- logs only at DEBUG, so at INFO the app log of a failing run

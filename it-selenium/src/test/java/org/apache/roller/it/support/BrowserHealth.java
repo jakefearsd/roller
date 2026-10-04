@@ -413,6 +413,54 @@ public final class BrowserHealth {
             jsExceptions.add(event.getRawMessage() + "   (while on " + page + ")");
             markEventSeen();
         });
+
+        delayNavigatingClicksIfAsked(devTools);
+    }
+
+    /**
+     * Environment variable that turns on the late-click reproduction mode: its value, in
+     * milliseconds, is how long every navigating click waits before it takes effect.
+     *
+     * <p>Off unless set. It exists because the suite's worst flakes had one cause that no
+     * rerun could show: a click whose form submission Chrome had not yet started when the
+     * WebDriver click returned, so the test moved on -- read the old page, signed out, or
+     * ended -- underneath it. On a starved CI runner that window is real and rare; here it
+     * is made fixed and wide, so a test that reads the page it clicked on fails every time
+     * instead of one nightly in four. {@code IT_LATE_CLICK_MS=150 mvn verify -Pit} must
+     * pass; see docs/dev/browser-its.md, "A click is not a barrier".
+     */
+    static final String LATE_CLICK_ENV = "IT_LATE_CLICK_MS";
+
+    /**
+     * Holds back every trusted click on a submit button or a navigating link by
+     * {@value #LATE_CLICK_ENV} milliseconds, then replays it as the page's own click.
+     * The replay is untrusted, so the listener lets it through, and it does exactly what
+     * the original would have -- validation, confirm dialogs, the submission with its
+     * {@code formaction} -- only later. It still falls inside the original click's
+     * transient user activation, so the late navigation behaves as a real one does.
+     */
+    private static void delayNavigatingClicksIfAsked(DevTools devTools) {
+        String delay = System.getenv(LATE_CLICK_ENV);
+        if (delay == null || delay.isBlank()) {
+            return;
+        }
+        devTools.send(Page.addScriptToEvaluateOnNewDocument(
+                "(function () { if (window.__rollerLateClick) { return; } window.__rollerLateClick = true;"
+                        + "document.addEventListener('click', function (e) {"
+                        + "  if (!e.isTrusted || !e.target.closest) { return; }"
+                        + "  var t = e.target.closest('button, input[type=submit], a[href]');"
+                        + "  if (!t) { return; }"
+                        + "  if (t.tagName === 'A') {"
+                        + "    var h = t.getAttribute('href') || '';"
+                        + "    if (h === '' || h.charAt(0) === '#' || h.indexOf('javascript:') === 0"
+                        + "        || t.target === '_blank' || t.hasAttribute('data-bs-toggle')) { return; }"
+                        + "  } else if ((t.getAttribute('type') || 'submit').toLowerCase() !== 'submit' || !t.form) {"
+                        + "    return;"
+                        + "  }"
+                        + "  e.preventDefault(); e.stopImmediatePropagation();"
+                        + "  setTimeout(function () { t.click(); }, " + Integer.parseInt(delay.trim()) + ");"
+                        + "}, true); })();",
+                Optional.empty(), Optional.empty(), Optional.empty()));
     }
 
     private void markEventSeen() {
@@ -513,7 +561,10 @@ public final class BrowserHealth {
                 "  back to its nearest version silently (look for \"Unable to find an exact match",
                 "  for CDP version\" in the output). Fix: pin selenium-devtools-vNNN in",
                 "  it-selenium/pom.xml to the version this Chrome speaks and update the imports",
-                "  in BrowserHealth.");
+                "  in BrowserHealth.",
+                "  If that URL is a form's POST target, suspect the PREVIOUS test first: it clicked",
+                "  a submit, did not wait for the answer, and the late navigation committed after",
+                "  this test's recorder was attached (RollerIT.clickAndAwaitNewPage).");
     }
 
     /**

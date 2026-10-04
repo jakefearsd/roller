@@ -154,7 +154,7 @@ class MediaBulkUploadIT extends RollerIT {
         // passed against the broken page by clicking something else entirely.
         // Matching either <a> or <button> keeps the assertion about behaviour
         // (does Cancel navigate?) rather than markup, which the unit test pins.
-        $$("#entry a, #entry button").findBy(text("Cancel")).should(exist).click();
+        clickAndAwaitNewPage($$("#entry a, #entry button").findBy(text("Cancel")).should(exist));
 
         assertTrue(WebDriverRunner.url().contains("mediaFileView.rol"),
                 "Cancel must land on the media view, not re-post the upload; was: "

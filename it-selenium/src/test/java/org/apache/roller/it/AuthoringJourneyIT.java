@@ -253,7 +253,9 @@ class AuthoringJourneyIT extends RollerIT {
 
     /** Submits via the publish button, whose formaction differs between add and edit. */
     private void clickPublish(String action) {
-        $("button[formaction$='" + action + "!publish.rol']").click();
+        // Waits for the answer: on an entry that is already published the
+        // permalink the callers wait on is on the page the click came from.
+        clickAndAwaitNewPage($("button[formaction$='" + action + "!publish.rol']"));
     }
 
     /** Opens the editor for an entry from the entry list. */
@@ -290,7 +292,9 @@ class AuthoringJourneyIT extends RollerIT {
     /** Posts the delete form the way the entry list's modal does. */
     private void deleteEntry(String entryId) {
         openPath("/roller-ui/authoring/entries.rol?weblog=" + WEBLOG_HANDLE);
-        executeJavaScript(
+        // form.submit() starts the navigation in a task of its own, so the script
+        // returns before the POST exists; the caller's 404 check must not overtake it.
+        awaitNewPageAfter(() -> executeJavaScript(
                 "var f = document.createElement('form');"
                         + "f.method = 'post';"
                         + "f.action = arguments[0];"
@@ -303,8 +307,7 @@ class AuthoringJourneyIT extends RollerIT {
                         + "document.body.appendChild(f); f.submit();",
                 baseUrl() + "/roller-ui/authoring/entryRemoveViaList!remove.rol",
                 entryId,
-                WEBLOG_HANDLE);
-        $("body").should(exist);
+                WEBLOG_HANDLE));
     }
 
     private String pathOf(String absoluteUrl) {

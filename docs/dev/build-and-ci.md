@@ -127,25 +127,32 @@ A flake goes here once it is explained; a rerun that passes explains nothing.
   `Dockerfile`/`deploy/caddy/Dockerfile` (docker_deployment.md);
   `deploy.sh` only pulls — `docker-compose.prod.yml` has no `build:` stanza.
 
-**Known flake, mechanism NOT established: a 403 on `POST
-/roller-ui/admin/createUser!save.rol`** in
-`ErrorCasesIT.aDuplicateUserNameIsRefused` (via `BrowserHealth`), seen once
-(parallel suite, 2026-08-19) on a commit that had just passed 125/125;
-`ErrorCasesIT` passes 8/8 alone (`mvn verify -Pit -Dit.test=ErrorCasesIT`).
-Two candidate stories, no evidence either way: Spring Security answers 403
-for both a stale CSRF token and access-denied, and concurrent classes call
-`loginAs`/`logout`, which invalidates the session. Deliberately unexplained
-(the `ModDateHeaderUtil` precedent). **Recurred 2026-09-14** on the first
-parallel run after the dependency wave (Boot 4.1.1 / Security 7.1.1): same
-test, same POST, 136/137; `ErrorCasesIT` alone passed 8/8 and the next full
-parallel run passed 137/137. The app log said nothing because every path
-that answers 403 here (`CsrfFilter`, `ExceptionTranslationFilter`, the
-interceptor's DENIED branches) logs only at DEBUG, so `start-app.sh` now
-runs the IT app with those loggers at DEBUG and writes Roller's file log
-per run to `it-selenium/target/it-work/roller-<run id>/roller.log` — read
-that, not the stdout log, on the next occurrence. Then trace it, don't
-rerun: it is the shape of a real regression. Capture what else was in
-flight on the other three threads from the failsafe report timestamps
-BEFORE running anything else — an isolated rerun overwrites
-`it-selenium/target/failsafe-reports`, which is how the 2026-09-14 overlap
-evidence was lost.
+**The 403 on `POST /roller-ui/admin/createUser!save.rol` (mechanism
+established 2026-10-04; fixed).** Seen 2026-08-19 and 2026-09-14 in
+`ErrorCasesIT.aDuplicateUserNameIsRefused` (via `BrowserHealth`); the same
+POST reappeared in disguise in nightlies 35203024997 (09-17) and 36231322274
+(09-26), which failed `ErrorCasesIT.anUnknownWeblogIsNotFound` -- a test that
+never touches the browser, and the one that runs straight after it -- with
+"The browser is on .../createUser!save.rol but this recorder saw no network
+traffic at all". The test clicked Save, called `settle()`, asserted that no
+success banner showed, and signed out. Neither the click nor `settle()` waits
+for a submission that has not started yet, so the assertion read the FORM it
+had typed into (an absence, so it passed), `logout()` invalidated the
+session, and the POST went out afterwards with none: `CsrfFilter - Invalid
+CSRF token found`, 403. Where that 403 surfaced was timing only: in the same
+test's health check, or as a navigation committed during the next test,
+whose recorder was attached after all of its traffic. Not a server defect:
+refusing a POST with no session is correct. Reproduced on demand by
+repeating the pair with the submission held back 20-135 ms: 14 of 144
+failed, with both CI messages, and the app log held 70 `Invalid CSRF token`
+refusals; with `RollerIT.clickAndAwaitNewPage` (wait for the old document
+to go stale), 0 and 0. The `MultiUserJourneyIT` `Element not found {#entry}`
+nightlies are the same defect. `docs/dev/browser-its.md`, "A click is not a
+barrier", has the family and `IT_LATE_CLICK_MS`.
+
+The general rule stands: on the next unexplained 403, read
+`it-selenium/target/it-work/roller-<run id>/roller.log` (the IT app runs
+`CsrfFilter`, `ExceptionTranslationFilter` and the interceptor at DEBUG for
+this), and capture what else was in flight from the failsafe report
+timestamps BEFORE rerunning anything -- an isolated rerun overwrites
+`it-selenium/target/failsafe-reports`.

@@ -143,7 +143,9 @@ class UserAdminIT extends RollerIT {
     private void openUserForEditing(String userName) {
         openPath(USER_ADMIN);
         $("#userName").should(visible).setValue(userName);
-        $("#user-submit").click();
+        // The search box is itself named bean.userName and holds the name just
+        // typed, so the wait below is only meaningful on the page that answers.
+        clickAndAwaitNewPage($("#user-submit"));
 
         $("input[name='bean.userName']").should(visible).shouldHave(value(userName));
     }
@@ -180,8 +182,10 @@ class UserAdminIT extends RollerIT {
         openPath("/roller-ui/login.rol");
         $("#j_username").setValue(userName);
         $("#j_password").setValue(PASSWORD);
-        $("#login").click();
-        BrowserHealth.current().settle();
+        // Wait for the sign-in's answer before asking for the menu: a menu
+        // request that overtakes the POST is anonymous, and would report any
+        // account -- disabled or not -- as refused.
+        clickAndAwaitNewPage($("#login"));
 
         openPath("/roller-ui/menu.rol");
         BrowserHealth.current().settle();

@@ -23,7 +23,10 @@ import com.codeborne.selenide.Selenide;
 import com.codeborne.selenide.SelenideElement;
 import com.codeborne.selenide.WebDriverRunner;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.net.CookieManager;
 import java.net.CookiePolicy;
@@ -246,6 +249,47 @@ public abstract class RollerIT {
         BrowserHealth.current().settle();
     }
 
+    /** How long a navigation a test started may take to replace the page; matches settle()'s bound. */
+    private static final Duration NEW_PAGE_TIMEOUT = Duration.ofSeconds(10);
+
+    /**
+     * Clicks something that submits a form or follows a link, and returns only once the
+     * server's answer has replaced the page.
+     *
+     * <p>Use it for every click that navigates unless the very next statement waits on
+     * something only the NEW page can satisfy. Neither the click nor {@link BrowserHealth#settle()}
+     * is a barrier: Chrome starts a form submission in a task of its own, so on a loaded
+     * machine the click returns, settle() finds the network quiet (the request does not
+     * exist yet), and the test reads the OLD page -- passing vacuously on it, or signing out
+     * underneath the request. The late POST then reaches a dead session, is refused for its
+     * CSRF token (the "403 on createUser!save.rol" of build-and-ci.md), and its answer lands
+     * wherever the browser happens to be next: in the same test's health check, over the
+     * next user's freshly installed session cookie, or committed during the next test,
+     * whose recorder never saw it start. docs/dev/browser-its.md has the reproduction.
+     *
+     * @param target the button or link to click
+     */
+    protected static void clickAndAwaitNewPage(SelenideElement target) {
+        awaitNewPageAfter(target::click);
+    }
+
+    /**
+     * Runs {@code action} -- a click followed by {@code Selenide.confirm()}, a script that
+     * submits a form -- and returns once the page it started from has been replaced.
+     *
+     * <p>The wait is on the old document going stale, which happens only when the new
+     * one commits: it cannot be satisfied by the page the action started from, however
+     * late the browser gets round to sending the request. See {@link #clickAndAwaitNewPage}.
+     */
+    protected static void awaitNewPageAfter(Runnable action) {
+        WebElement page = $("html").toWebElement();
+        action.run();
+        new WebDriverWait(WebDriverRunner.getWebDriver(), NEW_PAGE_TIMEOUT)
+                .withMessage("the page was never replaced: the click or submission started no navigation")
+                .until(ExpectedConditions.stalenessOf(page));
+        BrowserHealth.current().settle();
+    }
+
     /**
      * Signs in as the seed administrator and leaves the browser on the main menu.
      *
@@ -438,13 +482,13 @@ public abstract class RollerIT {
      * caller can observe. Failing here would turn a tidy-up into a test failure.
      */
     protected void logout() {
-        // Settle first. The old two-page-load implementation waited for a document
-        // to finish loading, which incidentally made this method a barrier: a test
-        // that clicked something and then logged out could not race its own POST.
-        // Cheap as this version is, dropping that property silently would push the
-        // race onto whatever the caller does next, so it is kept deliberately --
-        // settle() costs nothing when the network is already quiet, which is the
-        // usual case.
+        // Settle first, so whatever the page is still loading is recorded against
+        // this session. This is NOT a barrier against a test's own POST: a form
+        // submission the browser has not yet sent produces no event to wait for,
+        // so settle() returns at once and the POST then reaches the session this
+        // method is about to destroy. A caller that clicked something that
+        // navigates must have waited for the answer -- clickAndAwaitNewPage --
+        // before signing out.
         BrowserHealth.current().settle();
 
         Map<String, String> cookies = BrowserHealth.readCookies(baseUrl() + "/");

@@ -174,6 +174,65 @@ silently falling back to its nearest binding and logging a line nobody reads.
   the browser refused it. A **blocked** request is never excused, whatever
   its type.
 
+## A click is not a barrier: wait for the answer
+
+**Symptoms, all one defect** (nightlies 2026-08-31 to 2026-10-01, CI running
+the suite serially, so nothing else was in flight): a 403 on a form's POST
+target reported by `BrowserHealth` (`ErrorCasesIT.aDuplicateUserNameIsRefused`,
+`createUser!save.rol`); "the browser is on <POST target> but this recorder
+saw no network traffic at all" in the NEXT test of the class
+(`ErrorCasesIT.anUnknownWeblogIsNotFound`, which never touches the browser);
+`Element not found {#entry}` right after signing in as another user
+(`MultiUserJourneyIT`, line 128 before 3b6ed5537).
+
+**Mechanism.** Chrome runs a form submission (a click's, or a script's
+`form.submit()`) as a task of its own after the click event, so the WebDriver
+click can return before the request exists. On a loaded runner it does: the
+"blind" failure leaves the browser on a POST target that only the PREVIOUS
+test submits, which is possible only if that test ended with its POST still
+unanswered. `BrowserHealth.settle()` waits for silence among events, and an unsent request
+makes none, so it returns at once too. A test that then reads the page reads
+the page it clicked on; one that signs out (`logout()` clears the cookie jar
+and invalidates the session) sends the late POST with no session, and
+`CsrfFilter` refuses it (`Invalid CSRF token found`) with a 403 whose
+response also carries a fresh anonymous session cookie. Where that answer
+lands is timing only: in the same test's health check; over the cookie
+`signInAs` has just installed for the next user, so the next page bounces to
+the login form (the `#entry` failure); or -- the submission still carries the
+click's user activation -- as a navigation that overrides the next test's
+`about:blank`, so ChromeDriver's `get` returns on the POST's answer before the
+new recorder's listeners exist (the "blind" failure).
+
+**Rule.** A click that navigates is followed by a wait only the NEW page can
+satisfy. `RollerIT.clickAndAwaitNewPage(element)` (and
+`awaitNewPageAfter(action)` for a click plus `confirm()` or a scripted
+submit) waits for the old `<html>` to go stale, which happens only when the
+answer commits. Waits that look sufficient and are not: `#entry` after an
+editor save (the editor you clicked on has one), `#messages` on a page that
+already shows a flash, a username input on a search form you typed that
+name into, the URL straight after clicking a link, an ABSENCE (no
+`#messages`) read straight after the click, anything after `settle()` alone.
+A click that cannot navigate (a `required` field left empty, say) must not
+use it: the wait fails after 10 s saying no navigation started.
+
+**Reproduction.** `IT_LATE_CLICK_MS=<ms> mvn verify -Pit` makes every trusted
+click on a submit button or navigating link take effect that late
+(`BrowserHealth.delayNavigatingClicksIfAsked`): the starved runner made
+deterministic. At 150 ms, before the fix, 6 tests in 5 classes failed
+(`MultiUserJourneyIT` x2, `EntryRevisionIT`, `UserAdminIT`,
+`AuthoringJourneyIT`, `MediaBulkUploadIT`), every one a wait the old page
+satisfied; after it, the whole suite (140) passes. The CI failures themselves
+need the POST to land in a narrower window, so they were reproduced by
+repeating the exact sequence over a sweep of delays: the `ErrorCasesIT` pair,
+144 repetitions at 20-135 ms, failed 14 times (13 times with the CI "blind"
+message, once with the CI 403) with 70 `Invalid CSRF token` refusals in the
+app log, then 0 failures and 0 refusals with `clickAndAwaitNewPage`; Bob's
+delete then Alice's editor, 72 repetitions at 90-136 ms, failed 12 times with
+the CI `Element not found {#entry}` (13 refusals), then 0 and 0. A fixed delay
+cannot catch a test that asserts an ABSENCE and passes on the old page (that
+is how `ErrorCasesIT` hid) nor a scripted `form.submit()`, so review those by
+hand. Run `IT_LATE_CLICK_MS=150` after adding a test that clicks.
+
 ## Run the browser suite at BOTH context paths before shipping routing changes
 
 `mvn verify -Pit` covers the root context; `mvn verify -Pit -Dit.context.path=roller`

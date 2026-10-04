@@ -87,8 +87,9 @@ class ErrorCasesIT extends RollerIT {
         openPath("/roller-ui/login.rol");
         $("#j_username").setValue(ADMIN_USERNAME);
         $("#j_password").setValue("definitely-not-the-password");
-        $("#login").click();
-        BrowserHealth.current().settle();
+        // The refusal is a new page (login.rol?error=true). Waiting for it is what makes
+        // the #j_username check below about the answer rather than the form we typed into.
+        clickAndAwaitNewPage($("#login"));
 
         // Back at a login form, and the editor is still closed to us.
         $("#j_username").should(exist);
@@ -110,8 +111,7 @@ class ErrorCasesIT extends RollerIT {
         $("#name").should(visible).setValue("Clashing Blog");
         $("#handle").setValue(WEBLOG_HANDLE);
         $("#emailAddress").setValue("clash@example.invalid");
-        $("button[type='submit']").click();
-        BrowserHealth.current().settle();
+        clickAndAwaitNewPage($("button[type='submit']"));
 
         // Outcome, not page shape: a refusal may render errors or bounce, but
         // it must never report success.
@@ -129,8 +129,10 @@ class ErrorCasesIT extends RollerIT {
         $("input[name='bean.fullName']").setValue("Impostor");
         $("input[name='bean.password']").setValue("some-password");
         $("input[name='bean.emailAddress']").setValue("impostor@example.invalid");
-        $("#save_button").click();
-        BrowserHealth.current().settle();
+        // Not click-then-settle: that read the form we had typed into, passed on it, and
+        // signed out under the still-unsent POST, which then reached a dead session --
+        // the 403 on createUser!save.rol (docs/dev/build-and-ci.md).
+        clickAndAwaitNewPage($("#save_button"));
 
         assertFalse($$("#messages").size() > 0,
                 "creating a second account with an existing username reported success");

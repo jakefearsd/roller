@@ -77,7 +77,9 @@ class EntryRevisionIT extends RollerIT {
         // animation is how a browser test earns an intermittent failure on a
         // loaded runner; a fresh page has no modal to get out of the way.
         openEditorFor(entryId);
-        $(".revision-restore-button").click();
+        // Not a wait on #entry: the editor the click came from has one too, and
+        // reading it would report the text the restore is meant to replace.
+        clickAndAwaitNewPage($(".revision-restore-button"));
         $("#entry").should(exist);
         String restored = Editor.getText();
         assertTrue(restored != null && restored.contains(firstBody),
@@ -107,8 +109,8 @@ class EntryRevisionIT extends RollerIT {
 
     /** Rewrites the body of the entry currently open in the editor and saves. */
     private void editBodyTo(String body) {
-    Editor.setText(body);
-        $("button[formaction$='entryEdit!saveDraft.rol']").click();
+        Editor.setText(body);
+        clickAndAwaitNewPage($("button[formaction$='entryEdit!saveDraft.rol']"));
         $("#entry").should(exist);
     }
 }
