@@ -74,6 +74,16 @@ class SearchIndexQueryTest {
         indexed("other-post", null, otherBlog,
                 "Also about Spain", "a different weblog entirely quokkaword");
         TestUtils.endSession(true);
+
+        // addEntryIndexOperation only schedules the write. Without these waits
+        // every test's first search raced the setUp's own indexing (it nearly
+        // always returned with the write still in flight) and passed only
+        // because the search happened to queue behind it -- see
+        // SharedReaderHandoffTest for the window that ordering still left open.
+        awaitTitles(blog.getHandle(), titles -> titles.contains("Hiking in Spain"),
+                "setUp's entry was never indexed");
+        awaitTitles(otherBlog.getHandle(), titles -> titles.contains("Also about Spain"),
+                "setUp's other-weblog entry was never indexed");
     }
 
     @AfterEach

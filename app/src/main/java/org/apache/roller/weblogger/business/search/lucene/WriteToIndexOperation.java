@@ -46,8 +46,12 @@ public abstract class WriteToIndexOperation extends IndexOperation {
             log.error("Error acquiring write lock on index", e);
 
         } finally {
+            // Invalidate the cached reader BEFORE letting go of the lock. A
+            // search queued behind this write takes the read lock the instant
+            // it is released; reset afterwards and that search could still
+            // find the pre-write reader cached and answer without this write.
+            manager.resetSharedReader();
             manager.getReadWriteLock().writeLock().unlock();
         }
-        manager.resetSharedReader();
     }
 }

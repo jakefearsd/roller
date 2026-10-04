@@ -77,6 +77,24 @@ A flake goes here once it is explained; a rerun that passes explains nothing.
   0 of 900 after; `aListingWithNoEndDateIncludesAnAccountStampedAtOrAfterNow`
   pins it deterministically with a `dateCreated` just ahead of the clock.
 
+- **`SearchIndexQueryTest.aSearchCanBeNarrowedToACategory`** (CI
+  35431937572, "got: []") **and `rebuildingAWeblogsIndexRestoresIt`**,
+  fixed 2026-10-03. `addEntryIndexOperation` only schedules the write, and
+  `setUp` returned with it still in flight 194-199 times in 200 (measured
+  by opening the index directly at the end of `setUp`), so each test's first
+  search depended on queueing behind that write. Even queued, it could lose:
+  `WriteToIndexOperation` invalidated the shared `IndexReader` *after*
+  releasing the write lock, so a search taking the read lock in that window
+  answered from the reader cached before the write (here, the previous
+  test's). `rebuilding...`'s own failure was not reproduced; the same
+  stale or premature empty search would let its "index is empty" wait pass
+  before the removal had run, leaving removal and rebuild to race on the
+  unordered thread pool. Fixed in production (reset before
+  unlock) and in the test (`setUp` waits for its own entries). Reproduced
+  naturally once in 240 with the JVM pinned to one core (`taskset -c 15`),
+  the test after `rebuilding...` as in CI; `SharedReaderHandoffTest` holds
+  the window open deterministically (fails every run without the fix).
+
 ## CI: three tiers, and nothing publishes on a push
 
 `.github/workflows/main.yml`, split by cost:
