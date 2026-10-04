@@ -23,9 +23,10 @@ import com.codeborne.selenide.Selenide;
 import com.codeborne.selenide.SelenideElement;
 import com.codeborne.selenide.WebDriverRunner;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.openqa.selenium.StaleElementReferenceException;
+import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeOptions;
-import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.net.CookieManager;
@@ -286,8 +287,33 @@ public abstract class RollerIT {
         action.run();
         new WebDriverWait(WebDriverRunner.getWebDriver(), NEW_PAGE_TIMEOUT)
                 .withMessage("the page was never replaced: the click or submission started no navigation")
-                .until(ExpectedConditions.stalenessOf(page));
+                .until(driver -> isReplaced(page));
         BrowserHealth.current().settle();
+    }
+
+    /**
+     * Whether {@code element}'s document is no longer the page's.
+     *
+     * <p>Not {@code ExpectedConditions.stalenessOf}, which recognises only a
+     * {@link StaleElementReferenceException}. When the check lands while the new document
+     * is committing, ChromeDriver can answer it instead with "unknown error: unhandled
+     * inspector error: Node with given id does not belong to the document" -- its element
+     * ids carry the document they were found in, and that document is no longer the
+     * frame's. That is the same fact reported under another code, and stalenessOf threw
+     * it out of the wait (UserAdminIT, 2 runs in 6). Anything else still propagates.
+     */
+    private static boolean isReplaced(WebElement element) {
+        try {
+            element.isEnabled();
+            return false;
+        } catch (StaleElementReferenceException e) {
+            return true;
+        } catch (WebDriverException e) {
+            if (String.valueOf(e.getMessage()).contains("does not belong to the document")) {
+                return true;
+            }
+            throw e;
+        }
     }
 
     /**
