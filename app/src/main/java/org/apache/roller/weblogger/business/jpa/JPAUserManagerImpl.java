@@ -222,37 +222,32 @@ public class JPAUserManagerImpl implements UserManager {
     public List<User> getUsers(Boolean enabled, Date startDate, Date endDate,
             int offset, int length)
             throws WebloggerException {
-        TypedQuery<User> query;
 
-        Timestamp end = new Timestamp(endDate != null ? endDate.getTime() : new Date().getTime());
-
+        // Each filter is applied only when given: a null date is no bound at
+        // all, as UserManager documents. This used to default a null endDate
+        // to "now" with a strict "<", which hid any account stamped in the
+        // same millisecond as the listing -- and every caller passes null.
+        List<String> predicates = new ArrayList<>();
+        List<Object> params = new ArrayList<>();
         if (enabled != null) {
-            if (startDate != null) {
-                Timestamp start = new Timestamp(startDate.getTime());
-                query = strategy.getNamedQuery(
-                        "User.getByEnabled&EndDate&StartDateOrderByStartDateDesc", User.class);
-                query.setParameter(1, enabled);
-                query.setParameter(2, end);
-                query.setParameter(3, start);
-            } else {
-                query = strategy.getNamedQuery(
-                        "User.getByEnabled&EndDateOrderByStartDateDesc", User.class);
-                query.setParameter(1, enabled);
-                query.setParameter(2, end);
-            }
-        } else {
-            if (startDate != null) {
-                Timestamp start = new Timestamp(startDate.getTime());
-                query = strategy.getNamedQuery(
-                        "User.getByEndDate&StartDateOrderByStartDateDesc", User.class);
-                query.setParameter(1, end);
-                query.setParameter(2, start);
-            } else {
-                query = strategy.getNamedQuery(
-                        "User.getByEndDateOrderByStartDateDesc", User.class);
-                query.setParameter(1, end);
-            }
+            params.add(enabled);
+            predicates.add("u.enabled = ?" + params.size());
         }
+        if (endDate != null) {
+            params.add(new Timestamp(endDate.getTime()));
+            predicates.add("u.dateCreated < ?" + params.size());
+        }
+        if (startDate != null) {
+            params.add(new Timestamp(startDate.getTime()));
+            predicates.add("u.dateCreated > ?" + params.size());
+        }
+        String where = predicates.isEmpty() ? "" : " WHERE " + String.join(" AND ", predicates);
+
+        // The id tiebreak keeps same-timestamp accounts in one defined order,
+        // or adjacent pages can repeat or skip a row.
+        TypedQuery<User> query = strategy.getDynamicQuery(
+                "SELECT u FROM User u" + where + " ORDER BY u.dateCreated DESC, u.id", User.class);
+        bindParams(query, params.toArray());
         if (offset != 0) {
             query.setFirstResult(offset);
         }

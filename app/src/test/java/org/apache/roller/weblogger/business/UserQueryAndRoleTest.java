@@ -244,6 +244,42 @@ class UserQueryAndRoleTest {
                 "an end date before the account existed must exclude it: " + beforeEveryone);
     }
 
+    /**
+     * No end date means no end date, as {@code UserManager.getUsers} documents
+     * ("or null for all"). The implementation used to substitute "now" for a
+     * null end date and compare strictly ({@code dateCreated < now}), so an
+     * account stamped in the same millisecond as the listing was missing from
+     * it. That is what made {@link #listingIsTriStateOnEnabled} and
+     * {@link #listingIsPageable} flaky: warm, {@link #setUp} runs in about a
+     * millisecond, so the newest fixture account often shared the query's
+     * millisecond -- invisible to one query, visible to the next, which also
+     * shifted the page window. A {@code dateCreated} just ahead of the clock
+     * stands on that boundary deterministically.
+     */
+    @Test
+    void aListingWithNoEndDateIncludesAnAccountStampedAtOrAfterNow() throws Exception {
+        Date justAhead = Date.from(Instant.now().plus(1, ChronoUnit.MINUTES));
+        for (User account : List.of(users().getUserByUserName(aliceName),
+                users().getUserByUserName(disabledName, Boolean.FALSE))) {
+            account.setDateCreated(justAhead);
+            users().saveUser(account);
+        }
+        TestUtils.weblogger().flush();
+        TestUtils.endSession(true);
+
+        Date past = Date.from(Instant.now().minus(1, ChronoUnit.DAYS));
+        assertTrue(namesOf(users().getUsers(Boolean.TRUE, null, null, 0, -1)).contains(aliceName),
+                "enabled, no dates");
+        assertTrue(namesOf(users().getUsers(Boolean.FALSE, null, null, 0, -1)).contains(disabledName),
+                "disabled, no dates");
+        assertTrue(namesOf(users().getUsers(null, null, null, 0, -1))
+                        .containsAll(List.of(aliceName, disabledName)), "either, no dates");
+        assertTrue(namesOf(users().getUsers(Boolean.TRUE, past, null, 0, -1)).contains(aliceName),
+                "enabled, start date only");
+        assertTrue(namesOf(users().getUsers(null, past, null, 0, -1)).contains(disabledName),
+                "either, start date only");
+    }
+
     @Test
     void listingIsPageable() throws Exception {
         List<User> firstPage = users().getUsers(null, null, null, 0, 1);
@@ -262,9 +298,8 @@ class UserQueryAndRoleTest {
      * every offset returns a row no earlier offset already returned.
      *
      * <p>This deliberately calls {@code getUsersStartingWith(null, null, ...)},
-     * not {@code getUsers(...)} -- {@code getUsers} always resolves to one of
-     * the {@code EndDateOrderByStartDateDesc} named queries, which already
-     * carry {@code ORDER BY u.dateCreated DESC, u.id}. {@code getUsersStartingWith}
+     * not {@code getUsers(...)} -- {@code getUsers} builds a query that already
+     * carries {@code ORDER BY u.dateCreated DESC, u.id}. {@code getUsersStartingWith}
      * is what falls through to {@code User.getAll} when both {@code startsWith}
      * and {@code enabled} are null (see {@code JPAUserManagerImpl}), and
      * {@code User.getAll} is the one named query in {@code User.orm.xml} with
@@ -349,13 +384,20 @@ class UserQueryAndRoleTest {
      * all, and so did not match this regex and was not counted here --
      * {@link #getAllCarriesTheSameOrderingAsItsDateCreatedOrderedSiblings}
      * is what pinned that gap).
+     *
+     * <p>The four date-bounded named queries behind {@code getUsers} were
+     * replaced by one query that {@code JPAUserManagerImpl} builds (see
+     * {@link #aListingWithNoEndDateIncludesAnAccountStampedAtOrAfterNow}),
+     * so its ORDER BY is pinned in the Java source alongside {@code getAll}'s.
      */
     @Test
     void dateCreatedOrderedUserQueriesCarryTheIdTiebreak() throws Exception {
         String orm = java.nio.file.Files.readString(java.nio.file.Path.of(
                 "src/main/resources/org/apache/roller/weblogger/pojos/User.orm.xml"));
+        String impl = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "src/main/java/org/apache/roller/weblogger/business/jpa/JPAUserManagerImpl.java"));
         java.util.regex.Matcher m = java.util.regex.Pattern
-                .compile("ORDER BY u\\.dateCreated DESC([^<]*)").matcher(orm);
+                .compile("ORDER BY u\\.dateCreated DESC([^<\"]*)").matcher(orm + impl);
         int found = 0;
         while (m.find()) {
             found++;
@@ -366,9 +408,9 @@ class UserQueryAndRoleTest {
                             + "repeat or skip a row. Offender: ORDER BY "
                             + "u.dateCreated DESC" + m.group(1));
         }
-        assertEquals(5, found,
-                "the five dateCreated-ordered queries moved or changed count "
-                        + "-- update this pin alongside them");
+        assertEquals(2, found,
+                "the two dateCreated-ordered queries (User.getAll, getUsers) moved "
+                        + "or changed count -- update this pin alongside them");
     }
 
     // ------------------------------------------------------ prefix searching

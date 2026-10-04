@@ -57,6 +57,26 @@ mvn clean test && mvn jacoco:report -pl app  # coverage: app/target/site/jacoco/
   try-with-resources form); both restore the previous attachment
   (DB-backed tests set the real tier).
 
+## Unit-suite flakes root-caused
+
+Each entry: symptom, mechanism, fix, and how it was made to fail on demand.
+A flake goes here once it is explained; a rerun that passes explains nothing.
+
+- **`UserQueryAndRoleTest.listingIsPageable` / `listingIsTriStateOnEnabled`**
+  ("an offset must move the window", "got: []"), fixed 2026-10-03.
+  `JPAUserManagerImpl.getUsers` turned a null `endDate` into "now" and
+  compared `dateCreated < now`, so an account stamped in the same
+  millisecond as the listing was not listed. Warm, the class's `setUp` runs
+  in ~1 ms, so the newest fixture often shared the query's millisecond:
+  hidden from one query, visible to the next (which shifts an offset window
+  onto the row the first page already returned). A production bug: every
+  caller passes null and the interface documents null as "no bound". Now a
+  null date adds no predicate, as `JPAWeblogManagerImpl.getWeblogs` already
+  did. Reproduced by looping setUp + `listingWalksEveryUser...` + the two
+  tests in one JVM (the class's own method order): 100 of 900 failed before,
+  0 of 900 after; `aListingWithNoEndDateIncludesAnAccountStampedAtOrAfterNow`
+  pins it deterministically with a `dateCreated` just ahead of the clock.
+
 ## CI: three tiers, and nothing publishes on a push
 
 `.github/workflows/main.yml`, split by cost:
