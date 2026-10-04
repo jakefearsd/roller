@@ -26,8 +26,20 @@
 # any `while pgrep ...; do` loop waiting on it), which is the self-match trap
 # CLAUDE.md records. `ps` output cannot contain this script's own pattern.
 
-IT_RUN_PROP="-Droller.it.run="
-IT_OWNER_PROP="-Droller.it.owner="
+# THE NAMESPACE. Every marker lives under -D<namespace>.*, and a sweep sees only
+# its own namespace. Real runs never set IT_NAMESPACE, so they all share
+# "roller.it" and a real sweep still finds every real leftover on the machine.
+# ItHarnessLeakTest gives each test a namespace of its own: a sweep is
+# machine-wide by design, and with one shared namespace a concurrent run's
+# sweep reaped that test's deliberately stale fixtures before the test's own
+# sweep could report them (and the test's sweeps reaped and printed other
+# builds' leftovers), so its verdict depended on what else the machine was
+# running. Tests only; never set it for a real run, or its leftovers become
+# invisible to the next real sweep.
+IT_NAMESPACE="${IT_NAMESPACE:-roller.it}"
+
+IT_RUN_PROP="-D${IT_NAMESPACE}.run="
+IT_OWNER_PROP="-D${IT_NAMESPACE}.owner="
 
 # The supervisor marks itself with a DIFFERENT property, and the split is not
 # cosmetic. A forked shell subprocess (command substitution, either side of a
@@ -36,10 +48,13 @@ IT_OWNER_PROP="-Droller.it.owner="
 # run's processes and kills them. Observed, not theoretical. Keeping the two
 # roles on two properties means the kill list ("what belongs to this run?")
 # and the liveness question ("is this run still claimed?") never overlap.
-IT_SUPERVISOR_PROP="-Droller.it.supervisor="
+IT_SUPERVISOR_PROP="-D${IT_NAMESPACE}.supervisor="
 
-# Container names are <prefix>-<run id>; the sweep matches on the prefix.
-IT_CONTAINER_PREFIX="roller-it-postgres"
+# Container names are <prefix>-<run id>; the sweep matches on the prefix. The
+# default must match it.db.container-alias in it-selenium/pom.xml. Overridden
+# by ItHarnessLeakTest alongside IT_NAMESPACE, so its sweeps never remove a
+# real run's container.
+IT_CONTAINER_PREFIX="${IT_CONTAINER_PREFIX:-roller-it-postgres}"
 
 # ---------------------------------------------------------------- ownership
 

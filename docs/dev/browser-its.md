@@ -37,6 +37,20 @@ Five mechanisms in `it-selenium/src/test/script/`:
   `-Droller.it.run=`.** A forked subshell (command substitution, pipeline
   halves) shows its *parent's* command line in `ps`; a supervisor in its
   own run would kill its own subshells (`ItHarnessLeakTest` pins it).
+- **Every marker lives in a namespace, and a sweep sees only its own**
+  (`IT_NAMESPACE`, default `roller.it`, so real runs share one and a real
+  sweep still finds every real leftover). `ItHarnessLeakTest` gives each test
+  a random one. Before that it passed alone and failed beside another build:
+  a sweep is machine-wide, so a concurrent sweep (`mvn verify -Pit`, or this
+  class in another checkout) reaped the test's deliberately orphaned fixtures
+  before the test's own scripts could -- reproduced with a sweep looping
+  beside it, which killed the supervisor under test so it never reaped its
+  recorded chromedriver -- and the test's own sweeps reaped other builds'
+  leftovers. Each test also gets its own `IT_CONTAINER_PREFIX`, and that half
+  is not optional: from another namespace a LIVE real run looks unclaimed,
+  so a test sweep on the real prefix would remove its container. Pinned by
+  `aSweepNeverTouchesAStaleAppInAnotherNamespace`. Never set either variable
+  for a real run: its leftovers would be invisible to the next real sweep.
 
 Per run: container `roller-it-postgres-<run id>` (no fixed-name 409 needing
 `docker rm`); `pg-stop` passes `<removeVolumes>true</removeVolumes>` (the

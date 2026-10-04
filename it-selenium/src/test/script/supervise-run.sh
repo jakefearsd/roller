@@ -61,7 +61,7 @@ if [ "${IT_SUPERVISOR_CHILD:-}" != "1" ]; then
     # Marked as a supervisor, deliberately NOT as a member of the run: see
     # it-harness-lib.sh on why the two roles carry different properties.
     # shellcheck disable=SC2086
-    $DETACH "$0" "$@" "-Droller.it.supervisor=$RUN_ID" "-Droller.it.owner=$OWNER" \
+    $DETACH "$0" "$@" "${IT_SUPERVISOR_PROP}$RUN_ID" "${IT_OWNER_PROP}$OWNER" \
         >>"$LOG" 2>&1 </dev/null &
     echo "supervise-run.sh: watching build ${OWNER%%@*} for run $RUN_ID (log: $LOG)"
     exit 0

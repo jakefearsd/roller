@@ -38,6 +38,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
@@ -84,6 +85,23 @@ class ItHarnessLeakTest {
 
     @TempDir
     private Path work;
+
+    /**
+     * This test's own marker namespace (IT_NAMESPACE, see it-harness-lib.sh), handed to
+     * every script it runs.
+     *
+     * <p>Without it these tests shared the real harness's markers with every other run on
+     * the machine, and a sweep is machine-wide by design: another build's sweep -- a
+     * concurrent {@code mvn verify -Pit}, or this class in another checkout's unit suite --
+     * reaped the deliberately stale fixtures here before this class's own sweep could
+     * report them, and this class's sweeps reaped and printed whatever other builds had
+     * left. The verdict depended on what else the machine was running. Per test, not per
+     * class, so no two tests can see each other's fixtures either.
+     */
+    private final String namespace = newNamespace();
+
+    /** Marker property names as the harness library spells them, per namespace. */
+    private final Map<String, String> libProperties = new HashMap<>();
 
     private final List<Process> spawned = new ArrayList<>();
     private final Map<Long, Path> output = new HashMap<>();
@@ -185,6 +203,38 @@ class ItHarnessLeakTest {
         assertTrue(isAlive(pid), "the sweep killed a concurrent run's app:\n" + result.output());
         assertFalse(result.output().contains(String.valueOf(pid)),
                 "the sweep reported a live run as reaped:\n" + result.output());
+    }
+
+    /**
+     * Isolation between namespaces, which is what lets this class run beside a real
+     * {@code mvn verify -Pit}, or beside itself in another checkout, and get the same
+     * verdict as alone: a stale app in another namespace is invisible to this sweep --
+     * not reaped, not even mentioned -- while that namespace's own sweep still reaps it.
+     * Real runs all share the default namespace, so a real sweep still finds every real
+     * leftover on the machine.
+     */
+    @Test
+    void aSweepNeverTouchesAStaleAppInAnotherNamespace() throws Exception {
+        String foreignNamespace = newNamespace();
+        String staleRun = runId("foreign");
+        long pid = spawnMarked(foreignNamespace, staleRun, ownerTokenOfDeadProcess());
+
+        Result ours = runSweep(runId("current"));
+
+        assertEquals(0, ours.exit(), ours.output());
+        assertTrue(isAlive(pid), "a sweep reaped a stale app from another namespace:\n" + ours.output());
+        assertFalse(ours.output().contains(staleRun),
+                "a sweep must not even mention another namespace's processes:\n" + ours.output());
+
+        Map<String, String> env = new HashMap<>();
+        env.put("IT_NAMESPACE", foreignNamespace);
+        env.put("IT_RECORD_DIR", recordDir().toString());
+        Result theirs = run(List.of(SWEEP.toString(), runId("foreign-current")), env, Duration.ofMinutes(1));
+
+        assertTrue(theirs.output().contains(staleRun),
+                "the namespace's own sweep must still reap its stale app:\n" + theirs.output());
+        assertNoProcessMarked(foreignNamespace, "IT_RUN_PROP", staleRun,
+                "the namespace's own sweep left its stale app running");
     }
 
     // ----------------------------------------------------------- supervisor
@@ -488,9 +538,20 @@ class ItHarnessLeakTest {
 
     /** A process carrying the harness's markers, standing in for a Roller app JVM. */
     private long spawnMarked(String runId, String ownerToken) throws Exception {
-        Process process = spawn(List.of("bash", "-c", "while :; do sleep 1; done",
-                "-Droller.it.run=" + runId, "-Droller.it.owner=" + ownerToken));
-        awaitProcessFor(runId, "the fixture process never appeared");
+        return spawnMarked(namespace, runId, ownerToken);
+    }
+
+    /**
+     * As above, in a given namespace. The marker properties come from the harness's own
+     * library, as the owner token does, so a fixture and the real start-app.sh cannot
+     * drift apart in how they spell a marker.
+     */
+    private long spawnMarked(String inNamespace, String runId, String ownerToken) throws Exception {
+        Process process = spawn(List.of("bash", "-c",
+                "source \"$1\"; exec bash -c 'while :; do sleep 1; done' "
+                        + "\"${IT_RUN_PROP}$2\" \"${IT_OWNER_PROP}$3\"",
+                "bash", LIB.toString(), runId, ownerToken), Map.of("IT_NAMESPACE", inNamespace));
+        awaitProcessMarked(inNamespace, runId, "the fixture process never appeared");
         return process.pid();
     }
 
@@ -707,6 +768,10 @@ class ItHarnessLeakTest {
         ProcessBuilder builder = new ProcessBuilder(command)
                 .redirectErrorStream(true)
                 .redirectOutput(log.toFile());
+        // Every script this class runs is confined to this test's namespace unless the
+        // caller names another; see the namespace field.
+        builder.environment().put("IT_NAMESPACE", namespace);
+        builder.environment().put("IT_CONTAINER_PREFIX", namespace.replace('.', '-') + "-postgres");
         builder.environment().putAll(env);
         Process process = builder.start();
         spawned.add(process);
@@ -736,17 +801,31 @@ class ItHarnessLeakTest {
     }
 
     /** Every process whose command line carries the given marker, whoever started it. */
-    private static List<String> processesMarked(String property, String runId) throws Exception {
+    private List<String> processesMarked(String inNamespace, String propertyVariable, String runId)
+            throws Exception {
+        String marker = libProperty(inNamespace, propertyVariable) + runId;
         Process ps = new ProcessBuilder("ps", "-ww", "-eo", "pid=,args=").redirectErrorStream(true).start();
         String output = new String(ps.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         ps.waitFor(30, TimeUnit.SECONDS);
         return output.lines()
-                .filter(line -> line.contains(property + runId))
+                .filter(line -> line.contains(marker))
                 .toList();
     }
 
-    private static List<String> processesFor(String runId) throws Exception {
-        return processesMarked("-Droller.it.run=", runId);
+    /** A marker property's spelling in a namespace, asked of the harness library itself. */
+    private String libProperty(String inNamespace, String variable) throws Exception {
+        String key = inNamespace + " " + variable;
+        String cached = libProperties.get(key);
+        if (cached != null) {
+            return cached;
+        }
+        Result result = run(List.of("bash", "-c", "source \"$1\"; printf '%s' \"${!2}\"",
+                "bash", LIB.toString(), variable), Map.of("IT_NAMESPACE", inNamespace), Duration.ofSeconds(30));
+        assertEquals(0, result.exit(), "could not read " + variable + " from the harness library:\n"
+                + result.output());
+        assertFalse(result.output().isBlank(), variable + " is empty in the harness library");
+        libProperties.put(key, result.output());
+        return result.output();
     }
 
     private static String awaitFileContaining(Path file, String needle) throws Exception {
@@ -762,36 +841,46 @@ class ItHarnessLeakTest {
         return fail(file + " never contained '" + needle + "'; it holds:\n" + content);
     }
 
-    private static void awaitProcessFor(String runId, String message) throws Exception {
+    private void awaitProcessFor(String runId, String message) throws Exception {
+        awaitProcessMarked(namespace, runId, message);
+    }
+
+    private void awaitProcessMarked(String inNamespace, String runId, String message) throws Exception {
         Instant deadline = Instant.now().plus(REAP_BUDGET);
         while (Instant.now().isBefore(deadline)) {
-            if (!processesFor(runId).isEmpty()) {
+            if (!processesMarked(inNamespace, "IT_RUN_PROP", runId).isEmpty()) {
                 return;
             }
             Thread.sleep(200);
         }
-        fail(message + " (no process carrying -Droller.it.run=" + runId + ")");
+        fail(message + " (no process carrying " + libProperty(inNamespace, "IT_RUN_PROP") + runId + ")");
     }
 
-    private static void assertNoProcessFor(String runId, String message) throws Exception {
-        assertNoProcessMarked("-Droller.it.run=", runId, message);
+    private void assertNoProcessFor(String runId, String message) throws Exception {
+        assertNoProcessMarked(namespace, "IT_RUN_PROP", runId, message);
     }
 
-    private static void assertNoSupervisorFor(String runId, String message) throws Exception {
-        assertNoProcessMarked("-Droller.it.supervisor=", runId, message);
+    private void assertNoSupervisorFor(String runId, String message) throws Exception {
+        assertNoProcessMarked(namespace, "IT_SUPERVISOR_PROP", runId, message);
     }
 
-    private static void assertNoProcessMarked(String property, String runId, String message) throws Exception {
+    private void assertNoProcessMarked(String inNamespace, String propertyVariable, String runId,
+            String message) throws Exception {
         Instant deadline = Instant.now().plus(REAP_BUDGET);
         List<String> survivors = List.of();
         while (Instant.now().isBefore(deadline)) {
-            survivors = processesMarked(property, runId);
+            survivors = processesMarked(inNamespace, propertyVariable, runId);
             if (survivors.isEmpty()) {
                 return;
             }
             Thread.sleep(500);
         }
         fail(message + "; still running:\n" + String.join("\n", survivors));
+    }
+
+    /** A fresh marker namespace: unique on this machine, and never the real harness's. */
+    private static String newNamespace() {
+        return "roller.itleak" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
     }
 
     private static String runId(String label) {

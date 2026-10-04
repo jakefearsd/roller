@@ -122,7 +122,7 @@ mkdir -p "$(dirname "$PIDFILE")" "$(dirname "$LOG")"
 # stdout log (roller-<run id>/roller.log) instead of in ./logs under the
 # module, where it was shared by every run and found by nobody.
 "$JAVA" -Xmx"$APP_HEAP" -Djava.awt.headless=true -Droller.custom.config="$PROPS" \
-     "-Droller.it.run=$RUN_ID" "-Droller.it.owner=$OWNER" \
+     "${IT_RUN_PROP}$RUN_ID" "${IT_OWNER_PROP}$OWNER" \
      "-Droller.log.dir=$(dirname "$LOG")/roller-$RUN_ID" \
      -jar "$WAR" --server.port="$PORT" --server.servlet.context-path="$CONTEXT_PATH" \
      --management.server.port=0 \
