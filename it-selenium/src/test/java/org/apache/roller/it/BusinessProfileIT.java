@@ -18,10 +18,12 @@
 package org.apache.roller.it;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.codeborne.selenide.Selenide;
+import com.codeborne.selenide.SelenideElement;
 import org.apache.roller.it.support.BrowserHealth;
 import org.apache.roller.it.support.RollerIT;
 import org.junit.jupiter.api.Test;
@@ -49,7 +51,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @ResourceLock(value = RollerIT.GLOBAL_CONFIG, mode = ResourceAccessMode.READ)
 class BusinessProfileIT extends RollerIT {
 
-    private static final String BUSINESS_NAME = "IT Rentals";
+    /**
+     * Unique per test instance: class-parallel runs, and the same suite at two
+     * context paths against one database, must not meet in the businesses list.
+     */
+    private final String businessName = "IT Rentals " + Long.toString(System.nanoTime(), 36);
 
     private static final Pattern JSON_LD = Pattern.compile(
             "<script type=\"application/ld\\+json\">(.*?)</script>", Pattern.DOTALL);
@@ -58,26 +64,27 @@ class BusinessProfileIT extends RollerIT {
     void aBlogOwnerPicksASharedBusinessAndTheReaderSeesTheCardAndTheJsonLd() {
         loginAsAdmin();
         String handle = createWeblog();
-        boolean businessCreated = false;
+        AtomicBoolean businessCreated = new AtomicBoolean();
+        Throwable primary = null;
         try {
             // --- the site admin creates the shared business ---------------
             openPath("/roller-ui/admin/businesses.rol");
             $("#businesses-list-marker").should(exist);
-            $("#business-new").click();
-            $("#bean_name").should(visible).setValue(BUSINESS_NAME);
+            clickAndAwaitNewPage($("#business-new"));
+            $("#bean_name").should(visible).setValue(businessName);
             $("#bean_bookingUrl").setValue("https://book.example.com/stay");
             $("#bean_telephone").setValue("+351 912 345 678");
-            $("#business-save").click();
-            businessCreated = true;
+            businessCreated.set(true);
+            clickAndAwaitNewPage($("#business-save"));
             $("#messages").should(exist);
             assertTrue($$("#errors").isEmpty(), "saving the business reported an error");
             openPath("/roller-ui/admin/businesses.rol");
-            $$("table.rollertable td").findBy(text(BUSINESS_NAME)).should(exist);
+            $$("table.rollertable td").findBy(text(businessName)).should(exist);
 
             // --- the blog owner selects it and describes the place --------
             openPath("/roller-ui/authoring/weblogConfig.rol?weblog=" + handle);
             $("#settings-business").should(exist);
-            $("#weblog_bean_businessId").selectOption(BUSINESS_NAME);
+            $("#weblog_bean_businessId").selectOption(businessName);
             $("#weblog_bean_placeType").selectOptionByValue("LodgingBusiness");
             $("#weblog_bean_placeLocality").setValue("Porto");
             $("#weblog_bean_placeCountry").setValue("PT");
@@ -104,10 +111,21 @@ class BusinessProfileIT extends RollerIT {
             assertTrue(Pattern.compile("\"@type\"\\s*:\\s*\"LodgingBusiness\"").matcher(place).find(),
                     "the second block must be the LodgingBusiness place: " + place);
             assertTrue(Pattern.compile("\"parentOrganization\"\\s*:\\s*\\{[^{}]*\"name\"\\s*:\\s*\""
-                            + Pattern.quote(BUSINESS_NAME) + "\"").matcher(place).find(),
+                            + Pattern.quote(businessName) + "\"").matcher(place).find(),
                     "the place must name the business as its parentOrganization: " + place);
+        } catch (Throwable t) {
+            primary = t;
+            throw t;
         } finally {
-            cleanUp(handle, businessCreated);
+            // A cleanup failure must never replace the failure being reported.
+            try {
+                cleanUp(handle, businessCreated.get());
+            } catch (RuntimeException | AssertionError cleanupFailure) {
+                if (primary == null) {
+                    throw cleanupFailure;
+                }
+                primary.addSuppressed(cleanupFailure);
+            }
         }
         logout();
     }
@@ -132,15 +150,17 @@ class BusinessProfileIT extends RollerIT {
             return;
         }
         openPath("/roller-ui/admin/businesses.rol");
-        $$("table.rollertable tr").findBy(text(BUSINESS_NAME))
-                .find("button[data-confirm]").click();
-        Selenide.confirm();
+        SelenideElement row = $$("table.rollertable tr").findBy(text(businessName));
+        awaitNewPageAfter(() -> {
+            row.find("button[data-confirm]").click();
+            Selenide.confirm();
+        });
         $("#messages").should(exist);
-        $$("table.rollertable td").findBy(text(BUSINESS_NAME)).shouldNot(exist);
+        $$("table.rollertable td").findBy(text(businessName)).shouldNot(exist);
     }
 
     private void saveSettings() {
-        $("button[type='submit'].btn-primary").should(visible).click();
+        clickAndAwaitNewPage($("button[type='submit'].btn-primary").should(visible));
         $("#messages").should(exist);
         assertTrue($$("#errors").isEmpty(),
                 "saving the weblog settings reported an error: "
@@ -156,7 +176,7 @@ class BusinessProfileIT extends RollerIT {
         $("#handle").setValue(handle);
         $("#emailAddress").setValue(handle + "@example.invalid");
         $("select[name='theme']").selectOptionByValue("journal");
-        $("button[type='submit']").click();
+        clickAndAwaitNewPage($("button[type='submit']"));
 
         $("#messages").should(exist);
         return handle;
