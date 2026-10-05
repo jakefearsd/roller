@@ -137,8 +137,12 @@ class BusinessCardRenderingTest {
     private static final Pattern MACRO_CALL = Pattern.compile(
             "(?m)^[ \\t]*#showBusinessCard\\(\\$model\\.weblog \"[^\"\\r\\n]+\"\\)[ \\t]*$");
 
+    /** Velocity block comments (any number of lines) and "##" line comments. */
+    private static final Pattern COMMENTS = Pattern.compile("(?s)#\\*.*?\\*#|##[^\\r\\n]*");
+
     static boolean callsCardMacro(String template) {
-        return MACRO_CALL.matcher(template).find();
+        String live = COMMENTS.matcher(template).replaceAll("");
+        return MACRO_CALL.matcher(live).find();
     }
 
     @Test
@@ -146,6 +150,9 @@ class BusinessCardRenderingTest {
         assertTrue(callsCardMacro("<footer>\n    #showBusinessCard($model.weblog \"Book a stay\")\n</footer>"));
         assertFalse(callsCardMacro("## #showBusinessCard($model.weblog \"Book a stay\")"));
         assertFalse(callsCardMacro("#* #showBusinessCard($model.weblog \"Book a stay\") *#"));
+        assertFalse(callsCardMacro("#*\n    #showBusinessCard($model.weblog \"Book a stay\")\n*#"));
+        assertFalse(callsCardMacro("#*\n  disabled\n*#\n## #showBusinessCard($model.weblog \"Book a stay\")"));
+        assertTrue(callsCardMacro("#* note *#\n    #showBusinessCard($model.weblog \"Book a stay\")"));
         assertFalse(callsCardMacro("#showBusinessCardX($model.weblog \"Book a stay\")"));
         assertFalse(callsCardMacro("<p>call the showBusinessCard macro</p>"));
         assertFalse(callsCardMacro("<b>#showBusinessCard($model.weblog \"x\")</b>"));

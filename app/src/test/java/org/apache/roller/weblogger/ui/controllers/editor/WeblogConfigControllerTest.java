@@ -588,6 +588,17 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
         verify(weblogger.getWeblogManager(), never()).saveWeblog(any());
     }
 
+    /**
+     * Characterisation (passed immediately): booking links are public-facing,
+     * so localhost stays refused on this form as on the Businesses screen.
+     */
+    @Test
+    void aLocalhostBookingUrlIsRefusedWithTheBookingMessage() throws Exception {
+        bean.setBookingUrl("http://localhost:8080/book");
+        assertBusinessFieldRefused("weblog_bean_bookingUrl");
+        assertEquals(List.of("websiteSettings.bookingUrl.invalid"), errors(model));
+    }
+
     @Test
     void anUnknownBusinessIsRefused() throws Exception {
         bean.setBusinessId("nope");

@@ -70,7 +70,7 @@ class BusinessRulesTest {
     @ParameterizedTest
     @NullAndEmptySource
     @ValueSource(strings = {"12", "call me", "+1 555 <script>", "1234567890123456789012345678901234",
-            "555 ext", "555-CALL", "555 1234 ext. ", "555 1234 x1234567", "555 1234 ext 1a", "ext 12",
+            "555 ext", "555-CALL", "555 1234 ext. ", "555 1234 x1234567", "555 1234 ext 1a", "ext 12", "555\tx12", "555 1234\fx12", "555\u000Bx12",
             "12345678901234567890123 ext 12345"})
     void rejectsBadTelephone(String phone) {
         assertFalse(BusinessRules.isTelephone(phone));

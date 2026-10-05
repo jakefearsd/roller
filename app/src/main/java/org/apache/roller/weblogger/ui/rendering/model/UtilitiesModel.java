@@ -63,7 +63,7 @@ public class UtilitiesModel implements Model {
 
     /** A trailing "ext", "ext.", "extension" or "x" and the digits after it. */
     private static final Pattern TEL_EXTENSION =
-            Pattern.compile("\\s*(?:extension|ext\\.?|x)\\s*(\\d*)\\s*$", Pattern.CASE_INSENSITIVE);
+            Pattern.compile(" *(?:extension|ext\\.?|x) *(\\d*) *$", Pattern.CASE_INSENSITIVE);
     
     private ParsedRequest parsedRequest = null;
     private Weblog weblog = null;

@@ -108,7 +108,7 @@ public class BusinessesController extends BaseController {
             try {
                 existing = find(id);
             } catch (WebloggerException ex) {
-                return lookupFailed(request, model);
+                return lookupFailed(id, ex, request, model);
             }
             if (existing == null) {
                 addError(model, "businesses.error.notFound", request);
@@ -134,7 +134,7 @@ public class BusinessesController extends BaseController {
             try {
                 business = find(bean.getId());
             } catch (WebloggerException ex) {
-                return lookupFailed(request, model);
+                return lookupFailed(bean.getId(), ex, request, model);
             }
             if (business == null) {
                 addError(model, "businesses.error.notFound", request);
@@ -170,7 +170,7 @@ public class BusinessesController extends BaseController {
         try {
             business = find(id);
         } catch (WebloggerException ex) {
-            return lookupFailed(request, model);
+            return lookupFailed(id, ex, request, model);
         }
         if (business == null) {
             addError(model, "businesses.error.notFound", request);
@@ -223,8 +223,8 @@ public class BusinessesController extends BaseController {
     }
 
     /** The lookup itself failed: say so, show the list, and do nothing further. */
-    private String lookupFailed(HttpServletRequest request, Model model) {
-        log.error("Error looking up business");
+    private String lookupFailed(String id, WebloggerException ex, HttpServletRequest request, Model model) {
+        log.error("Error looking up business {}", id, ex);
         addError(model, "businesses.error.lookupFailed", request);
         loadList(request, model);
         return LIST_VIEW;

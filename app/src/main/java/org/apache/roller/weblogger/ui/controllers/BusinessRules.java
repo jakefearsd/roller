@@ -33,7 +33,7 @@ import org.apache.roller.weblogger.business.BookingLink;
 public final class BusinessRules {
 
     static final Pattern TELEPHONE = Pattern.compile(
-            "^(?=.{3,32}$)[0-9+()\\-. ]{3,}(?:\\s*(?:extension|ext\\.?|x)\\s*\\d{1,6})?$",
+            "^(?=.{3,32}$)[0-9+()\\-. ]{3,}(?: *(?:extension|ext\\.?|x) *\\d{1,6})?$",
             Pattern.CASE_INSENSITIVE);
 
     /** Most sameAs profile links a business may carry. */
