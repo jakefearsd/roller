@@ -95,7 +95,7 @@
         <div class="col-sm-9">
             <textarea id="bean_sameAs" name="bean.sameAs" rows="5"
                       class="form-control">${fn:escapeXml(bean.sameAs)}</textarea>
-            <div class="form-text"><spring:message code="businesses.sameAs.help" arguments="10"/></div>
+            <div class="form-text"><spring:message code="businesses.sameAs.help" arguments="${maxSameAs}"/></div>
         </div>
     </div>
 

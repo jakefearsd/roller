@@ -25,6 +25,7 @@ import org.apache.roller.weblogger.business.MockWeblogger;
 import org.apache.roller.weblogger.pojos.Business;
 import org.apache.roller.weblogger.pojos.GlobalPermission;
 import org.apache.roller.weblogger.pojos.User;
+import org.apache.roller.weblogger.ui.controllers.BusinessRules;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.apache.roller.weblogger.util.cache.CacheManager;
 import org.junit.jupiter.api.AfterEach;
@@ -389,6 +390,138 @@ class BusinessesControllerTest {
         assertEquals(".Businesses", view);
         assertEquals(List.of("businesses.error.notFound"), ControllerTestFixture.errors(model));
         verify(manager, never()).removeBusiness(any());
+    }
+
+    // ---- a lookup that could not run is not a lookup that found nothing ----
+
+    @Test
+    void editWhoseLookupFailsReportsASystemErrorNotNotFound() throws Exception {
+        when(manager.getBusiness("b1")).thenThrow(new WebloggerException("db down"));
+
+        String view = controller.edit(ControllerTestFixture.requestFor(user()), model, "b1");
+
+        assertEquals(".Businesses", view);
+        assertEquals(List.of("businesses.error.lookupFailed"), ControllerTestFixture.errors(model));
+    }
+
+    @Test
+    void saveWhoseLookupFailsReportsASystemErrorAndStoresNothing() throws Exception {
+        when(manager.getBusiness("b1")).thenThrow(new WebloggerException("db down"));
+        BusinessBean bean = validBean();
+        bean.setId("b1");
+
+        String view = save(bean);
+
+        assertEquals(".Businesses", view);
+        assertEquals(List.of("businesses.error.lookupFailed"), ControllerTestFixture.errors(model));
+        verify(manager, never()).saveBusiness(any());
+    }
+
+    @Test
+    void deleteWhoseLookupFailsReportsASystemErrorAndRemovesNothing() throws Exception {
+        when(manager.getBusiness("b1")).thenThrow(new WebloggerException("db down"));
+
+        String view = controller.delete(ControllerTestFixture.requestFor(user()), model, redirect, "b1");
+
+        assertEquals(".Businesses", view);
+        assertEquals(List.of("businesses.error.lookupFailed"), ControllerTestFixture.errors(model));
+        verify(manager, never()).removeBusiness(any());
+    }
+
+    /**
+     * Characterisation: passed against the existing code. If the usage count
+     * cannot be taken the remove is refused, never performed on a guess.
+     */
+    @Test
+    void aUsageCountThatFailsDuringRemoveRefusesTheRemove() throws Exception {
+        Business b = new Business();
+        b.setName("Casa");
+        when(manager.getBusiness(b.getId())).thenReturn(b);
+        when(manager.countWeblogsUsing(b)).thenThrow(new WebloggerException("db down"));
+
+        String view = controller.delete(ControllerTestFixture.requestFor(user()), model, redirect, b.getId());
+
+        assertEquals(".Businesses", view);
+        assertTrue(ControllerTestFixture.errors(model).contains("generic.error.check.logs"));
+        verify(manager, never()).removeBusiness(any());
+        verify(weblogger.weblogger(), never()).flush();
+    }
+
+    // ---- invalidation after a committed save ----
+
+    @Test
+    void aRuntimeFailureWhileInvalidatingAfterASaveIsStillReportedSaved() throws Exception {
+        when(manager.getWeblogsUsing(any())).thenThrow(new IllegalStateException("cache boom"));
+
+        try (MockedStatic<CacheManager> cache = mockStatic(CacheManager.class)) {
+            assertEquals("redirect:/roller-ui/admin/businesses.rol", save(validBean()));
+        }
+        assertTrue(ControllerTestFixture.errors(model).isEmpty());
+    }
+
+    @Test
+    void aRuntimeFailureFromTheCacheManagerIsStillReportedSaved() throws Exception {
+        Weblog one = new Weblog();
+        when(manager.getWeblogsUsing(any())).thenReturn(List.of(one));
+
+        try (MockedStatic<CacheManager> cache = mockStatic(CacheManager.class)) {
+            cache.when(() -> CacheManager.invalidate(any(Weblog.class)))
+                    .thenThrow(new IllegalStateException("cache boom"));
+            assertEquals("redirect:/roller-ui/admin/businesses.rol", save(validBean()));
+        }
+    }
+
+    // ---- more validation ----
+
+    /** Characterisation: passed immediately against the existing length check. */
+    @Test
+    void anOverlongSameAsLineIsRefused() throws Exception {
+        BusinessBean bean = validBean();
+        bean.setSameAs("https://ok.com\nhttps://long.example.com/" + "x".repeat(260));
+        assertRefused(bean, "bean_sameAs");
+    }
+
+    /**
+     * Ruling: booking links are public-facing and the entry sanitizer drops
+     * anchors the same validator refuses, so localhost and intranet hosts
+     * stay refused, and the message says why.
+     */
+    @Test
+    void aLocalhostBookingUrlIsRefusedWithTheFieldErrorForThatField() throws Exception {
+        BusinessBean bean = validBean();
+        bean.setBookingUrl("http://localhost:8080/book");
+        assertRefused(bean, "bean_bookingUrl");
+        assertTrue(ControllerTestFixture.errors(model).get(0).startsWith("businesses.error.urlInvalid"),
+                ControllerTestFixture.errors(model).toString());
+    }
+
+    @Test
+    void theAdminUrlMessagesSayAPublicAddressIsRequired() throws Exception {
+        java.util.Properties bundle = new java.util.Properties();
+        try (var in = java.nio.file.Files.newBufferedReader(
+                java.nio.file.Path.of("src/main/resources/ApplicationResources.properties"))) {
+            bundle.load(in);
+        }
+        for (String key : new String[] {"businesses.error.urlInvalid", "websiteSettings.bookingUrl.invalid"}) {
+            String text = bundle.getProperty(key);
+            assertTrue(text.contains("public") && text.contains("http"), key + ": " + text);
+        }
+    }
+
+    // ---- the form shows the cap the validator enforces ----
+
+    @Test
+    void theEditFormIsGivenTheSameAsCapFromTheRule() {
+        controller.edit(ControllerTestFixture.requestFor(user()), model, null);
+        assertEquals(BusinessRules.MAX_SAME_AS, model.getAttribute("maxSameAs"));
+    }
+
+    @Test
+    void aRefusedSaveReRendersTheFormWithTheSameAsCap() throws Exception {
+        BusinessBean bean = validBean();
+        bean.setName("");
+        assertRefused(bean, "bean_name");
+        assertEquals(BusinessRules.MAX_SAME_AS, model.getAttribute("maxSameAs"));
     }
 
     @Test

@@ -24,6 +24,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TimeZone;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.text.StringEscapeUtils;
@@ -58,6 +60,10 @@ import org.apache.roller.weblogger.pojos.User;
 public class UtilitiesModel implements Model {
     
     private static final Logger log = LoggerFactory.getLogger(UtilitiesModel.class);
+
+    /** A trailing "ext", "ext.", "extension" or "x" and the digits after it. */
+    private static final Pattern TEL_EXTENSION =
+            Pattern.compile("\\s*(?:extension|ext\\.?|x)\\s*(\\d*)\\s*$", Pattern.CASE_INSENSITIVE);
     
     private ParsedRequest parsedRequest = null;
     private Weblog weblog = null;
@@ -362,10 +368,16 @@ public class UtilitiesModel implements Model {
         }
         String phone = business == null ? null : StringUtils.trimToNull(business.getTelephone());
         if (phone != null) {
-            String digits = phone.replaceAll("[^0-9]", "");
+            Matcher ext = TEL_EXTENSION.matcher(phone);
+            boolean hasExt = ext.find();
+            String number = hasExt ? phone.substring(0, ext.start()) : phone;
+            String digits = number.replaceAll("[^0-9]", "");
             if (!digits.isEmpty()) {
                 card.put("telephone", phone);
-                card.put("telHref", "tel:" + (phone.startsWith("+") ? "+" : "") + digits);
+                String href = "tel:" + (number.trim().startsWith("+") ? "+" : "") + digits;
+                // RFC 3966: an extension is a parameter, never more digits of the number.
+                String extDigits = hasExt ? ext.group(1) : "";
+                card.put("telHref", extDigits.isEmpty() ? href : href + ";ext=" + extDigits);
             }
         }
         String booking = BookingLink.resolve(w);

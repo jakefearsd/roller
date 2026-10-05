@@ -30,7 +30,11 @@ resolves through the index at the end of `CLAUDE.md`.
   (name, locality, `tel:` link, booking link). `BookingLink` is the one place
   UTM parameters are added (before any `#fragment`, never duplicating an
   existing `utm_source`), shared by the card and `[cta]`. A booking URL must
-  be http(s) with a real TLD.
+  be a public absolute http(s) URL with a real TLD: localhost and intranet
+  hosts are refused on purpose (the entry sanitizer deletes anchors that fail
+  the same validator, so they could never work through `[cta]`), and both
+  admin forms say so. A trailing telephone extension (`ext`, `ext.`,
+  `extension`, `x`) becomes the RFC 3966 `;ext=` parameter of the `tel:` link.
 - `[cta]` without `href` falls back to the weblog's booking URL, then the
   business's.
 - **Cache expiry.** Weblog pages and feeds expire only through

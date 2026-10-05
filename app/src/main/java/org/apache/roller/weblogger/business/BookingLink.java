@@ -118,14 +118,36 @@ public final class BookingLink {
 
     /**
      * The lower-cased host of {@code absoluteUrl} -- no userinfo, port or
-     * path -- or null when it cannot be parsed.
+     * path -- or null when it cannot be parsed. A host java.net.URI cannot
+     * parse as a server name (an underscore, say) comes back from
+     * {@code getHost()} as null; the host is then taken from the raw authority.
      */
     public static String destHost(String absoluteUrl) {
+        if (absoluteUrl == null) {
+            return null;
+        }
         try {
-            String host = new URI(absoluteUrl).getHost();
+            URI uri = new URI(absoluteUrl);
+            String host = uri.getHost();
+            if (host == null) {
+                host = hostOfAuthority(uri.getRawAuthority());
+            }
             return host == null ? null : host.toLowerCase(Locale.ROOT);
         } catch (URISyntaxException e) {
             return null;
         }
+    }
+
+    /** {@code authority} minus any userinfo and port, or null when nothing is left. */
+    private static String hostOfAuthority(String authority) {
+        if (authority == null) {
+            return null;
+        }
+        String host = authority.substring(authority.lastIndexOf('@') + 1);
+        int colon = host.lastIndexOf(':');
+        if (colon >= 0 && host.indexOf(']') < colon) {
+            host = host.substring(0, colon);
+        }
+        return host.isEmpty() ? null : host;
     }
 }

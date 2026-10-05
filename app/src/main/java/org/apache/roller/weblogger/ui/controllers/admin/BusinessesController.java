@@ -104,7 +104,12 @@ public class BusinessesController extends BaseController {
         populateCommonModel(request, model);
         BusinessBean bean = new BusinessBean();
         if (StringUtils.isNotBlank(id)) {
-            Business existing = find(id);
+            Business existing;
+            try {
+                existing = find(id);
+            } catch (WebloggerException ex) {
+                return lookupFailed(request, model);
+            }
             if (existing == null) {
                 addError(model, "businesses.error.notFound", request);
                 loadList(request, model);
@@ -113,6 +118,7 @@ public class BusinessesController extends BaseController {
             bean.copyFrom(existing);
         }
         model.addAttribute("bean", bean);
+        model.addAttribute("maxSameAs", BusinessRules.MAX_SAME_AS);
         return EDIT_VIEW;
     }
 
@@ -121,10 +127,15 @@ public class BusinessesController extends BaseController {
                        @ModelAttribute("bean") BusinessBean bean) {
         populateCommonModel(request, model);
         model.addAttribute("bean", bean);
+        model.addAttribute("maxSameAs", BusinessRules.MAX_SAME_AS);
 
         Business business = new Business();
         if (StringUtils.isNotBlank(bean.getId())) {
-            business = find(bean.getId());
+            try {
+                business = find(bean.getId());
+            } catch (WebloggerException ex) {
+                return lookupFailed(request, model);
+            }
             if (business == null) {
                 addError(model, "businesses.error.notFound", request);
                 loadList(request, model);
@@ -155,7 +166,12 @@ public class BusinessesController extends BaseController {
     public String delete(HttpServletRequest request, Model model, RedirectAttributes redirectAttributes,
                          @RequestParam(name = "id") String id) {
         populateCommonModel(request, model);
-        Business business = find(id);
+        Business business;
+        try {
+            business = find(id);
+        } catch (WebloggerException ex) {
+            return lookupFailed(request, model);
+        }
         if (business == null) {
             addError(model, "businesses.error.notFound", request);
             loadList(request, model);
@@ -195,18 +211,23 @@ public class BusinessesController extends BaseController {
             for (Weblog weblog : weblogger.getBusinessManager().getWeblogsUsing(business)) {
                 CacheManager.invalidate(weblog);
             }
-        } catch (WebloggerException ex) {
+        } catch (WebloggerException | RuntimeException ex) {
+            // The save has committed; whatever failed here must not turn it into a 500.
             log.error("Saved business {} but could not invalidate the blogs using it", business.getId(), ex);
         }
     }
 
-    private Business find(String id) {
-        try {
-            return weblogger.getBusinessManager().getBusiness(id);
-        } catch (WebloggerException ex) {
-            log.error("Error looking up business", ex);
-            return null;
-        }
+    /** The business, or null when there is none. A lookup that could not run throws: that is not "none". */
+    private Business find(String id) throws WebloggerException {
+        return weblogger.getBusinessManager().getBusiness(id);
+    }
+
+    /** The lookup itself failed: say so, show the list, and do nothing further. */
+    private String lookupFailed(HttpServletRequest request, Model model) {
+        log.error("Error looking up business");
+        addError(model, "businesses.error.lookupFailed", request);
+        loadList(request, model);
+        return LIST_VIEW;
     }
 
     private void loadList(HttpServletRequest request, Model model) {

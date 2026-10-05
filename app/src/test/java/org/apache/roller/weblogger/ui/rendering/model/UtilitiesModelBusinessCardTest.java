@@ -22,6 +22,8 @@ import java.util.Map;
 import org.apache.roller.weblogger.pojos.Business;
 import org.apache.roller.weblogger.pojos.Weblog;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -106,5 +108,38 @@ class UtilitiesModelBusinessCardTest {
         Map<String, String> card = utils.businessCard(w, null);
 
         assertEquals(Map.of("name", "Sea View Rooms", "locality", "Ponta Delgada"), card);
+    }
+
+    private Map<String, String> cardWithPhone(String phone) {
+        Weblog w = weblog("Sea View Rooms");
+        Business b = business("Casa Azul Group", "Azores");
+        b.setTelephone(phone);
+        w.setBusiness(b);
+        return utils.businessCard(w, null);
+    }
+
+    /**
+     * An extension is RFC 3966 ";ext=": folding its digits into the number
+     * dials a wrong line. The text shown stays exactly as typed.
+     */
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            "+1 555 123 4567 ext. 89|tel:+15551234567;ext=89",
+            "+1 555 123 4567 EXT 89|tel:+15551234567;ext=89",
+            "+1 555 123 4567 extension 89|tel:+15551234567;ext=89",
+            "(555) 123-4567 x89|tel:5551234567;ext=89",
+            "555.123.4567 X 89|tel:5551234567;ext=89",
+            "+1 555 123 4567|tel:+15551234567",
+            "(555) 123-4567|tel:5551234567"})
+    void aTelephoneExtensionBecomesAnRfc3966ExtParameter(String typed, String href) {
+        Map<String, String> card = cardWithPhone(typed);
+
+        assertEquals(href, card.get("telHref"));
+        assertEquals(typed, card.get("telephone"));
+    }
+
+    @Test
+    void anExtensionWithNoDigitsIsDroppedNotEmitted() {
+        assertEquals("tel:5551234567", cardWithPhone("555 123 4567 ext.").get("telHref"));
     }
 }

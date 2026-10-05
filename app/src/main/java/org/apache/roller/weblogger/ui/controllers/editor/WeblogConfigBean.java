@@ -24,6 +24,7 @@ import java.util.regex.Pattern;
 
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.BusinessManager;
+import org.apache.roller.weblogger.pojos.Business;
 import org.apache.roller.weblogger.pojos.Weblog;
 
 
@@ -293,25 +294,26 @@ public class WeblogConfigBean {
      * {@link WebloggerException} so a stale form can never silently unlink it.
      */
     public void copyTo(Weblog dataHolder, BusinessManager businesses) throws WebloggerException {
-        copyTo(dataHolder);
+        // Resolve first: a failed lookup must leave the weblog exactly as it was.
         String id = StringUtils.trimToNull(this.businessId);
-        if (id == null) {
-            dataHolder.setBusiness(null);
-            return;
+        Business business = null;
+        if (id != null) {
+            business = businesses.getBusiness(id);
+            if (business == null) {
+                throw new WebloggerException("Unknown business " + id);
+            }
         }
-        var business = businesses.getBusiness(id);
-        if (business == null) {
-            throw new WebloggerException("Unknown business " + id);
-        }
+        copyTo(dataHolder);
         dataHolder.setBusiness(business);
     }
 
     /**
-     * A coordinate as typed: a plain decimal, at most three integer digits and
-     * eight decimals. No exponent, ever -- "1E-100000000" is numerically zero
-     * and would pass a range check, but rounding it costs seconds of CPU.
+     * A coordinate as typed: a plain decimal with an optional sign, at most three
+     * integer digits (or none, as in ".5") and eight decimals. No exponent,
+     * ever -- "1E-100000000" is numerically zero and would pass a range
+     * check, but rounding it costs seconds of CPU.
      */
-    private static final Pattern PLAIN_DECIMAL = Pattern.compile("^-?\\d{1,3}(\\.\\d{1,8})?$");
+    private static final Pattern PLAIN_DECIMAL = Pattern.compile("^[+-]?(\\d{1,3}(\\.\\d{1,8})?|\\.\\d{1,8})$");
 
     /**
      * The number typed, or null when blank or not a plain decimal (validation

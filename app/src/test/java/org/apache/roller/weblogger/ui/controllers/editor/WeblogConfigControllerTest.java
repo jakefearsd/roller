@@ -568,6 +568,26 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
         assertEquals(List.of(), model.getAttribute("businesses"));
     }
 
+    /**
+     * The lookup passes validation, then fails when the save resolves it
+     * again. The weblog must come out untouched and unsaved.
+     */
+    @Test
+    void aBusinessLookupThatFailsWhileSavingLeavesTheWeblogUntouched() throws Exception {
+        Business business = givenBusiness("biz-1");
+        when(weblogger.businessManager().getBusiness("biz-1"))
+                .thenReturn(business).thenThrow(new WebloggerException("db down"));
+        String before = weblog.getName();
+        bean.setBusinessId("biz-1");
+        bean.setName("Renamed in a failed save");
+
+        controller.save(request, model, bean);
+
+        assertEquals(before, weblog.getName(), "a failed save must not half-update the weblog");
+        assertEquals(List.of("generic.error.check.logs"), errors(model));
+        verify(weblogger.getWeblogManager(), never()).saveWeblog(any());
+    }
+
     @Test
     void anUnknownBusinessIsRefused() throws Exception {
         bean.setBusinessId("nope");
@@ -677,6 +697,35 @@ class WeblogConfigControllerTest extends EditorControllerTestSupport {
         assertTrue(errors(model).isEmpty(), "Expected no errors, got: " + errors(model));
         assertEquals(new BigDecimal("-90.00"), weblog.getPlaceLat());
         assertEquals(new BigDecimal("180.00"), weblog.getPlaceLng());
+    }
+
+    /** A leading plus and a missing integer part are ordinary ways to type a coordinate. */
+    @Test
+    void aLeadingPlusAndAMissingIntegerPartAreAccepted() throws Exception {
+        bean.setPlaceLat("+10");
+        bean.setPlaceLng(".5");
+        controller.save(request, model, bean);
+        assertTrue(errors(model).isEmpty(), "Expected no errors, got: " + errors(model));
+        assertEquals(new BigDecimal("10.00"), weblog.getPlaceLat());
+        assertEquals(new BigDecimal("0.50"), weblog.getPlaceLng());
+
+        model = newModel();
+        bean.setPlaceLat("-.5");
+        bean.setPlaceLng("+.25");
+        controller.save(request, model, bean);
+        assertTrue(errors(model).isEmpty(), "Expected no errors, got: " + errors(model));
+        assertEquals(new BigDecimal("-0.50"), weblog.getPlaceLat());
+    }
+
+    @Test
+    void signAndDotAloneAreStillRefused() throws Exception {
+        for (String bad : new String[] {"+", "-", ".", "+.", "+-5", "++5", "5.", "+1e1", "+.5e1"}) {
+            model = newModel();
+            bean.setPlaceLat(bad);
+            bean.setPlaceLng("10");
+            controller.save(request, model, bean);
+            assertEquals(List.of("weblog_bean_placeLat"), invalidFields(model), bad);
+        }
     }
 
     @Test

@@ -22,6 +22,7 @@ import org.apache.roller.weblogger.pojos.Weblog;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 /** The blog's booking link: resolution order and UTM tagging. */
@@ -72,6 +73,33 @@ class BookingLinkTest {
         assertEquals("book.example.com",
                 BookingLink.destHost("https://User@Book.Example.com:8443/p?q=1"));
         assertNull(BookingLink.destHost("not a url"));
+    }
+
+    /**
+     * java.net.URI treats "my_shop.example.com" as a registry-based
+     * authority and getHost() is null; the host is then read from the raw
+     * authority. Whether such a URL can reach destHost at all is pinned
+     * separately below (it cannot through isHttpUrl).
+     */
+    @Test
+    void destHostOfAnUnderscoreHostIsReadFromTheRawAuthority() {
+        assertEquals("my_shop.example.com", BookingLink.destHost("https://my_shop.example.com/book"));
+        assertEquals("my_shop.example.com",
+                BookingLink.destHost("https://User:pw@My_Shop.Example.com:8443/p?q=1#f"));
+        assertEquals("my_shop.example.com", BookingLink.destHost("https://my_shop.example.com?x=1"));
+    }
+
+    @Test
+    void destHostOfAnUnparseableOrHostlessUrlIsNull() {
+        assertNull(BookingLink.destHost("https://"));
+        assertNull(BookingLink.destHost("mailto:a@b.com"));
+        assertNull(BookingLink.destHost(null));
+    }
+
+    /** Characterisation: the validator both callers use already refuses an underscore host. */
+    @Test
+    void anUnderscoreHostNeverPassesTheBookingUrlValidator() {
+        assertFalse(BookingLink.isHttpUrl("https://my_shop.example.com/book"));
     }
 
     @Test

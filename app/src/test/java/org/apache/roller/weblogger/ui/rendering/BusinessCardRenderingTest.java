@@ -129,6 +129,28 @@ class BusinessCardRenderingTest {
 
     // ------------------------------------------------------------------ AC15
 
+    /**
+     * An actual invocation: the macro call alone on its line, as the themes
+     * write it. A commented-out call, a renamed macro or a mention in prose
+     * does not count.
+     */
+    private static final Pattern MACRO_CALL = Pattern.compile(
+            "(?m)^[ \\t]*#showBusinessCard\\(\\$model\\.weblog \"[^\"\\r\\n]+\"\\)[ \\t]*$");
+
+    static boolean callsCardMacro(String template) {
+        return MACRO_CALL.matcher(template).find();
+    }
+
+    @Test
+    void onlyARealMacroInvocationCountsAsTheFooterCall() {
+        assertTrue(callsCardMacro("<footer>\n    #showBusinessCard($model.weblog \"Book a stay\")\n</footer>"));
+        assertFalse(callsCardMacro("## #showBusinessCard($model.weblog \"Book a stay\")"));
+        assertFalse(callsCardMacro("#* #showBusinessCard($model.weblog \"Book a stay\") *#"));
+        assertFalse(callsCardMacro("#showBusinessCardX($model.weblog \"Book a stay\")"));
+        assertFalse(callsCardMacro("<p>call the showBusinessCard macro</p>"));
+        assertFalse(callsCardMacro("<b>#showBusinessCard($model.weblog \"x\")</b>"));
+    }
+
     @Test
     void everyThemeTemplateWithAFooterCallsTheCardMacro() throws Exception {
         List<String> missing = new ArrayList<>();
@@ -139,7 +161,7 @@ class BusinessCardRenderingTest {
                     String text = Files.readString(vm);
                     if (text.contains("<footer")) {
                         footers++;
-                        if (!text.contains("#showBusinessCard(")) {
+                        if (!callsCardMacro(text)) {
                             missing.add(vm.toString());
                         }
                     }
