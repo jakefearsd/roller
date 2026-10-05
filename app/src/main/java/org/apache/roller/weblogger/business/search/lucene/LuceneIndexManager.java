@@ -234,33 +234,41 @@ public class LuceneIndexManager implements IndexManager {
         int entryCount,
         URLStrategy urlStrategy) throws WebloggerException {
 
-        SearchOperation search = new SearchOperation(this);
-        search.setTerm(term);
-        boolean weblogSpecific = !WebloggerRuntimeConfig.isSiteWideWeblog(weblogHandle);
-        if (weblogSpecific) {
-            search.setWeblogHandle(weblogHandle);
-        }
-        if (category != null) {
-            search.setCategory(category);
-        }
-        if (locale != null) {
-            search.setLocale(locale);
-        }
+        // try-with-resources: the operation holds a counted reference to the
+        // reader it queried (see acquireSharedIndexReader), and it must hold
+        // it past the read lock, through convertHitsToEntryList's
+        // stored-field reads -- a write landing in between would otherwise
+        // close the reader under this search. Closing the operation here
+        // lets go on every path out: hits, no hits, a query the parser
+        // rejected, a conversion that threw.
+        try (SearchOperation search = new SearchOperation(this)) {
+            search.setTerm(term);
+            boolean weblogSpecific = !WebloggerRuntimeConfig.isSiteWideWeblog(weblogHandle);
+            if (weblogSpecific) {
+                search.setWeblogHandle(weblogHandle);
+            }
+            if (category != null) {
+                search.setCategory(category);
+            }
+            if (locale != null) {
+                search.setLocale(locale);
+            }
 
-        executeIndexOperationNow(search);
-        if (search.getResultsCount() >= 0) {
-            TopFieldDocs docs = search.getResults();
-            ScoreDoc[] hitsArr = docs.scoreDocs;
-            return convertHitsToEntryList(
-                hitsArr,
-                search,
-                pageNum,
-                entryCount,
-                weblogHandle,
-                weblogSpecific,
-                urlStrategy);
+            executeIndexOperationNow(search);
+            if (search.getResultsCount() >= 0) {
+                TopFieldDocs docs = search.getResults();
+                ScoreDoc[] hitsArr = docs.scoreDocs;
+                return convertHitsToEntryList(
+                    hitsArr,
+                    search,
+                    pageNum,
+                    entryCount,
+                    weblogHandle,
+                    weblogSpecific,
+                    urlStrategy);
+            }
+            throw new WebloggerException("Error executing search");
         }
-        throw new WebloggerException("Error executing search");
     }
 
     public ReadWriteLock getReadWriteLock() {
@@ -326,10 +334,40 @@ public class LuceneIndexManager implements IndexManager {
         }
     }
 
+    /**
+     * Retires the cached reader after an index write, so the next search
+     * opens one that sees the write.
+     *
+     * <p>The manager owns one reference to the cached reader (the one
+     * {@code DirectoryReader.open} returned) and drops it here. That closes
+     * the reader -- and its segment file handles -- at once if no search is
+     * using it, or when the last search that {@linkplain
+     * #acquireSharedIndexReader acquired} it lets go. Simply forgetting the
+     * reader, as this once did, left every superseded reader's files open
+     * until the garbage collector got to it; closing it outright would fail
+     * a search still converting its hits on it.
+     */
     public synchronized void resetSharedReader() {
-        reader = null;
+        if (reader != null) {
+            try {
+                releaseSharedIndexReader(reader);
+            } finally {
+                // forgotten even if the release threw (a lent reader its
+                // borrower closed: AlreadyClosedException), or every later
+                // search would be handed the dead reader
+                reader = null;
+            }
+        }
     }
 
+    /**
+     * The cached reader, opened on first use, <em>borrowed</em>: the caller
+     * takes no reference, so the reader is only guaranteed open while the
+     * caller holds the index read lock (a write, which retires it, needs the
+     * write lock). Anything that uses the reader after letting go of that
+     * lock -- a search converting its hits -- must use
+     * {@link #acquireSharedIndexReader} instead.
+     */
     public synchronized IndexReader getSharedIndexReader() {
         if (reader == null) {
             try {
@@ -340,6 +378,37 @@ public class LuceneIndexManager implements IndexManager {
             }
         }
         return reader;
+    }
+
+    /**
+     * The cached reader with a reference counted for the caller, which keeps
+     * it open across a later {@link #resetSharedReader} until the caller
+     * hands it to {@link #releaseSharedIndexReader} -- exactly once, in a
+     * {@code finally}. Taking the reference under this monitor is what makes
+     * it safe: a reset cannot drop the manager's reference between the
+     * lookup and the increment.
+     */
+    // The reader is returned to the caller, who owns the reference just
+    // taken; releaseSharedIndexReader is where it is let go of.
+    @SuppressWarnings("PMD.CloseResource")
+    public synchronized IndexReader acquireSharedIndexReader() {
+        IndexReader shared = getSharedIndexReader();
+        shared.incRef();
+        return shared;
+    }
+
+    /**
+     * Lets go of one reference to a reader; the reader closes when its last
+     * reference goes. A failure to close is logged, not thrown: the caller
+     * is finished with the reader either way, and its answer (a search
+     * result, a write) does not depend on the close.
+     */
+    public void releaseSharedIndexReader(IndexReader acquired) {
+        try {
+            acquired.decRef();
+        } catch (IOException ex) {
+            log.warn("Unable to close a search index reader.", ex);
+        }
     }
 
     /**
@@ -452,13 +521,11 @@ public class LuceneIndexManager implements IndexManager {
             log.warn("Unable to delete search index consistency marker: {}", indexConsistencyMarker);
         }
 
-        if (reader != null) {
-            try {
-                reader.close();
-            } catch (IOException ex) {
-                log.error("Unable to close reader.", ex);
-            }
-        }
+        // Drop the manager's own reference, as a write does: the reader
+        // closes now, or when a search still converting on it lets go. It is
+        // also forgotten, so a write that straggles in after shutdown does
+        // not release the same reference a second time.
+        resetSharedReader();
     }
 
     /**

@@ -136,11 +136,12 @@ class LuceneIndexManagerSearchTest {
                 () -> manager.search("\"" + WORD, "parseblog", null, null, 0, 10, null));
         assertEquals("Error executing search", ex.getMessage());
 
-        SearchOperation op = new SearchOperation(manager);
-        op.setTerm("\"" + WORD);
-        op.run();
-        assertEquals(-1, op.getResultsCount());
-        assertNotNull(op.getParseError(), "the parser's complaint must be kept");
+        try (SearchOperation op = new SearchOperation(manager)) {
+            op.setTerm("\"" + WORD);
+            op.run();
+            assertEquals(-1, op.getResultsCount());
+            assertNotNull(op.getParseError(), "the parser's complaint must be kept");
+        }
     }
 
     /**
@@ -156,11 +157,13 @@ class LuceneIndexManagerSearchTest {
         index(entry("facet-1", hiking, "Mountains", "Up high"));
         index(entry("facet-2", cooking, "Recipes", "Soup"));
 
-        SearchOperation siteWide = new SearchOperation(manager);
-        siteWide.setTerm(WORD);
-        siteWide.run();
-        SearchResultList all = manager.convertHitsToEntryList(siteWide.getResults().scoreDocs,
-                siteWide, 0, 10, null, false, mock(URLStrategy.class));
+        SearchResultList all;
+        try (SearchOperation siteWide = new SearchOperation(manager)) {
+            siteWide.setTerm(WORD);
+            siteWide.run();
+            all = manager.convertHitsToEntryList(siteWide.getResults().scoreDocs,
+                    siteWide, 0, 10, null, false, mock(URLStrategy.class));
+        }
 
         assertEquals(Set.of("facet-1", "facet-2"), Set.copyOf(idsOf(all)));
         assertEquals(Set.of("mountains", "recipes"), all.getCategories());

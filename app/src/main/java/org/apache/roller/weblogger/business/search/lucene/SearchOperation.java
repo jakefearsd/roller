@@ -39,10 +39,17 @@ import org.apache.roller.weblogger.business.search.IndexManager;
 
 /**
  * An operation that searches the index.
+ *
+ * <p>{@link AutoCloseable}: running it acquires a counted reference to the
+ * shared reader, which it keeps after {@code run()} returns so the caller can
+ * still read the hits' stored fields through {@link #getSearcher()} once the
+ * index read lock is gone. Closing it lets go of that reference; a caller
+ * that runs one must close it. (Running it again lets go of the previous
+ * run's reader first, so it never holds more than one.)
  * 
  * @author Mindaugas Idzelis (min@idzelis.com)
  */
-public class SearchOperation extends ReadFromIndexOperation {
+public class SearchOperation extends ReadFromIndexOperation implements AutoCloseable {
 
     // ~ Static fields/initializers
     // =============================================
@@ -63,6 +70,15 @@ public class SearchOperation extends ReadFromIndexOperation {
 
     private IndexSearcher searcher;
     private TopFieldDocs searchresults;
+
+    // The reader this operation acquired, held until close(). Guarded by
+    // this operation's monitor, as is `closed`: run() executes on the
+    // ThreadManager's pool thread while close() runs on the caller's.
+    private IndexReader acquired;
+    // Set by close(). A caller whose wait for run() was interrupted closes
+    // the operation while run() may still be about to start; a run() that
+    // finds it closed must not take a reference nobody will release.
+    private boolean closed;
 
     private String term;
     private String weblogHandle;
@@ -94,10 +110,10 @@ public class SearchOperation extends ReadFromIndexOperation {
      * 
      * @see java.lang.Runnable#run()
      */
-    // manager.getSharedIndexReader() is the LuceneIndexManager's own
-    // long-lived, shared IndexReader -- closing it here would break every
-    // other search or read in flight on it. See the "don't need to close
-    // the reader" comment at the end of this method.
+    // The reader is the LuceneIndexManager's shared one, acquired with a
+    // counted reference that close() lets go of -- it must outlive this
+    // method, because the caller reads the hits' stored fields through
+    // getSearcher() afterwards. Closing it here would break that.
     @SuppressWarnings("PMD.CloseResource")
     @Override
     protected void doRun() {
@@ -106,7 +122,10 @@ public class SearchOperation extends ReadFromIndexOperation {
         searcher = null;
 
         try {
-            IndexReader reader = manager.getSharedIndexReader();
+            IndexReader reader = acquireReader();
+            if (reader == null) {
+                return;
+            }
             searcher = new IndexSearcher(reader);
 
             MultiFieldQueryParser multiParser = new MultiFieldQueryParser(
@@ -152,7 +171,42 @@ public class SearchOperation extends ReadFromIndexOperation {
             // who cares?
             parseError = e.getMessage();
         }
-        // don't need to close the reader, since we didn't do any writing!
+        // the reader stays acquired: close() lets go of it, after the
+        // caller has finished reading hits through getSearcher()
+    }
+
+    /**
+     * Acquires the shared reader for this run, or returns null if the
+     * operation was already closed. A second run lets go of the first run's
+     * reader before acquiring the current one, so this operation never holds
+     * more than one reference.
+     */
+    private synchronized IndexReader acquireReader() {
+        if (closed) {
+            return null;
+        }
+        if (acquired != null) {
+            manager.releaseSharedIndexReader(acquired);
+            // cleared before re-acquiring: if that throws (no index on
+            // disk), close() must not release this reference a second time
+            acquired = null;
+        }
+        acquired = manager.acquireSharedIndexReader();
+        return acquired;
+    }
+
+    /**
+     * Lets go of the reader this operation acquired, if any; the reader
+     * closes once nothing else holds it. Idempotent. After it,
+     * {@link #getSearcher()} must not be used to read documents.
+     */
+    @Override
+    public synchronized void close() {
+        closed = true;
+        if (acquired != null) {
+            manager.releaseSharedIndexReader(acquired);
+            acquired = null;
+        }
     }
 
     /**

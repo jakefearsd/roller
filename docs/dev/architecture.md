@@ -115,3 +115,21 @@ templates).
   add/remove/rebuild operations
 - **Scope**: full-text across entries with category and locale filtering
 - **Index Location**: configurable work directory
+- **Reader lifecycle** (`LuceneIndexManager`): searches share one cached
+  `IndexReader`; every index write retires it with `resetSharedReader()`,
+  called *before* the write lock is released (or a search queued behind the
+  write answers from the stale reader — `SharedReaderHandoffTest`). The
+  reader is reference-counted: the manager owns one reference and drops it
+  on reset or `shutdown()`; a search takes its own with
+  `acquireSharedIndexReader()` and must hand it to
+  `releaseSharedIndexReader()` exactly once, in a `finally`. That is
+  required, not tidy-up: a search reads its hits' stored fields
+  (`convertHitsToEntryList`) *after* the read lock is gone, so a write can
+  retire the reader mid-search; closing it at reset fails that search with
+  `AlreadyClosedException`, and never closing it (the old behaviour) leaked
+  every superseded reader's segment file handles until GC.
+  `SearchOperation` is `AutoCloseable` and holds the reference until
+  closed — `search()` runs it in try-with-resources, and anything else that
+  runs one must close it. `getSharedIndexReader()` lends the reader without
+  a reference; it is safe only while the caller holds the read lock.
+  `SharedReaderLifecycleTest` pins all of this.
