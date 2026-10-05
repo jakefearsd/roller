@@ -60,14 +60,18 @@ class BusinessRulesTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"+351 912 345 678", "+351 912 345.678", "(555) 123-4567", "123"})
+    @ValueSource(strings = {"+351 912 345 678", "+351 912 345.678", "(555) 123-4567", "123",
+            "+1 555 123 4567 ext. 89", "555-1234 x12", "555-1234 X 12", "555 1234 extension 123456",
+            "555 1234ext9"})
     void acceptsTelephone(String phone) {
         assertTrue(BusinessRules.isTelephone(phone));
     }
 
     @ParameterizedTest
     @NullAndEmptySource
-    @ValueSource(strings = {"12", "call me", "+1 555 <script>", "1234567890123456789012345678901234"})
+    @ValueSource(strings = {"12", "call me", "+1 555 <script>", "1234567890123456789012345678901234",
+            "555 ext", "555-CALL", "555 1234 ext. ", "555 1234 x1234567", "555 1234 ext 1a", "ext 12",
+            "12345678901234567890123 ext 12345"})
     void rejectsBadTelephone(String phone) {
         assertFalse(BusinessRules.isTelephone(phone));
     }

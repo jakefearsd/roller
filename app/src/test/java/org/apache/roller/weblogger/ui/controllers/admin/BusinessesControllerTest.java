@@ -447,6 +447,24 @@ class BusinessesControllerTest {
         verify(weblogger.weblogger(), never()).flush();
     }
 
+    /** A telephone with an extension saves, and the card then dials the number with ;ext=. */
+    @Test
+    void aTelephoneWithAnExtensionIsSavedAndTheCardLinksItAsAnRfc3966Ext() throws Exception {
+        BusinessBean bean = validBean();
+        bean.setTelephone("+1 555 123 4567 ext. 89");
+        assertEquals("redirect:/roller-ui/admin/businesses.rol", save(bean));
+
+        org.mockito.ArgumentCaptor<Business> saved = org.mockito.ArgumentCaptor.forClass(Business.class);
+        verify(manager).saveBusiness(saved.capture());
+        Weblog w = new Weblog();
+        w.setHandle("blog");
+        w.setName("Blog");
+        w.setBusiness(saved.getValue());
+        var card = new org.apache.roller.weblogger.ui.rendering.model.UtilitiesModel().businessCard(w, null);
+        assertEquals("tel:+15551234567;ext=89", card.get("telHref"));
+        assertEquals("+1 555 123 4567 ext. 89", card.get("telephone"));
+    }
+
     // ---- invalidation after a committed save ----
 
     @Test

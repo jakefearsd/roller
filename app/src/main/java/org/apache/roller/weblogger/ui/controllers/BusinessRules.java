@@ -32,7 +32,9 @@ import org.apache.roller.weblogger.business.BookingLink;
  */
 public final class BusinessRules {
 
-    static final Pattern TELEPHONE = Pattern.compile("^[0-9+()\\-. ]{3,32}$");
+    static final Pattern TELEPHONE = Pattern.compile(
+            "^(?=.{3,32}$)[0-9+()\\-. ]{3,}(?:\\s*(?:extension|ext\\.?|x)\\s*\\d{1,6})?$",
+            Pattern.CASE_INSENSITIVE);
 
     /** Most sameAs profile links a business may carry. */
     public static final int MAX_SAME_AS = 10;
@@ -53,7 +55,11 @@ public final class BusinessRules {
         return s != null && EmailValidator.getInstance().isValid(s);
     }
 
-    /** Digits, plus, parentheses, hyphen, dot and space, 3 to 32 characters. */
+    /**
+     * Digits, plus, parentheses, hyphen, dot and space, then optionally an
+     * extension ("ext", "ext.", "extension" or "x" and 1 to 6 digits); 3 to
+     * 32 characters in all, the column's width.
+     */
     public static boolean isTelephone(String s) {
         return s != null && TELEPHONE.matcher(s).matches();
     }
