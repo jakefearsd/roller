@@ -44,6 +44,7 @@ import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopFieldDocs;
+import org.apache.lucene.store.AlreadyClosedException;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.roller.weblogger.WebloggerException;
@@ -166,6 +167,10 @@ public class LuceneIndexManager implements IndexManager {
                 // test if the index is readable, if the version is outdated or it fails we rebuild.
                 try {
                     synchronized(this) {
+                        // retire any reader already held rather than
+                        // overwrite the only reference to it (and leak its
+                        // files): a no-op on the one startup call today
+                        resetSharedReader();
                         reader = DirectoryReader.open(getIndexDirectory());
                     }
                 } catch (IOException | IllegalArgumentException ex) {  // IAE for incompatible codecs
@@ -352,9 +357,8 @@ public class LuceneIndexManager implements IndexManager {
             try {
                 releaseSharedIndexReader(reader);
             } finally {
-                // forgotten even if the release threw (a lent reader its
-                // borrower closed: AlreadyClosedException), or every later
-                // search would be handed the dead reader
+                // forgotten even if the release threw, or every later search
+                // would be handed the dead reader
                 reader = null;
             }
         }
@@ -402,11 +406,19 @@ public class LuceneIndexManager implements IndexManager {
      * reference goes. A failure to close is logged, not thrown: the caller
      * is finished with the reader either way, and its answer (a search
      * result, a write) does not depend on the close.
+     *
+     * <p>That includes a reader already closed ({@code AlreadyClosedException},
+     * unchecked): one lent by {@link #getSharedIndexReader} and closed by its
+     * borrower. The release runs in a write's {@code finally} and in
+     * {@code shutdown()}, where {@code WebloggerImpl.shutdown} stops the
+     * thread manager only after it returns -- and the {@code reader.close()}
+     * shutdown used before was idempotent -- so a second close must not
+     * throw from here either.
      */
     public void releaseSharedIndexReader(IndexReader acquired) {
         try {
             acquired.decRef();
-        } catch (IOException ex) {
+        } catch (IOException | AlreadyClosedException ex) {
             log.warn("Unable to close a search index reader.", ex);
         }
     }
