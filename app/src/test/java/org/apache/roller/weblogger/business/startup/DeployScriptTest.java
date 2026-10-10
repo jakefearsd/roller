@@ -51,7 +51,7 @@ class DeployScriptTest {
                 #!/bin/bash
                 echo "$*" >> "$STUB_LOG"
                 case "$*" in
-                  *" run --rm -T admin status"*) exit "$STUB_STATUS_RC" ;;
+                  *" run --rm -T admin status"*) echo "STATUS-OUTPUT-LINE"; exit "$STUB_STATUS_RC" ;;
                 esac
                 exit 0
                 """);
@@ -77,6 +77,8 @@ class DeployScriptTest {
                 "docker compose -f docker-compose.prod.yml run --rm admin create --username NAME --email ADDRESS"),
                 r.out());
         assertTrue(r.calls().contains("compose -f docker-compose.prod.yml run --rm -T admin status"), r.calls());
+        // The tool's own text would repeat the create command: only deploy.sh's hint shows.
+        assertFalse(r.out().contains("STATUS-OUTPUT-LINE"), r.out());
     }
 
     @Test
@@ -84,6 +86,7 @@ class DeployScriptTest {
         Result r = deploy(0);
         assertEquals(0, r.exit(), r.out());
         assertFalse(r.out().contains("admin create"), r.out());
+        assertTrue(r.out().contains("  STATUS-OUTPUT-LINE"), "status output, indented: " + r.out());
     }
 
     @Test
@@ -91,5 +94,6 @@ class DeployScriptTest {
         Result r = deploy(1);
         assertEquals(0, r.exit(), r.out());
         assertTrue(r.out().contains("warning: could not check for an admin account"), r.out());
+        assertTrue(r.out().contains("STATUS-OUTPUT-LINE"), "the failure's output should be shown: " + r.out());
     }
 }

@@ -16,7 +16,9 @@
 # docs/superpowers/specs/2026-10-10-admin-bootstrap-and-recovery-design.md.
 #
 # The password is never an argument and is never printed. It reaches psql
-# only through psql's environment (\getenv), and psql quotes it itself.
+# only through psql's environment (\getenv) and then as a bind parameter
+# ($1 ... \bind :pw \g), never as statement text: a failed statement is
+# logged by the server, and a bind parameter is not part of that text.
 # Every psql call reads its SQL from a heredoc: -c would not substitute -v
 # variables, and the heredoc stops psql eating this script's stdin, where
 # the password is.
@@ -29,7 +31,7 @@ export PGPASSWORD="${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}"
 export PGDATABASE="${POSTGRES_DB:-rollerdb}"
 
 MIN_PASSWORD_LENGTH=8
-USERNAME_RE='^[A-Za-z0-9]+$'
+EMAIL_MAX=255
 EMAIL_RE='^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'
 
 usage() {
@@ -46,6 +48,14 @@ die() {
     exit 1
 }
 
+# Bracket ranges follow LC_ALL/LC_COLLATE: under the image's en_US.UTF-8,
+# [A-Za-z] matches ä and fullwidth letters. Scope C to this check only; a
+# global LC_ALL=C would make ${#PASSWORD} count bytes.
+valid_username() {
+    local LC_ALL=C
+    [[ "$1" =~ ^[A-Za-z0-9]+$ && ${#1} -le 255 ]]
+}
+
 # sql [psql -v args...] <<'SQL' ... -- unaligned, tuples only, stops on error
 sql() {
     psql -X -q -v ON_ERROR_STOP=1 -tA "$@"
@@ -56,7 +66,7 @@ require_schema() {
     present=$(sql <<'SQL'
 SELECT to_regclass('public.roller_user') IS NOT NULL;
 SQL
-) || die "cannot reach database ${PGDATABASE} on ${PGHOST}:${PGPORT}"
+) || die "database error (is ${PGDATABASE} on ${PGHOST}:${PGPORT} reachable?)"
     [[ "${present}" == t ]] \
         || die "the Roller schema is not installed in ${PGDATABASE}: run deploy.sh first"
 }
@@ -66,7 +76,12 @@ read_password() {
     local confirm=""
     PASSWORD=""
     if [[ "${FROM_STDIN}" -eq 1 ]]; then
-        IFS= read -r PASSWORD || true
+        if [[ -t 0 ]]; then
+            IFS= read -r -s -p "Password: " PASSWORD || true
+            echo >&2
+        else
+            IFS= read -r PASSWORD || true
+        fi
         [[ -n "${PASSWORD}" ]] || die "no password on stdin"
     else
         IFS= read -r -s -p "Password: " PASSWORD || true
@@ -80,7 +95,8 @@ read_password() {
 }
 
 cmd_create() {
-    [[ "${USERNAME}" =~ ${USERNAME_RE} && ${#USERNAME} -le 255 ]] \
+    [[ ${#EMAIL} -le ${EMAIL_MAX} ]] || die "email address is longer than ${EMAIL_MAX} characters"
+    valid_username "${USERNAME}" \
         || die "username must be 1-255 letters and digits"
     [[ "${EMAIL}" =~ ${EMAIL_RE} ]] || die "not an email address: ${EMAIL}"
     require_schema
@@ -88,18 +104,20 @@ cmd_create() {
     taken=$(sql -v username="${USERNAME}" <<'SQL'
 SELECT count(*) FROM roller_user WHERE lower(username) = lower(:'username');
 SQL
-)
+) || die "database error while checking for an existing account"
     [[ "${taken}" == 0 ]] || die "an account named ${USERNAME} already exists (perhaps disabled)"
     read_password
-    ROLLER_ADMIN_PASSWORD="${PASSWORD}" sql -v username="${USERNAME}" -v email="${EMAIL}" >/dev/null <<'SQL'
+    ROLLER_ADMIN_PASSWORD="${PASSWORD}" sql -v username="${USERNAME}" -v email="${EMAIL}" >/dev/null <<'SQL' || die "database error: nothing was written"
+SET client_min_messages = warning;
 \getenv pw ROLLER_ADMIN_PASSWORD
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 INSERT INTO roller_user (id, username, passphrase, screenname, fullname,
                          emailaddress, datecreated, locale, timezone, isenabled)
 VALUES (gen_random_uuid()::text, :'username',
-        '{bcrypt}' || crypt(:'pw', gen_salt('bf', 10)),
-        :'username', :'username', :'email', now(), 'en_US', 'UTC', true);
+        '{bcrypt}' || crypt($1, gen_salt('bf', 10)),
+        :'username', :'username', :'email', now(), 'en_US', 'UTC', true)
+\bind :pw \g
 INSERT INTO userrole (id, rolename, username)
 VALUES (gen_random_uuid()::text, 'admin', :'username'),
        (gen_random_uuid()::text, 'editor', :'username');
@@ -114,15 +132,17 @@ cmd_reset() {
     enabled=$(sql -v username="${USERNAME}" <<'SQL'
 SELECT isenabled FROM roller_user WHERE username = :'username';
 SQL
-)
+) || die "database error while looking up ${USERNAME}"
     [[ -n "${enabled}" ]] || die "no account named ${USERNAME}"
     read_password
-    ROLLER_ADMIN_PASSWORD="${PASSWORD}" sql -v username="${USERNAME}" >/dev/null <<'SQL'
+    ROLLER_ADMIN_PASSWORD="${PASSWORD}" sql -v username="${USERNAME}" >/dev/null <<'SQL' || die "database error: password not changed"
+SET client_min_messages = warning;
 \getenv pw ROLLER_ADMIN_PASSWORD
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
-UPDATE roller_user SET passphrase = '{bcrypt}' || crypt(:'pw', gen_salt('bf', 10))
- WHERE username = :'username';
+UPDATE roller_user SET passphrase = '{bcrypt}' || crypt($1, gen_salt('bf', 10))
+ WHERE username = :'username'
+\bind :pw \g
 COMMIT;
 SQL
     if [[ "${enabled}" != t ]]; then
@@ -144,7 +164,7 @@ SELECT u.username FROM roller_user u
                 WHERE r.username = u.username AND r.rolename = 'admin')
  ORDER BY u.username;
 SQL
-)
+) || die "database error while listing admin accounts"
     if [[ -z "${admins}" ]]; then
         echo "no enabled admin account. Create one with:"
         echo "  docker compose -f docker-compose.prod.yml run --rm admin create --username NAME --email ADDRESS"

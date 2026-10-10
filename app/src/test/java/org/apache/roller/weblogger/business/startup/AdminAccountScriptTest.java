@@ -204,10 +204,23 @@ class AdminAccountScriptTest {
         long before = accountsNamed(existing);
 
         String fresh = uniqueName();
-        record Case(String why, String stdin, String user, String email, boolean fromStdin) {}
+        record Case(String why, String stdin, String user, String email, boolean fromStdin, String counted) {
+            Case(String why, String stdin, String user, String email, boolean fromStdin) {
+                this(why, stdin, user, email, fromStdin, user);
+            }
+        }
+        // The image runs LC_ALL=en_US.UTF-8, where a bash [A-Za-z] range matches
+        // letters like ä; the check must be ASCII whatever the locale.
+        created.add("j\u00e4ke");
+        created.add("\uff41\uff44\uff4d\uff49\uff4e");
+        String longEmail = "a".repeat(250) + "@e.com";   // 256 characters: varchar(255)
         List<Case> cases = List.of(
+                new Case("non-ASCII letter in username", GOOD_PASSWORD + "\n", "j\u00e4ke", "x@example.com", true),
+                new Case("fullwidth letters in username", GOOD_PASSWORD + "\n",
+                        "\uff41\uff44\uff4d\uff49\uff4e", "x@example.com", true),
+                new Case("email over 255 characters", GOOD_PASSWORD + "\n", fresh, longEmail, true),
                 new Case("existing username, other case", GOOD_PASSWORD + "\n",
-                        existing.toUpperCase(Locale.ROOT), "x@example.com", true),
+                        existing.toUpperCase(Locale.ROOT), "x@example.com", true, fresh),
                 new Case("bad username character", GOOD_PASSWORD + "\n", fresh + "-x", "x@example.com", true),
                 new Case("malformed email", GOOD_PASSWORD + "\n", fresh, "not-an-email", true),
                 new Case("7-character password", "1234567\n", fresh, "x@example.com", true),
@@ -221,7 +234,7 @@ class AdminAccountScriptTest {
             Run r = run(suiteDb(), c.stdin(), args.toArray(String[]::new));
             assertEquals(1, r.exit(), c.why() + ": " + r.stderr());
             assertFalse(r.stderr().isBlank(), c.why() + " must say what was wrong");
-            assertEquals(0, accountsNamed(fresh), c.why() + " wrote rows");
+            assertEquals(0, accountsNamed(c.counted()), c.why() + " wrote rows");
         }
         assertEquals(before, accountsNamed(existing), "the existing account was touched");
     }
@@ -307,9 +320,23 @@ class AdminAccountScriptTest {
             s.setString(1, name);
             s.executeUpdate();
         }
+        String before = passphraseOf(suiteDb(), name);
         Run r = run(suiteDb(), "a brand new one\n", "reset-password", "--username", name, "--password-stdin");
         assertEquals(0, r.exit(), r.stderr());
         assertTrue(r.stderr().contains("disabled"), r.stderr());
+        assertTrue(!before.equals(passphraseOf(suiteDb(), name)), "the stored passphrase did not change");
+    }
+
+    static String passphraseOf(String db, String name) throws Exception {
+        try (Connection c = DriverManager.getConnection(ScratchDatabase.jdbcUrl(db),
+                RollerPostgresContainer.getUsername(), RollerPostgresContainer.getPassword());
+             PreparedStatement s = c.prepareStatement("SELECT passphrase FROM roller_user WHERE username = ?")) {
+            s.setString(1, name);
+            try (ResultSet rs = s.executeQuery()) {
+                assertTrue(rs.next(), "no account " + name);
+                return rs.getString(1);
+            }
+        }
     }
 
     // --- acceptance criterion 5 and Review Focus 5 (isolated database: the
@@ -353,6 +380,77 @@ class AdminAccountScriptTest {
         assertFalse(argv.isBlank(), "the shim saw no psql call: is psql resolved through PATH?");
         assertFalse(argv.contains(secret), "password passed to psql as an argument");
         assertFalse(r.stdout().contains(secret) || r.stderr().contains(secret), "password printed");
+
+        // AC3 covers any subcommand: reset-password too.
+        RollerPostgresContainer.get().execInContainer("rm", "-f", "/tmp/shim/argv.log");
+        String secret2 = "s3cret-" + UUID.randomUUID();
+        Run r2 = run(suiteDb(), secret2 + "\n" + secret2 + "\n", "reset-password", "--username", name);
+        assertEquals(0, r2.exit(), r2.stderr());
+        String argv2 = RollerPostgresContainer.get().execInContainer("cat", "/tmp/shim/argv.log").getStdout();
+        assertFalse(argv2.isBlank(), "the shim saw no psql call on reset-password");
+        assertFalse(argv2.contains(secret2), "password passed to psql as an argument on reset");
+        assertFalse(r2.stdout().contains(secret2) || r2.stderr().contains(secret2), "password printed on reset");
+    }
+
+    // --- I2: a failed write must not leave the password in the server log ---
+    private static final String FAIL_FN = "CREATE FUNCTION admintool_fail() RETURNS trigger LANGUAGE plpgsql AS"
+            + " $$BEGIN RAISE EXCEPTION 'forced failure'; END$$";
+
+    @Test
+    void aFailedCreateLeavesThePasswordOutOfTheServerLog() throws Exception {
+        String db = "admintool_logc";
+        try (Connection c = ScratchDatabase.migrated(db); Statement st = c.createStatement()) {
+            st.execute(FAIL_FN);
+            st.execute("CREATE TRIGGER admintool_fail BEFORE INSERT ON roller_user"
+                    + " FOR EACH ROW EXECUTE FUNCTION admintool_fail()");
+            String secret = "s3cret-" + UUID.randomUUID();
+            Run r = run(db, secret + "\n", "create", "--username", "carol",
+                    "--email", "carol@example.com", "--password-stdin");
+            assertTrue(r.exit() != 0, "the forced failure should fail the tool");
+            assertFalse(r.stdout().contains(secret) || r.stderr().contains(secret), "password printed");
+            assertTrue(RollerPostgresContainer.get().getLogs().contains("forced failure"),
+                    "the failed statement never reached the server log: the check proves nothing");
+            assertFalse(RollerPostgresContainer.get().getLogs().contains(secret),
+                    "password in the PostgreSQL server log");
+        } finally {
+            ScratchDatabase.drop(db);
+        }
+    }
+
+    @Test
+    void aFailedResetLeavesThePasswordOutOfTheServerLog() throws Exception {
+        String db = "admintool_logr";
+        try (Connection c = ScratchDatabase.migrated(db); Statement st = c.createStatement()) {
+            assertEquals(0, run(db, GOOD_PASSWORD + "\n", "create", "--username", "dave",
+                    "--email", "dave@example.com", "--password-stdin").exit());
+            st.execute(FAIL_FN);
+            st.execute("CREATE TRIGGER admintool_fail BEFORE UPDATE ON roller_user"
+                    + " FOR EACH ROW EXECUTE FUNCTION admintool_fail()");
+            String secret = "s3cret-" + UUID.randomUUID();
+            Run r = run(db, secret + "\n", "reset-password", "--username", "dave", "--password-stdin");
+            assertTrue(r.exit() != 0, "the forced failure should fail the tool");
+            assertFalse(r.stdout().contains(secret) || r.stderr().contains(secret), "password printed");
+            assertTrue(RollerPostgresContainer.get().getLogs().contains("forced failure"),
+                    "the failed statement never reached the server log: the check proves nothing");
+            assertFalse(RollerPostgresContainer.get().getLogs().contains(secret),
+                    "password in the PostgreSQL server log");
+        } finally {
+            ScratchDatabase.drop(db);
+        }
+    }
+
+    // --- M1: a check that could not run is not "no admin" ---
+    @Test
+    void statusOnASqlErrorExitsOneNotThree() throws Exception {
+        String db = "admintool_staterr";
+        try (Connection c = ScratchDatabase.migrated(db); Statement st = c.createStatement()) {
+            st.execute("DROP TABLE userrole");
+            Run r = run(db, "", "status");
+            assertEquals(1, r.exit(), r.stderr());
+            assertTrue(r.stderr().contains("database error"), r.stderr());
+        } finally {
+            ScratchDatabase.drop(db);
+        }
     }
 
     // --- Review Focus 3 ---

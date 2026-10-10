@@ -73,9 +73,11 @@ echo "    app healthy."
 # pass. A failed check must never fail an otherwise good deploy.
 echo "==> Checking for an admin account..."
 admin_rc=0
-"${COMPOSE[@]}" run --rm -T admin status </dev/null || admin_rc=$?
+# Captured, not streamed: on exit 3 the tool's own text repeats the create
+# command that is printed below.
+admin_out=$("${COMPOSE[@]}" run --rm -T admin status </dev/null 2>&1) || admin_rc=$?
 case "${admin_rc}" in
-    0) ;;
+    0) sed 's/^/    /' <<<"${admin_out}" ;;
     3)
         echo "    No admin account yet. Create the first one (it prompts for the password):"
         echo "      ${COMPOSE[*]} run --rm admin create --username NAME --email ADDRESS"
@@ -83,6 +85,7 @@ case "${admin_rc}" in
     *)
         echo "    warning: could not check for an admin account (exit ${admin_rc});" \
              "try: ${COMPOSE[*]} run --rm admin status" >&2
+        sed 's/^/    /' <<<"${admin_out}" >&2
         ;;
 esac
 
