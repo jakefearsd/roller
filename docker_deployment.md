@@ -251,8 +251,8 @@ the first administrator is made from the host, in this order:
    never starts it. Being able to run it at all means controlling this host
    and its `.env`, which is the trust it relies on.
 2. **Log in** at `/roller-ui/login.rol`, then in Admin -> Global Config set
-   the **Site URL** and the **site admin email** (`site.adminemail`). The
-   site admin email is the From address of every mail Roller sends, and
+   **Absolute URL to site (if required)** (`ROLLER_SITE_ABSOLUTEURL`) and
+   **Site Administrator's email address** (`site.adminemail`). That address is the From address of every mail Roller sends, and
    password-reset mail cannot go out without it.
 3. **Set up mail**, next section: [Mail and account recovery](#mail-and-account-recovery).
 4. **Check it.** `docker compose -f docker-compose.prod.yml run --rm admin status`
@@ -276,13 +276,14 @@ ROLLER_MAIL_PASSWORD=<Brevo SMTP key>
 
 `mail.security` defaults to `starttls`, which is what port 587 wants (`ssl`
 for a port-465 relay, `none` only for a local relay). The From address is the
-site admin email, so it must be a sender or domain you have verified in Brevo
+Site Administrator's email address, so it must be a sender or domain you have verified in Brevo
 or the relay will refuse the mail.
 
 Reset mail needs **both** halves: the SMTP settings above **and** the site
-admin email (`site.adminemail`, Admin -> Global Config). Until both are set,
-the forgot-password page shows a "mail not configured" notice. The reset link
-is built from the Site URL (`ROLLER_SITE_ABSOLUTEURL`), lasts 1 hour, works
+admin email (`site.adminemail`, labelled **Site Administrator's email address**
+in Admin -> Global Config). Until both are set, the forgot-password page says
+the server has no outgoing mail configured (or no site email address set). The reset link
+is built from **Absolute URL to site (if required)** (`ROLLER_SITE_ABSOLUTEURL`), lasts 1 hour, works
 once, and goes to the email address on the account.
 
 **Applying changes.** A change to `.env` needs
@@ -293,7 +294,7 @@ needs `docker compose -f docker-compose.prod.yml restart app`.
 
 **Recovering a lost password**, in order:
 
-1. "Forgot password?" on the login page. Enter the username or the email
+1. "Forgot your password?" on the login page. Enter the username or the email
    address.
 2. Last resort, when mail is broken, from the host:
 
@@ -1092,11 +1093,11 @@ one-off DB access for debugging, use `docker compose exec postgres psql
 
 ## Troubleshooting
 
-**Forgot-password says mail is not configured**
+**The forgot-password page says the server has no outgoing mail configured**
 
 Reset mail needs both the `ROLLER_MAIL_*` SMTP settings in `.env` (applied
-with `up -d --force-recreate app`) and the site admin email in Admin -> Global
-Config. Check both; see [Mail and account recovery](#mail-and-account-recovery).
+with `up -d --force-recreate app`) and the **Site Administrator's email address** in Admin -> Global
+Config (`site.adminemail`). Check both; see [Mail and account recovery](#mail-and-account-recovery).
 
 **The new password from `reset-password` doesn't work**
 
