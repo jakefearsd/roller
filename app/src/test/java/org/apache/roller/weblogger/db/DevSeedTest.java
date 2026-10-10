@@ -25,12 +25,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
 
-import org.apache.roller.testing.MigrationFiles;
-import org.apache.roller.testing.RollerPostgresContainer;
+import org.apache.roller.testing.ScratchDatabase;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
@@ -177,19 +175,10 @@ class DevSeedTest {
         }
     }
 
-    // --- Isolated-database helpers, mirroring AnalyticsContractTest ---
+    // --- Isolated-database helpers: see ScratchDatabase ---
 
     private Connection freshDatabase(String dbName) throws Exception {
-        try (Connection admin = adminConnection(); Statement st = admin.createStatement()) {
-            st.execute("DROP DATABASE IF EXISTS " + dbName);
-            st.execute("CREATE DATABASE " + dbName);
-        }
-        Connection con = DriverManager.getConnection(jdbcUrlFor(dbName),
-                RollerPostgresContainer.getUsername(), RollerPostgresContainer.getPassword());
-        for (Path migration : MigrationFiles.all()) {
-            execute(con, Files.readString(migration, StandardCharsets.UTF_8)
-                    .replace(":app_user", RollerPostgresContainer.getUsername()));
-        }
+        Connection con = ScratchDatabase.migrated(dbName);
         // The seed itself does this, but guardSaysRewrite() runs the guard
         // expression alone without applying the seed.
         execute(con, "CREATE EXTENSION IF NOT EXISTS pgcrypto");
@@ -197,21 +186,6 @@ class DevSeedTest {
     }
 
     private void dropDatabase(String dbName) throws Exception {
-        try (Connection admin = adminConnection(); Statement st = admin.createStatement()) {
-            st.execute("DROP DATABASE IF EXISTS " + dbName);
-        }
-    }
-
-    private Connection adminConnection() throws Exception {
-        return DriverManager.getConnection(RollerPostgresContainer.getJdbcUrl(),
-                RollerPostgresContainer.getUsername(), RollerPostgresContainer.getPassword());
-    }
-
-    private String jdbcUrlFor(String dbName) {
-        String url = RollerPostgresContainer.getJdbcUrl();
-        int dbStart = url.lastIndexOf('/') + 1;
-        int queryStart = url.indexOf('?', dbStart);
-        String tail = queryStart < 0 ? "" : url.substring(queryStart);
-        return url.substring(0, dbStart) + dbName + tail;
+        ScratchDatabase.drop(dbName);
     }
 }

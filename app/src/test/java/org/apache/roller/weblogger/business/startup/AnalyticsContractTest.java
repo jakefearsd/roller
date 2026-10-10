@@ -17,15 +17,10 @@
  */
 package org.apache.roller.weblogger.business.startup;
 
-import org.apache.roller.testing.MigrationFiles;
-import org.apache.roller.testing.RollerPostgresContainer;
+import org.apache.roller.testing.ScratchDatabase;
 import org.junit.jupiter.api.Test;
 
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.sql.Timestamp;
@@ -265,50 +260,11 @@ public class AnalyticsContractTest {
 
     /** Applies the full chain to a brand-new database (dropping any leftover of the same name first) and returns a connection to it. */
     private Connection freshDatabase(String dbName) throws Exception {
-        try (Connection admin = adminConnection();
-             Statement st = admin.createStatement()) {
-            st.execute("DROP DATABASE IF EXISTS " + dbName);
-            st.execute("CREATE DATABASE " + dbName);
-        }
-
-        Connection con = DriverManager.getConnection(
-                jdbcUrlFor(dbName),
-                RollerPostgresContainer.getUsername(),
-                RollerPostgresContainer.getPassword());
-        for (Path migration : MigrationFiles.all()) {
-            try (Statement st = con.createStatement()) {
-                st.execute(readMigration(migration));
-            }
-        }
-        return con;
+        return ScratchDatabase.migrated(dbName);
     }
 
     /** Drops the scratch database. Callers must close their connection to it first. */
     private void dropDatabase(String dbName) throws Exception {
-        try (Connection admin = adminConnection();
-             Statement st = admin.createStatement()) {
-            st.execute("DROP DATABASE IF EXISTS " + dbName);
-        }
-    }
-
-    private String readMigration(Path migration) throws Exception {
-        return Files.readString(migration, StandardCharsets.UTF_8)
-                .replace(":app_user", RollerPostgresContainer.getUsername());
-    }
-
-    private Connection adminConnection() throws Exception {
-        return DriverManager.getConnection(
-                RollerPostgresContainer.getJdbcUrl(),
-                RollerPostgresContainer.getUsername(),
-                RollerPostgresContainer.getPassword());
-    }
-
-    /** Rewrites the container's JDBC URL to point at a different database. */
-    private String jdbcUrlFor(String dbName) {
-        String url = RollerPostgresContainer.getJdbcUrl();
-        int dbStart = url.lastIndexOf('/') + 1;
-        int queryStart = url.indexOf('?', dbStart);
-        String tail = queryStart < 0 ? "" : url.substring(queryStart);
-        return url.substring(0, dbStart) + dbName + tail;
+        ScratchDatabase.drop(dbName);
     }
 }
