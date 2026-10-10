@@ -35,6 +35,7 @@ import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -394,5 +395,26 @@ class ProductionComposeTest {
             }
         }
         return block.trim();
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void theAdminToolIsProfileGatedAndReachesOnlyTheDatabase() {
+        Map<String, Object> admin = service("admin");
+        assertEquals(List.of("tools"), admin.get("profiles"),
+                "admin must never start with `up`: only `docker compose run` may start it");
+        assertEquals(service("app").get("image"), admin.get("image"),
+                "the tool must ship in the very image the app runs");
+        assertEquals(List.of("/app/admin-account.sh"), admin.get("entrypoint"));
+        assertEquals("no", admin.get("restart"));
+        assertNull(admin.get("ports"), "the admin tool must publish nothing");
+        assertNull(admin.get("env_file"),
+                "env_file would hand the tool every secret in .env; it needs the database's only");
+        assertNull(admin.get("volumes"));
+        assertEquals(List.of("internal"), admin.get("networks"));
+        Map<String, Object> env = (Map<String, Object>) admin.get("environment");
+        assertEquals(Set.of("POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD"), env.keySet());
+        Map<String, Object> deps = (Map<String, Object>) admin.get("depends_on");
+        assertEquals(Map.of("condition", "service_healthy"), deps.get("postgres"));
     }
 }

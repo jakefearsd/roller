@@ -110,6 +110,7 @@ COPY --from=builder /build/bin/db/migrations /app/migrations
 # about what "applied" means.
 COPY bin/db/migrate.sh /app/migrate.sh
 COPY deploy/provision.sh /app/provision.sh
+COPY deploy/admin-account.sh /app/admin-account.sh
 COPY deploy/analytics-views.sh /app/analytics-views.sh
 COPY deploy/analytics/umami-views.sql /app/umami-views.sql
 COPY deploy/backup/backup.sh /app/backup/backup.sh
@@ -119,7 +120,7 @@ COPY bin/roller-api /app/roller-api
 # Runtime data: mediafiles, search index, uploads, all under /data per the
 # runtime contract. There is no /config any more -- configuration arrives as
 # ROLLER_* environment variables (see WebloggerConfig.applyEnvironmentOverrides).
-RUN chmod 755 /app/migrate.sh /app/provision.sh /app/analytics-views.sh /app/backup/backup.sh /app/backup/loop.sh \
+RUN chmod 755 /app/migrate.sh /app/provision.sh /app/admin-account.sh /app/analytics-views.sh /app/backup/backup.sh /app/backup/loop.sh \
     && chmod +x /app/roller-api \
     && mkdir -p /data/mediafiles /data/search-index /data/uploads \
     && chown -R roller:roller /app /data
