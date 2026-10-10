@@ -1186,7 +1186,7 @@ docker compose -f docker-compose.prod.yml exec postgres \
 (`roller`/`rollerdb` are the `.env.example` defaults for `POSTGRES_USER` and
 `POSTGRES_DB`. `POSTGRES_PASSWORD` only takes effect when the data volume is first
 initialised, so changing `.env` alone does not change the role's password.)
-Fixed from the release after 0.1.10, which passes the password through as
+Fixed in 0.1.11, which passes the password through as
 plaintext whatever it looks like.
 
 **Disk filling up**
