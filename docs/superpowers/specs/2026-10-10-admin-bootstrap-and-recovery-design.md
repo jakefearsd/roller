@@ -76,6 +76,12 @@ printf '%s\n' "$PW" | $C run --rm -T admin create --username jake --email jake@e
   of an existing account and touches nothing else. It is the last resort
   when mail itself is broken. If the account is disabled, it says so,
   because a disabled account still cannot log in.
+  - It ends by printing the exact command to restart the app. A running
+    app caches accounts it has already loaded
+    (`JPAUserManagerImpl.userNameToIdMap` plus EclipseLink's shared
+    cache), so a password changed underneath it does not take effect
+    until the app restarts. `create` has no such issue, because nothing
+    has loaded an account that did not exist.
 - **`status`** prints the usernames of the enabled admin accounts. It
   exits 0 if there is at least one, and 3 if there are none.
 - **No subcommand, or an unknown one,** prints usage and exits 2.
@@ -201,6 +207,11 @@ Each item names how it is checked.
      criterion 1 path and the old one does not.
    - An unknown user exits non-zero and changes nothing.
    - A disabled user gets the new hash plus a warning on stderr.
+   - stdout ends with the app-restart command.
+   - A second test records why the restart is needed: once the running
+     tier has loaded an account, a reset leaves the old password working.
+     If someone removes the cache, that test fails, and the restart
+     advice goes with it.
    *Test: same harness.*
 5. **`status` reports correctly.** It exits 3 with an explanatory
    message when no enabled admin exists, and exits 0 listing usernames
