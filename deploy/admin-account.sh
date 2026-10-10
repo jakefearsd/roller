@@ -4,8 +4,10 @@
 #
 #   C="docker compose -f docker-compose.prod.yml"
 #   $C run --rm admin create --username NAME --email ADDRESS
+#   $C run --rm admin reset-password --username NAME
+#   $C run --rm admin status
 #
-# create prompts for the password twice. With --password-stdin it reads
+# create and reset-password prompt for the password twice. With --password-stdin it reads
 # exactly one line from stdin instead (use `run --rm -T`).
 #
 # Trust model: running this at all means controlling the host and its
@@ -33,6 +35,8 @@ EMAIL_RE='^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'
 usage() {
     cat >&2 <<'EOF'
 usage: admin-account.sh create --username NAME --email ADDRESS [--password-stdin]
+       admin-account.sh reset-password --username NAME [--password-stdin]
+       admin-account.sh status
 EOF
     exit 2
 }
@@ -104,6 +108,52 @@ SQL
     echo "created admin account ${USERNAME} (roles: admin, editor)"
 }
 
+cmd_reset() {
+    require_schema
+    local enabled
+    enabled=$(sql -v username="${USERNAME}" <<'SQL'
+SELECT isenabled FROM roller_user WHERE username = :'username';
+SQL
+)
+    [[ -n "${enabled}" ]] || die "no account named ${USERNAME}"
+    read_password
+    ROLLER_ADMIN_PASSWORD="${PASSWORD}" sql -v username="${USERNAME}" >/dev/null <<'SQL'
+\getenv pw ROLLER_ADMIN_PASSWORD
+BEGIN;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+UPDATE roller_user SET passphrase = '{bcrypt}' || crypt(:'pw', gen_salt('bf', 10))
+ WHERE username = :'username';
+COMMIT;
+SQL
+    if [[ "${enabled}" != t ]]; then
+        echo "admin-account: warning: ${USERNAME} is disabled and still cannot log in;" \
+             "enable it from another admin account, or create a new admin" >&2
+    fi
+    echo "password reset for ${USERNAME}."
+    echo "The running app caches accounts it has loaded; restart it so the new password takes effect:"
+    echo "  docker compose -f docker-compose.prod.yml restart app"
+}
+
+cmd_status() {
+    require_schema
+    local admins
+    admins=$(sql <<'SQL'
+SELECT u.username FROM roller_user u
+ WHERE u.isenabled
+   AND EXISTS (SELECT 1 FROM userrole r
+                WHERE r.username = u.username AND r.rolename = 'admin')
+ ORDER BY u.username;
+SQL
+)
+    if [[ -z "${admins}" ]]; then
+        echo "no enabled admin account. Create one with:"
+        echo "  docker compose -f docker-compose.prod.yml run --rm admin create --username NAME --email ADDRESS"
+        exit 3
+    fi
+    echo "enabled admin accounts:"
+    sed 's/^/  /' <<<"${admins}"
+}
+
 COMMAND="${1:-}"
 [[ -n "${COMMAND}" ]] || usage
 shift
@@ -121,5 +171,11 @@ case "${COMMAND}" in
     create)
         [[ -n "${USERNAME}" && -n "${EMAIL}" ]] || usage
         cmd_create ;;
+    reset-password)
+        [[ -n "${USERNAME}" && -z "${EMAIL}" ]] || usage
+        cmd_reset ;;
+    status)
+        [[ -z "${USERNAME}${EMAIL}" && "${FROM_STDIN}" -eq 0 ]] || usage
+        cmd_status ;;
     *) usage ;;
 esac

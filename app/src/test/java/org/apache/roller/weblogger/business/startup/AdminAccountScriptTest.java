@@ -30,6 +30,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -240,6 +241,103 @@ class AdminAccountScriptTest {
                 "--email", name + "@example.com", "--password-stdin");
         assertEquals(1, r.exit());
         assertTrue(r.stderr().contains("already exists"), r.stderr());
+    }
+
+    private String createWith(String password) throws Exception {
+        String name = uniqueName();
+        Run r = run(suiteDb(), password + "\n", "create", "--username", name,
+                "--email", name + "@example.com", "--password-stdin");
+        assertEquals(0, r.exit(), r.stderr());
+        return name;
+    }
+
+    // --- acceptance criterion 4 ---
+    // The account is never logged in before the reset, so nothing has cached it.
+    @Test
+    void resetReplacesThePassword() throws Exception {
+        String name = createWith(GOOD_PASSWORD);
+        Run r = run(suiteDb(), "a brand new one\n", "reset-password", "--username", name, "--password-stdin");
+        assertEquals(0, r.exit(), r.stderr());
+        assertNotNull(login(name, "a brand new one"));
+        assertThrows(BadCredentialsException.class, () -> login(name, GOOD_PASSWORD));
+    }
+
+    // --- Review Focus 2 ---
+    @Test
+    void resetEndsWithTheRestartCommand() throws Exception {
+        String name = createWith(GOOD_PASSWORD);
+        Run r = run(suiteDb(), "a brand new one\n", "reset-password", "--username", name, "--password-stdin");
+        assertEquals(0, r.exit(), r.stderr());
+        List<String> lines = r.stdout().strip().lines().toList();
+        assertEquals("  docker compose -f docker-compose.prod.yml restart app", lines.get(lines.size() - 1));
+    }
+
+    /**
+     * Why reset-password tells the operator to restart the app: a running
+     * tier that has loaded an account keeps serving the password it loaded
+     * (JPAUserManagerImpl.userNameToIdMap, then EclipseLink's shared cache
+     * behind getUser). This pins that limitation. If it starts failing, the
+     * cache went away, and the restart advice in admin-account.sh and the
+     * runbook should go with it.
+     */
+    @Test
+    void aRunningTierKeepsTheOldPasswordUntilRestart() throws Exception {
+        String name = createWith(GOOD_PASSWORD);
+        assertNotNull(login(name, GOOD_PASSWORD));   // the tier now holds the account
+        assertEquals(0, run(suiteDb(), "a brand new one\n", "reset-password",
+                "--username", name, "--password-stdin").exit());
+        assertNotNull(login(name, GOOD_PASSWORD), "expected the cached hash to still be served");
+    }
+
+    @Test
+    void resetOfAnUnknownAccountChangesNothing() throws Exception {
+        String name = uniqueName();
+        Run r = run(suiteDb(), "a brand new one\n", "reset-password", "--username", name, "--password-stdin");
+        assertEquals(1, r.exit());
+        assertTrue(r.stderr().contains("no account named"), r.stderr());
+        assertEquals(0, accountsNamed(name));
+    }
+
+    @Test
+    void resetOfADisabledAccountWarns() throws Exception {
+        String name = createWith(GOOD_PASSWORD);
+        try (Connection c = DriverManager.getConnection(RollerPostgresContainer.getJdbcUrl(),
+                RollerPostgresContainer.getUsername(), RollerPostgresContainer.getPassword());
+             PreparedStatement s = c.prepareStatement("UPDATE roller_user SET isenabled = false WHERE username = ?")) {
+            s.setString(1, name);
+            s.executeUpdate();
+        }
+        Run r = run(suiteDb(), "a brand new one\n", "reset-password", "--username", name, "--password-stdin");
+        assertEquals(0, r.exit(), r.stderr());
+        assertTrue(r.stderr().contains("disabled"), r.stderr());
+    }
+
+    // --- acceptance criterion 5 and Review Focus 5 (isolated database: the
+    // suite's own may hold other tests' admins) ---
+    @Test
+    void statusReportsEnabledAdminsOnly() throws Exception {
+        String db = "admintool_status";
+        try (Connection c = ScratchDatabase.migrated(db)) {
+            Run none = run(db, "", "status");
+            assertEquals(3, none.exit(), none.stderr());
+            assertTrue(none.stdout().contains("run --rm admin create"), none.stdout());
+
+            assertEquals(0, run(db, GOOD_PASSWORD + "\n", "create", "--username", "alice",
+                    "--email", "alice@example.com", "--password-stdin").exit());
+            try (Statement s = c.createStatement()) {
+                s.executeUpdate("UPDATE roller_user SET isenabled = false WHERE username = 'alice'");
+            }
+            assertEquals(3, run(db, "", "status").exit(), "a disabled admin is no admin");
+
+            try (Statement s = c.createStatement()) {
+                s.executeUpdate("UPDATE roller_user SET isenabled = true WHERE username = 'alice'");
+            }
+            Run some = run(db, "", "status");
+            assertEquals(0, some.exit(), some.stderr());
+            assertTrue(some.stdout().contains("alice"), some.stdout());
+        } finally {
+            ScratchDatabase.drop(db);
+        }
     }
 
     // --- acceptance criterion 3 ---
