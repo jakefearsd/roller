@@ -166,8 +166,11 @@ environment-variable-configured container.
     [Newsletter](#newsletter).
 - **Postgres credentials, backup schedule, Analytics and Newsletter
   settings** — `POSTGRES_DB`/`POSTGRES_USER`/`POSTGRES_PASSWORD` (shared by
-  `postgres`, `provision`, and `backup` — generate a real password, e.g.
-  `openssl rand -base64 24`), `BACKUP_HOUR`/`BACKUP_RETENTION_DAYS`
+  `postgres`, `provision`, and `backup` — generate a real password with
+  `openssl rand -base64 33 | tr '+/' '-_'`: 44 characters, no padding, only
+  URL-safe ones, because the compose file splices `POSTGRES_PASSWORD` into
+  Umami's `DATABASE_URL` and a `/` from plain base64 breaks that URL),
+  `BACKUP_HOUR`/`BACKUP_RETENTION_DAYS`
   (defaults `3`, `14` are reasonable starting points), `JAVA_OPTS` (optional
   extra JVM flags, e.g. `-Xmx1g`), and the `UMAMI_*`/`LISTMONK_*` variables
   covered in their own sections below ([Analytics](#analytics),
@@ -1077,6 +1080,30 @@ provisioning succeeded, confirm `.env`'s
 `POSTGRES_USER`/`POSTGRES_PASSWORD` exactly — the two are not templated
 against each other. Re-running `./deploy.sh` (or `docker compose up -d`) is
 safe and idempotent if you want to retry provisioning from scratch.
+
+**App crash-loops with `EclipseLink-7360` "Database password was encrypted by
+deprecated algorithm"**
+
+Images up to and including 0.1.10 hand the database password to EclipseLink,
+which treats any even-length, all-hex value (what `openssl rand -hex N`
+prints) as one of its own encrypted passwords, fails to decrypt it and never
+bootstraps. Nothing was encrypted and `passwordUpdate.sh` is not the fix: give
+the role a password containing at least one non-hex character (the generator
+in [Configure `.env`](#configure-env) does), then update `.env` to match:
+
+```bash
+NEW='...'   # e.g. $(openssl rand -base64 33 | tr '+/' '-_')
+docker compose -f docker-compose.prod.yml exec postgres \
+    psql -U roller -d rollerdb -c "ALTER ROLE roller PASSWORD '$NEW'"
+# then set BOTH POSTGRES_PASSWORD and ROLLER_DATABASE_JDBC_PASSWORD in .env
+# to $NEW, and re-run ./deploy.sh (or docker compose up -d)
+```
+
+(`roller`/`rollerdb` are the `.env.example` defaults for `POSTGRES_USER` and
+`POSTGRES_DB`. `POSTGRES_PASSWORD` only takes effect when the data volume is first
+initialised, so changing `.env` alone does not change the role's password.)
+Fixed from the release after 0.1.10, which passes the password through as
+plaintext whatever it looks like.
 
 **Disk filling up**
 
