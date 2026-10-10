@@ -16,7 +16,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.business.VirtualHostRegistry;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WebloggerProvider;
-import org.apache.roller.weblogger.config.WebloggerConfig;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 
 /**
@@ -125,14 +124,12 @@ public class ControlPlaneHostFilter implements Filter {
     }
 
     /**
-     * The site host, read from site.absoluteurl DIRECTLY and never through
-     * getAbsoluteContextURL(), which falls back to InitFilter's latched value.
+     * The site host, read from site.absoluteurl DIRECTLY (database row, then
+     * ROLLER_SITE_ABSOLUTEURL) and never through getAbsoluteContextURL(),
+     * which falls back to InitFilter's latched value.
      */
     private static String siteHostUrl() {
-        String configured = WebloggerRuntimeConfig.getProperty("site.absoluteurl");
-        if (configured == null || configured.isBlank()) {
-            configured = WebloggerConfig.getProperty("site.absoluteurl");
-        }
+        String configured = WebloggerRuntimeConfig.getPropertyWithConfigFallback("site.absoluteurl");
         if (configured == null || configured.isBlank()) {
             return null;
         }

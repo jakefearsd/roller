@@ -288,8 +288,9 @@ and `ProductionComposeTest` fails the build if that stops being true.
 
 Five steps, in order:
 
-0. **Set `site.absoluteurl`** (Admin → Global Config → Site URL, or
-   `ROLLER_SITE_ABSOLUTEURL` in `.env`) to the site's own address, e.g.
+0. **Set `site.absoluteurl`** (`ROLLER_SITE_ABSOLUTEURL` in `.env`, or
+   Admin → Global Config → "Absolute URL to site"; a value saved on that page
+   wins over the variable) to the site's own address, e.g.
    `https://blog.example.com`. This becomes required the moment ANY weblog
    has a custom domain — with it blank, `InitFilter` latches the absolute
    context URL from whichever request happens to arrive first after boot,

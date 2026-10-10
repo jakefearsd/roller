@@ -277,14 +277,17 @@ public final class WebloggerRuntimeConfig {
     /**
      * Get the absolute url to this site.
      *
-     * This method will just return the value of the "site.absoluteurl"
-     * property if it is set, otherwise it will return the non-persisted
-     * value which is set by the InitFilter.
+     * <p>Precedence: the {@code site.absoluteurl} database row (Admin ->
+     * Global Config) when non-blank, then the static config -- where
+     * {@code ROLLER_SITE_ABSOLUTEURL} lands -- when non-blank, and only then
+     * the non-persisted value InitFilter latched from the first request after
+     * boot. The row alone is not enough: its default is blank, so reading only
+     * the row silently ignored the environment route the deployment runbook
+     * documents, and every generated url took whichever host hit first.
      */
     public static String getAbsoluteContextURL() {
         
-        // db prop takes priority if it exists
-        String absURL = getProperty("site.absoluteurl");
+        String absURL = getPropertyWithConfigFallback("site.absoluteurl");
         if(absURL != null && !absURL.isBlank()) {
             return absURL;
         }

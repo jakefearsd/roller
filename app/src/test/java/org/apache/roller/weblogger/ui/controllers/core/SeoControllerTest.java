@@ -35,6 +35,7 @@ import org.apache.roller.weblogger.business.WeblogManager;
 import org.apache.roller.weblogger.business.WeblogPageManager;
 import org.apache.roller.weblogger.business.Weblogger;
 import org.apache.roller.weblogger.business.WebloggerProvider;
+import org.apache.roller.weblogger.config.StaticConfigOverride;
 import org.apache.roller.weblogger.config.WebloggerRuntimeConfig;
 import org.apache.roller.weblogger.pojos.MediaFile;
 import org.apache.roller.weblogger.pojos.User;
@@ -132,6 +133,31 @@ class SeoControllerTest {
                 "robots.txt must allow everything (empty Disallow):\n" + body);
         assertTrue(body.contains("Sitemap: " + ABSOLUTE_CONTEXT + "/sitemap.xml"),
                 "robots.txt must point at the absolute sitemap index URL:\n" + body);
+    }
+
+    /**
+     * The symptom that proved the bug on a real deployment: the app's
+     * environment carried {@code ROLLER_SITE_ABSOLUTEURL=http://docker2.lan},
+     * the Global Config row was left at its blank default, the first request
+     * after a restart arrived by IP -- and robots.txt advertised
+     * {@code Sitemap: http://192.168.5.52/sitemap.xml}.
+     */
+    @Test
+    void robotsAdvertisesTheEnvironmentSiteUrlNotTheFirstRequestsHost() {
+        assertTrue(WebloggerRuntimeConfig.getProperty("site.absoluteurl") == null
+                        || WebloggerRuntimeConfig.getProperty("site.absoluteurl").isBlank(),
+                "precondition: the Global Config row is at its blank default");
+        try (StaticConfigOverride env = StaticConfigOverride.set("site.absoluteurl", "http://docker2.lan")) {
+            WebloggerRuntimeConfig.setAbsoluteContextURL("http://192.168.5.52");
+
+            String body = controller.robots(new MockHttpServletRequest()).getBody();
+
+            assertNotNull(body);
+            assertTrue(body.contains("Sitemap: http://docker2.lan/sitemap.xml"),
+                    "robots.txt must advertise the configured site url:\n" + body);
+        } finally {
+            WebloggerRuntimeConfig.setAbsoluteContextURL(ABSOLUTE_CONTEXT);
+        }
     }
 
     @Test

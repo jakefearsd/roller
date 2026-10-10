@@ -47,6 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.atMostOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
@@ -221,7 +222,11 @@ class URLModelTest {
             assertEquals(ABSOLUTE_SITE, model.getAbsoluteSite(),
                     "getAbsoluteSite must no longer read the per-weblog property at all.");
 
-            config.verifyNoInteractions();
+            // The one static read allowed is the SITE's own url: a blank
+            // Global Config row falls back to ROLLER_SITE_ABSOLUTEURL, which
+            // lives in the static config. Nothing per-weblog may be read.
+            config.verify(() -> WebloggerConfig.getProperty("site.absoluteurl"), atMostOnce());
+            config.verifyNoMoreInteractions();
         }
     }
 

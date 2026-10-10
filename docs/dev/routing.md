@@ -99,9 +99,10 @@ A weblog with `weblog.custom_domain` set is served at that hostname's root:
   redirect to the site host is cross-origin (CSP-blocked; a POST 301 has no
   body), breaking every `[contact]`/`[subscribe]` on vhost weblogs.
 - **`site.absoluteurl` is required once any weblog has a custom domain**,
-  read directly — never `getAbsoluteContextURL()`, whose `InitFilter`
-  fallback can itself be a custom domain. Unset, the filter serves rather
-  than redirects: never a loop.
+  read directly (`getPropertyWithConfigFallback`: the row, then
+  `ROLLER_SITE_ABSOLUTEURL`) — never `getAbsoluteContextURL()`, whose
+  `InitFilter` fallback can itself be a custom domain. Unset, the filter
+  serves rather than redirects: never a loop.
 - The path form 301s (never `sendRedirect`, whose 302 tells crawlers not to
   transfer ranking). The site sitemap index **omits** custom-domain weblogs:
   an index may only reference its own host's sitemaps.

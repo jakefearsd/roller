@@ -49,14 +49,21 @@ import static org.mockito.Mockito.when;
 class WebloggerRuntimeConfigTest {
 
     private PropertiesManager previouslyAttached;
+    private String previouslyLatched;
 
     @BeforeEach
     void saveAttachment() {
         previouslyAttached = WebloggerRuntimeConfig.attach(null);
+        // InitFilter's first-request latch is process-global too. With nothing
+        // attached and no static value the reader answers the latch itself.
+        try (StaticConfigOverride none = StaticConfigOverride.set("site.absoluteurl", null)) {
+            previouslyLatched = WebloggerRuntimeConfig.getAbsoluteContextURL();
+        }
     }
 
     @AfterEach
     void restoreAttachment() {
+        WebloggerRuntimeConfig.setAbsoluteContextURL(previouslyLatched);
         WebloggerRuntimeConfig.attach(previouslyAttached);
     }
 
@@ -117,6 +124,66 @@ class WebloggerRuntimeConfigTest {
                 WebloggerRuntimeConfig.getBooleanProperty("groupblogging.enabled"));
         assertEquals(WebloggerConfig.getProperty("groupblogging.enabled"),
                 WebloggerRuntimeConfig.getPropertyWithConfigFallback("groupblogging.enabled"));
+    }
+
+    /**
+     * {@code ROLLER_SITE_ABSOLUTEURL} lands in the static config, not the
+     * database row, and the row's default is blank. The deployment that proved
+     * the bug: the environment said {@code http://docker2.lan}, the Global
+     * Config row was untouched, the first request after a restart arrived by
+     * IP -- and robots.txt, canonical urls, feeds and password-reset links all
+     * took the IP, because this reader consulted only the row and the latch.
+     */
+    @Test
+    void anEnvironmentSiteUrlBeatsTheFirstRequestLatchWhenTheDatabaseRowIsBlank() {
+        try (RuntimeConfigAttachment row = RuntimeConfigAttachment.answering("site.absoluteurl", "");
+             StaticConfigOverride env = StaticConfigOverride.set("site.absoluteurl", "http://docker2.lan")) {
+            WebloggerRuntimeConfig.setAbsoluteContextURL("http://192.168.5.52");
+
+            assertEquals("http://docker2.lan", WebloggerRuntimeConfig.getAbsoluteContextURL(),
+                    "a configured ROLLER_SITE_ABSOLUTEURL must win over whichever host hit first");
+        }
+    }
+
+    /** Before bootstrap (nothing attached) the environment value is still the site url. */
+    @Test
+    void anEnvironmentSiteUrlIsHonouredWithNoDatabaseAttached() {
+        try (StaticConfigOverride env = StaticConfigOverride.set("site.absoluteurl", "http://docker2.lan")) {
+            WebloggerRuntimeConfig.setAbsoluteContextURL("http://192.168.5.52");
+
+            assertEquals("http://docker2.lan", WebloggerRuntimeConfig.getAbsoluteContextURL());
+        }
+    }
+
+    /**
+     * Characterisation of the precedence the fix must keep: a non-blank
+     * Global Config row (what Admin -> Global Config writes) still beats the
+     * environment. Passes before and after the fix.
+     */
+    @Test
+    void aNonBlankDatabaseRowStillBeatsTheEnvironment() {
+        try (RuntimeConfigAttachment row =
+                     RuntimeConfigAttachment.answering("site.absoluteurl", "https://admin.example.com");
+             StaticConfigOverride env = StaticConfigOverride.set("site.absoluteurl", "http://docker2.lan")) {
+            WebloggerRuntimeConfig.setAbsoluteContextURL("http://192.168.5.52");
+
+            assertEquals("https://admin.example.com", WebloggerRuntimeConfig.getAbsoluteContextURL());
+        }
+    }
+
+    /**
+     * Characterisation: with neither the row nor the environment set (a blank
+     * environment value trims to empty) the first-request latch is the last
+     * resort, never an empty string. Passes before and after the fix.
+     */
+    @Test
+    void withNeitherConfiguredTheFirstRequestLatchIsTheLastResort() {
+        try (RuntimeConfigAttachment row = RuntimeConfigAttachment.answering("site.absoluteurl", " ");
+             StaticConfigOverride env = StaticConfigOverride.set("site.absoluteurl", "  ")) {
+            WebloggerRuntimeConfig.setAbsoluteContextURL("http://192.168.5.52");
+
+            assertEquals("http://192.168.5.52", WebloggerRuntimeConfig.getAbsoluteContextURL());
+        }
     }
 
     @Test

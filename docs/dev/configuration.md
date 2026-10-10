@@ -56,6 +56,17 @@ resolves through the index at the end of `CLAUDE.md`.
   `database.jdbc.driverClass`); an unmatched name is used as derived —
   required, since `mail.port` has no entry in `roller.properties` and
   `uploads.dir` is commented out. Production is configured this way.
+- **A `ROLLER_*` variable for a *runtime* property reaches only the static
+  layer.** `WebloggerRuntimeConfig.getProperty`/`getIntProperty` read the DB
+  row alone, and a runtime row exists with its (often blank) default, so the
+  variable is silently ignored unless the reader uses
+  `getPropertyWithConfigFallback` (non-blank row, else static) or
+  `getBooleanProperty`. A saved non-blank row beats the variable. Shipped
+  once: `getAbsoluteContextURL()` read only the row, so
+  `ROLLER_SITE_ABSOLUTEURL` never reached generated urls and they took the
+  first request's host (fixed 2026-10-10, `WebloggerRuntimeConfigTest`,
+  `SeoControllerTest.robotsAdvertisesTheEnvironmentSiteUrl...`). Tests set
+  the static layer with `StaticConfigOverride` (restores on close).
 
 **Promoting a startup property to runtime** (add a `<property-def>`, read via
 `WebloggerRuntimeConfig`) has three traps, pinned by

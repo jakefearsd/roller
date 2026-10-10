@@ -3,6 +3,7 @@ package org.apache.roller.weblogger.ui.core.filters;
 import java.util.List;
 
 import org.apache.roller.weblogger.config.RuntimeConfigAttachment;
+import org.apache.roller.weblogger.config.StaticConfigOverride;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.business.PropertiesManager;
 import org.apache.roller.weblogger.business.VirtualHostRegistry;
@@ -147,6 +148,29 @@ class ControlPlaneHostFilterTest {
         assertEquals(301, response.getStatus());
         assertEquals("https://control.example.com/roller-ui/menu.rol", response.getHeader("Location"));
         assertNull(chain.getRequest(), "a redirected request must not reach the rest of the chain");
+    }
+
+    /**
+     * Characterisation: {@code ROLLER_SITE_ABSOLUTEURL} (the static config,
+     * not the blank database row) also engages the control-plane boundary.
+     * The filter read both layers by hand before it was routed through
+     * {@code WebloggerRuntimeConfig.getPropertyWithConfigFallback}; this
+     * passes before and after that change.
+     */
+    @Test
+    void anEnvironmentSiteUrlWithABlankRowAlsoRedirectsToTheSiteHost() throws Exception {
+        givenSiteAbsoluteUrl("");
+        MockHttpServletRequest request = vhostRequest("GET", "/roller-ui/menu.rol");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        try (StaticConfigOverride env = StaticConfigOverride.set("site.absoluteurl", SITE_URL + "/")) {
+            filter.doFilter(request, response, chain);
+        }
+
+        assertEquals(301, response.getStatus());
+        assertEquals("https://control.example.com/roller-ui/menu.rol", response.getHeader("Location"));
+        assertNull(chain.getRequest());
     }
 
     @Test
