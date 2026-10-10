@@ -59,7 +59,7 @@ There is no git checkout on the deploy host at all. Everything the stack
 needs lives in two published images (`ghcr.io/jakefearsd/roller` and
 `ghcr.io/jakefearsd/roller-caddy`) — nothing is bind-mounted from a working
 tree. The host needs exactly three files, all attached to the GitHub Release
-for the version you're deploying: `docker-compose.prod.yml`, `.env.example`,
+for the version you're deploying: `docker-compose.prod.yml`, `env.example`,
 and `deploy.sh`. Download them into one directory, e.g. `/opt/roller`:
 
 ```bash
@@ -994,7 +994,9 @@ Only 80 and 443 need to be open to the internet. Caddy also publishes
 and listmonk consoles — see [Test a release locally before deploying
 it](#test-a-release-locally-before-deploying-it)), but those are
 loopback-bound, unreachable from outside the host by construction, and need
-no firewall rule either way. Nothing else in `docker-compose.prod.yml`
+no firewall rule either way. Their host side moves with `UMAMI_CONSOLE_PORT` /
+`LISTMONK_CONSOLE_PORT` in `.env` when a host already uses either port (see
+[Troubleshooting](#troubleshooting)). Nothing else in `docker-compose.prod.yml`
 publishes a host port by default (`postgres` and the app's `8080`/`8090` are
 reachable only on the internal Docker network), so there's nothing else to
 explicitly block on a default-deny host firewall, but locking it down
@@ -1023,6 +1025,24 @@ docker compose -f docker-compose.prod.yml logs provision
 docker compose -f docker-compose.prod.yml logs app
 docker compose -f docker-compose.prod.yml logs postgres
 ```
+
+**Caddy won't start: `bind: address already in use`**
+
+Something else on the host already listens on 80, 443, 8081 or 8082. The
+last two are only the loopback console ports, but a listener on *any*
+address (`0.0.0.0:8082`, say) blocks the `127.0.0.1:8082` bind just the same,
+and caddy is the stack's only ingress, so the blog goes dark with it. Find
+the owner with `ss -ltn` / `docker ps`, then move the console port in `.env`
+rather than editing the compose file (a re-download on the next upgrade would
+silently put the edit back):
+
+```bash
+LISTMONK_CONSOLE_PORT=18082   # and/or UMAMI_CONSOLE_PORT=18081
+```
+
+In the local `:8081`/`:8082` mode the console is then at
+`http://localhost:18082`, and `LISTMONK_ROOT_URL` moves with it. 80 and 443
+are not movable this way: they are the site.
 
 **App container is up but `/roller` isn't reachable through Caddy**
 

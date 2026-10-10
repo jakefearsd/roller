@@ -27,7 +27,7 @@
 #
 # First-time setup (see docker_deployment.md for the full runbook):
 #   curl -LO <release-url>/docker-compose.prod.yml
-#   curl -L  <release-url>/.env.example -o .env
+#   curl -L  <release-url>/env.example -o .env   # GitHub strips the dot
 #   # edit .env: real domain, real secrets, real SMTP
 #   docker compose -f docker-compose.prod.yml up -d
 #
@@ -126,9 +126,11 @@ services:
       # Inert in production: with real hostnames in UMAMI_DOMAIN/LISTMONK_DOMAIN
       # Caddy serves those sites on 443 and nothing listens here. Locally those
       # variables are ":8081"/":8082" and these are how you reach the consoles.
-      # Loopback-bound either way, so the 80/443-only rule still holds.
-      - "127.0.0.1:8081:8081"
-      - "127.0.0.1:8082:8082"
+      # Loopback-bound either way, so the 80/443-only rule still holds. The
+      # HOST side is movable from .env: a host that already has 8081/8082
+      # bound -- on any address -- otherwise stops caddy, and with it the blog.
+      - "127.0.0.1:${UMAMI_CONSOLE_PORT:-8081}:8081"
+      - "127.0.0.1:${LISTMONK_CONSOLE_PORT:-8082}:8082"
     environment:
       SITE_DOMAIN: ${SITE_DOMAIN:?SITE_DOMAIN must be set in .env (a real domain, or :80 for LAN/testing)}
       UMAMI_DOMAIN: ${UMAMI_DOMAIN:-analytics.invalid}

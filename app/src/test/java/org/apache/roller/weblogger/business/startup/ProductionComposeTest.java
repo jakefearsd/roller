@@ -181,6 +181,37 @@ class ProductionComposeTest {
         }
     }
 
+    /**
+     * The loopback console ports exist only for a local run, yet caddy cannot
+     * start if a host already has either one bound -- on any address, since a
+     * wildcard listener blocks a loopback bind of the same port -- and caddy is
+     * the only ingress, so a hard-coded console port takes the blog down with
+     * it. Each one's host side must therefore be movable from .env, and named
+     * there, or the override exists but nobody can find it.
+     */
+    @Test
+    void everyLoopbackHostPortIsOverridableFromEnv() throws IOException {
+        Pattern overridable = Pattern.compile(
+                "127\\.0\\.0\\.1:\\$\\{([A-Z][A-Z0-9_]*):-\\d+}:\\d+");
+        String envExample = Files.readString(Paths.get("../deploy/.env.example"),
+                StandardCharsets.UTF_8);
+        List<String> loopback = new ArrayList<>();
+        for (Object port : (List<?>) service("caddy").get("ports")) {
+            String spec = String.valueOf(port);
+            if (!spec.startsWith("127.0.0.1:")) {
+                continue;
+            }
+            loopback.add(spec);
+            var m = overridable.matcher(spec);
+            assertTrue(m.matches(), spec + " hard-codes its host port; write it as "
+                    + "127.0.0.1:${SOME_PORT:-<default>}:<container port> so a host that "
+                    + "already uses <default> can move it");
+            assertTrue(Pattern.compile("(?m)^#?" + m.group(1) + "=").matcher(envExample).find(),
+                    m.group(1) + " moves " + spec + " but deploy/.env.example never names it");
+        }
+        assertFalse(loopback.isEmpty(), "expected caddy's loopback console ports; did they move?");
+    }
+
     @Test
     void theAppTakesItsConfigurationFromEnvFile() {
         assertEquals(".env", String.valueOf(service("app").get("env_file")),
