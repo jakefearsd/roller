@@ -167,7 +167,7 @@ environment-variable-configured container.
     [Newsletter](#newsletter).
 - **Postgres credentials, backup schedule, Analytics and Newsletter
   settings** — `POSTGRES_DB`/`POSTGRES_USER`/`POSTGRES_PASSWORD` (shared by
-  `postgres`, `provision`, and `backup` — generate a real password with
+  `postgres`, `provision`, `admin`, and `backup` — generate a real password with
   `openssl rand -base64 33 | tr '+/' '-_'`: 44 characters, no padding, only
   URL-safe ones, because the compose file splices `POSTGRES_PASSWORD` into
   Umami's `DATABASE_URL` and a `/` from plain base64 breaks that URL),
@@ -244,8 +244,8 @@ the first administrator is made from the host, in this order:
 
    It prompts for the password twice. For a script, pipe one line in and use
    `-T`: `docker compose -f docker-compose.prod.yml run --rm -T admin create
-   --username NAME --email ADDRESS --password-stdin`. The username is letters
-   and digits only; the email must be a real address you read, because
+   --username NAME --email ADDRESS --password-stdin`. The username is ASCII
+   letters and digits only; the email (at most 255 characters) must be a real address you read, because
    password-reset links are sent there; the password is at least 8
    characters. The `admin` service is in the `tools` profile, so `up -d`
    never starts it. Being able to run it at all means controlling this host
@@ -261,7 +261,7 @@ the first administrator is made from the host, in this order:
 
 Then create a weblog.
 
-## Mail and account recovery
+### Mail and account recovery
 
 Roller sends password-reset and notification mail through an SMTP relay.
 Worked example with Brevo, in `.env`:

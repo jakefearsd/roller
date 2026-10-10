@@ -92,11 +92,14 @@ Each check fails with a non-zero exit and a message naming the problem.
 
 - **Username:** must match `^[A-Za-z0-9]+$` (the default
   `username.allowedChars`) and be at most 255 characters
-  (`ColumnLimits.USERNAME`).
+  (`ColumnLimits.USERNAME`). The check is ASCII regardless of locale: the
+  script scopes `LC_ALL=C` to it, because under the image's en_US.UTF-8 a
+  bash bracket range also matches `ä` and fullwidth letters.
 - **Existing username:** `create` refuses one that already exists,
   compared case-insensitively. Unlike `addUser`'s check, this includes
   disabled accounts.
-- **Email:** must match `AdminApi`'s `^[^@\s]+@[^@\s]+\.[^@\s]+$`.
+- **Email:** must match `AdminApi`'s `^[^@\s]+@[^@\s]+\.[^@\s]+$` and be
+  at most 255 characters (`ColumnLimits.USER_EMAIL_ADDRESS`), checked first.
 - **Password:** at least 8 characters, the minimum the reset page
   enforces (`PasswordResetController.MIN_PASSWORD_LENGTH`).
 - **Prompt mode:** the confirmation must match the password.
@@ -113,8 +116,11 @@ Each write is one transaction, so a failure leaves the database unchanged.
 - **Output:** it never prints the password.
 - **Reaching psql:** the script exports it to psql's environment only.
   psql reads it with `\getenv` (psql 15 or later; the image ships 18) and
-  quotes it as `:'pw'`. The password never appears on any process command
-  line, and the shell never interpolates it into SQL.
+  sends it as a bind parameter (`crypt($1, ...)` then `\bind :pw \g`,
+  psql 16 or later), not as `:'pw'`. A failed statement's text is written to
+  the server log, and a bind parameter is not part of that text, so a failed
+  write cannot leak the password there. The password never appears on any
+  process command line, and the shell never interpolates it into SQL.
 - **Hashing:** inside PostgreSQL, as `'{bcrypt}' || crypt(pw,
   gen_salt('bf', 10))`, after `CREATE EXTENSION IF NOT EXISTS pgcrypto`.
   pgcrypto is a trusted extension, so the database owner can create it.

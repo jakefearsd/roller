@@ -50,11 +50,21 @@ recovers a lost password. Spec: `docs/superpowers/specs/2026-10-10-admin-bootstr
   there is no web bootstrap or recovery endpoint.
 - **The password route (D4).** The password is never an argument and is never
   printed. It goes into the environment of one `psql`, which reads it with
-  `\getenv` and quotes it itself (`:'pw'`); the hash is `{bcrypt}` +
+  `\getenv`, then binds it as a parameter (`crypt($1, …)` + `\bind :pw \g`;
+  UNQUOTED `:pw`, since `:'pw'` would bind the quoted literal). Never
+  `:'pw'` in statement text: psql substitutes it client-side, so a failed
+  statement is logged by the server with the password in it (log lesson;
+  `AdminAccountScriptTest` forces a failure and greps the container log).
+  The hash is `{bcrypt}` +
   pgcrypto `crypt(…, gen_salt('bf', 10))`. Every `psql` call reads its SQL
   from a heredoc and never `-c`: `-c` does not substitute `-v` variables, and
   a heredoc stops psql swallowing the script's own stdin, where the
   `--password-stdin` line is.
+- **Locale lesson.** Bash bracket ranges follow `LC_ALL`/`LC_COLLATE`, and
+  the image runs `en_US.UTF-8`, where `[A-Za-z]` matches `ä`. The username
+  check scopes `LC_ALL=C` to itself; never export it globally (it would make
+  `${#PASSWORD}` count bytes). Every `psql` call has `|| die`, so a SQL error
+  exits 1 and `status` never reports "no admin" for a check that could not run.
 - **`IFS= read -r`** reads the password, so leading/trailing spaces and
   backslashes survive.
 - **Restart caveat.** The running app caches loaded accounts, so after
