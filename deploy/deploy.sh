@@ -6,7 +6,8 @@
 # container, run it, then start the app -- and now lives in
 # docker-compose.prod.yml as depends_on conditions, where `docker compose up
 # -d` enforces it whether or not anyone runs this file. What remains is a
-# convenience wrapper: pull, up, and wait for health with a real timeout.
+# convenience wrapper: pull, up, and wait for health with a real timeout,
+# then check for an admin account and say how to create one if none exists.
 #
 # The old version also had a genuine bug this shape cannot have: it expanded
 # ${UMAMI_DB:-umami} in the host shell, which never sourced .env, so renaming a
@@ -65,6 +66,25 @@ if [[ "${healthy}" -ne 1 ]]; then
     exit 1
 fi
 echo "    app healthy."
+
+# A fresh install has no admin account, and there is no web page to make
+# one (deliberately: see docker_deployment.md, "First run"). Point the
+# operator at the tool rather than leave them at a login page they cannot
+# pass. A failed check must never fail an otherwise good deploy.
+echo "==> Checking for an admin account..."
+admin_rc=0
+"${COMPOSE[@]}" run --rm -T admin status </dev/null || admin_rc=$?
+case "${admin_rc}" in
+    0) ;;
+    3)
+        echo "    No admin account yet. Create the first one (it prompts for the password):"
+        echo "      ${COMPOSE[*]} run --rm admin create --username NAME --email ADDRESS"
+        ;;
+    *)
+        echo "    warning: could not check for an admin account (exit ${admin_rc});" \
+             "try: ${COMPOSE[*]} run --rm admin status" >&2
+        ;;
+esac
 
 if [[ "${PRUNE}" -eq 1 ]]; then
     echo "==> Pruning dangling images..."
