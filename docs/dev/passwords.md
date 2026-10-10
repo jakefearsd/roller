@@ -37,3 +37,32 @@ resolves through the index at the end of `CLAUDE.md`.
   the secret with `tr -dc … </dev/urandom | head -c N`: under
   `set -o pipefail` `head` exiting early SIGPIPEs `tr` and the script dies
   silently at 141.
+
+## The admin account tool
+
+`deploy/admin-account.sh` (`create`, `reset-password`, `status`; compose
+service `admin`, profile `tools`) is how production gets its first admin and
+recovers a lost password. Spec: `docs/superpowers/specs/2026-10-10-admin-bootstrap-and-recovery-design.md`.
+
+- **Trust model.** Running it at all means controlling the host and its
+  `.env`, which already holds every database credential, so it adds no
+  authority. Nothing reachable over HTTP can do what it does, which is why
+  there is no web bootstrap or recovery endpoint.
+- **The password route (D4).** The password is never an argument and is never
+  printed. It goes into the environment of one `psql`, which reads it with
+  `\getenv` and quotes it itself (`:'pw'`); the hash is `{bcrypt}` +
+  pgcrypto `crypt(…, gen_salt('bf', 10))`. Every `psql` call reads its SQL
+  from a heredoc and never `-c`: `-c` does not substitute `-v` variables, and
+  a heredoc stops psql swallowing the script's own stdin, where the
+  `--password-stdin` line is.
+- **`IFS= read -r`** reads the password, so leading/trailing spaces and
+  backslashes survive.
+- **Restart caveat.** The running app caches loaded accounts, so after
+  `reset-password` it keeps accepting the old password until
+  `docker compose -f docker-compose.prod.yml restart app`. The script prints
+  that command; `AdminAccountScriptTest.aRunningTierKeepsTheOldPasswordUntilRestart`
+  pins the behaviour.
+- **Tests.** `AdminAccountScriptTest` runs the shipped script inside the
+  PostgreSQL container with a psql argv shim (so a password in argv fails the
+  test). `AdminRunbookTest` pins that `docker_deployment.md` documents every
+  subcommand in the usage block.

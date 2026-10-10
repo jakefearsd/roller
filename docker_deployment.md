@@ -17,6 +17,7 @@ public IP.
 3. [Configure `.env`](#configure-env)
 4. [DNS](#dns)
 5. [First run](#first-run)
+   - [Mail and account recovery](#mail-and-account-recovery)
 6. [TLS](#tls)
 7. [Health monitoring](#health-monitoring)
 8. [Analytics](#analytics)
@@ -231,8 +232,78 @@ analytics-views` if the Grafana dashboard's traffic panel comes up empty; the
 same `up -d analytics-views` re-run mentioned in its own log output is safe.
 
 When it finishes, browse to `https://<your-domain>/` (or `http://<host>/` in
-`:80` mode) and complete Roller's normal first-run flow: register the first
-user account, which becomes the site administrator, then create a weblog.
+`:80` mode). A fresh install has no accounts and no registration page, so
+the first administrator is made from the host, in this order:
+
+1. **Create the admin.** `./deploy.sh` ends by checking for one and, if there
+   is none, prints this command:
+
+   ```bash
+   docker compose -f docker-compose.prod.yml run --rm admin create --username NAME --email ADDRESS
+   ```
+
+   It prompts for the password twice. For a script, pipe one line in and use
+   `-T`: `docker compose -f docker-compose.prod.yml run --rm -T admin create
+   --username NAME --email ADDRESS --password-stdin`. The username is letters
+   and digits only; the email must be a real address you read, because
+   password-reset links are sent there; the password is at least 8
+   characters. The `admin` service is in the `tools` profile, so `up -d`
+   never starts it. Being able to run it at all means controlling this host
+   and its `.env`, which is the trust it relies on.
+2. **Log in** at `/roller-ui/login.rol`, then in Admin -> Global Config set
+   the **Site URL** and the **site admin email** (`site.adminemail`). The
+   site admin email is the From address of every mail Roller sends, and
+   password-reset mail cannot go out without it.
+3. **Set up mail**, next section: [Mail and account recovery](#mail-and-account-recovery).
+4. **Check it.** `docker compose -f docker-compose.prod.yml run --rm admin status`
+   lists the enabled admin accounts (and exits 3 with the create command if
+   there are none).
+
+Then create a weblog.
+
+## Mail and account recovery
+
+Roller sends password-reset and notification mail through an SMTP relay.
+Worked example with Brevo, in `.env`:
+
+```bash
+ROLLER_MAIL_CONFIGURATIONTYPE=properties
+ROLLER_MAIL_HOSTNAME=smtp-relay.brevo.com
+ROLLER_MAIL_PORT=587
+ROLLER_MAIL_USERNAME=<Brevo SMTP login>
+ROLLER_MAIL_PASSWORD=<Brevo SMTP key>
+```
+
+`mail.security` defaults to `starttls`, which is what port 587 wants (`ssl`
+for a port-465 relay, `none` only for a local relay). The From address is the
+site admin email, so it must be a sender or domain you have verified in Brevo
+or the relay will refuse the mail.
+
+Reset mail needs **both** halves: the SMTP settings above **and** the site
+admin email (`site.adminemail`, Admin -> Global Config). Until both are set,
+the forgot-password page shows a "mail not configured" notice. The reset link
+is built from the Site URL (`ROLLER_SITE_ABSOLUTEURL`), lasts 1 hour, works
+once, and goes to the email address on the account.
+
+**Applying changes.** A change to `.env` needs
+`docker compose -f docker-compose.prod.yml up -d --force-recreate app`
+(a plain `restart` does not re-read `.env`). Roller caches runtime settings
+and loaded accounts, so a setting or account changed directly in the database
+needs `docker compose -f docker-compose.prod.yml restart app`.
+
+**Recovering a lost password**, in order:
+
+1. "Forgot password?" on the login page. Enter the username or the email
+   address.
+2. Last resort, when mail is broken, from the host:
+
+   ```bash
+   docker compose -f docker-compose.prod.yml run --rm admin reset-password --username NAME
+   docker compose -f docker-compose.prod.yml restart app
+   ```
+
+   The restart is required: the running app keeps the accounts it has loaded,
+   so it still holds the old password until it restarts.
 
 ### The context path
 
@@ -1020,6 +1091,17 @@ one-off DB access for debugging, use `docker compose exec postgres psql
 ...` instead of exposing the port.
 
 ## Troubleshooting
+
+**Forgot-password says mail is not configured**
+
+Reset mail needs both the `ROLLER_MAIL_*` SMTP settings in `.env` (applied
+with `up -d --force-recreate app`) and the site admin email in Admin -> Global
+Config. Check both; see [Mail and account recovery](#mail-and-account-recovery).
+
+**The new password from `reset-password` doesn't work**
+
+The running app caches accounts it has loaded. Run
+`docker compose -f docker-compose.prod.yml restart app`, then log in again.
 
 **A container won't start / keeps restarting**
 
