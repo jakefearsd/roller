@@ -44,6 +44,19 @@ was unrestorable by the `pg_restore` *inside* the postgres container
 (`unsupported version (1.16) in file header`) — backups sound, restores
 broken, nothing red. Raise the floor and the server image together.
 
+**EclipseLink decrypts the JDBC password unless told not to.** It passes
+`jakarta.persistence.jdbc.password` through its login encryptor, and the
+default one (`JCEEncryptor`) takes any value that parses as hex for one of
+its own AES-encrypted passwords. An even-length all-hex plaintext (`openssl
+rand -hex 24`) then fails decryption and the unit never deploys:
+`EclipseLink-7360 ... encrypted by deprecated algorithm`, a message that
+points everywhere but the cause. Plain JDBC with the same credentials works,
+so `DatabaseProvider`'s startup check passes. The 0.1.10 production deploy
+crash-looped on it. `JPAPersistenceStrategy` now sets
+`eclipselink.login.encryptor` to `PlaintextPasswordEncryptor` (identity both
+ways); `JPAPersistenceStrategyPasswordTest` bootstraps against a real role
+with a hex password. Anything else that builds an EMF must do the same.
+
 ### Schema changes
 
 **Every schema-changing commit MUST add a numbered migration** under

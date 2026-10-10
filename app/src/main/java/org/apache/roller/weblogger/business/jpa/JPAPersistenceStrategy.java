@@ -37,6 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.roller.weblogger.WebloggerException;
 import org.apache.roller.weblogger.config.WebloggerConfig;
+import org.eclipse.persistence.config.PersistenceUnitProperties;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.FlushModeType;
@@ -142,6 +143,15 @@ public class JPAPersistenceStrategy {
             // of weaving), so no correctness change results — only a
             // performance/change-tracking-strategy difference.
             emfProps.setProperty("eclipselink.weaving", "false");
+
+            // The configured database password is plaintext; without this,
+            // EclipseLink's default encryptor mistakes an even-length all-hex
+            // password for one of its own encrypted ones and refuses to
+            // deploy (EclipseLink-7360). See PlaintextPasswordEncryptor. Set
+            // before the passthrough, like weaving, so an explicit
+            // eclipselink.login.encryptor in roller-custom.properties wins.
+            emfProps.setProperty(PersistenceUnitProperties.LOGIN_ENCRYPTOR,
+                    PlaintextPasswordEncryptor.class.getName());
 
             Enumeration<Object> keys = WebloggerConfig.keys();
             while (keys.hasMoreElements()) {
